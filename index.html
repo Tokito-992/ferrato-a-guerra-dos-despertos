@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#05060a" />
+  <meta name="description" content="Ferrato: A Guerra Dos Despertos — beat 'em up 2D single player em HTML5 Canvas + TypeScript." />
+  <title>FERRATO — A Guerra Dos Despertos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/main.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="frame">
+      <canvas id="game" width="1280" height="720" aria-label="Jogo Ferrato: A Guerra Dos Despertos"></canvas>
+      <div class="crt" aria-hidden="true"></div>
+    </div>
+    <div id="loading">
+      <div class="loading-mark">FERRATO</div>
+      <div class="loading-sub">abrindo o Véu…</div>
+    </div>
+    <p id="footnote">
+      <span>WASD / ← → mover</span><span>ESPAÇO pular</span><span>J atacar</span><span>K pesado</span>
+      <span>L dash</span><span>E habilidade</span><span>ESC pausar</span><span>M áudio</span>
+    </p>
+  </div>
+  <noscript>Este jogo precisa de JavaScript habilitado.</noscript>
+  <script type="module" src="dist/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,298 @@
+/** As seis fases: paletas, ondas, chefes e ambientação. */
+
+import type { CharacterId } from './characters.js';
+import type { BossId } from './bosses.js';
+import type { EnemyKind } from './enemies.js';
+
+export type AmbientKind = 'embers' | 'ash' | 'stars' | 'magma' | 'feathers' | 'cosmic';
+
+export interface WaveSpawn {
+  kind: EnemyKind;
+  count: number;
+  elite?: boolean;
+}
+
+export interface WaveDef {
+  at: number;
+  label: string;
+  spawns: WaveSpawn[];
+}
+
+export interface StagePalette {
+  skyTop: string;
+  skyBottom: string;
+  far: string;
+  mid: string;
+  near: string;
+  ground: string;
+  groundDark: string;
+  accent: string;
+  accent2: string;
+  fog: string;
+  sun: string;
+}
+
+export interface StageDef {
+  id: number;
+  name: string;
+  subtitle: string;
+  location: string;
+  synopsis: string;
+  width: number;
+  floor: number;
+  gravity: number;
+  music: number;
+  ambient: AmbientKind;
+  palette: StagePalette;
+  waves: WaveDef[];
+  boss: BossId;
+  character: CharacterId;
+  enemyNames: Partial<Record<EnemyKind, string>>;
+  eliteName: string;
+  /** Multiplicador de vida/dano dos inimigos da fase. */
+  difficulty: number;
+}
+
+export const STAGES: StageDef[] = [
+  {
+    id: 1,
+    name: 'O Despertar',
+    subtitle: 'Fase I',
+    location: 'Terra — Subúrbio de New Haven',
+    synopsis:
+      'Um dia comum vira pesadelo. Criaturas ferratizadas sobem do asfalto e o sangue de alguns moradores começa a ferver.',
+    width: 2600,
+    floor: 602,
+    gravity: 1950,
+    music: 0,
+    ambient: 'embers',
+    palette: {
+      skyTop: '#1b0f18',
+      skyBottom: '#e0603a',
+      far: '#4a2430',
+      mid: '#2c1a22',
+      near: '#161016',
+      ground: '#2b2224',
+      groundDark: '#151012',
+      accent: '#ff7a3c',
+      accent2: '#ffd166',
+      fog: 'rgba(255, 112, 60, 0.12)',
+      sun: '#ffb36b',
+    },
+    waves: [
+      { at: 0, label: 'Primeiro Contato', spawns: [{ kind: 'crawler', count: 3 }] },
+      { at: 950, label: 'Rastejantes', spawns: [{ kind: 'crawler', count: 4 }, { kind: 'crawler', count: 1, elite: true }] },
+      { at: 1750, label: 'A Matilha', spawns: [{ kind: 'crawler', count: 4 }, { kind: 'crawler', count: 2, elite: true }] },
+    ],
+    boss: 'colossus',
+    character: 'ravi',
+    enemyNames: { crawler: 'Rastejante Ferratizado' },
+    eliteName: 'Matilha Alfa',
+    difficulty: 1,
+  },
+  {
+    id: 2,
+    name: 'Cinzas Ascendentes',
+    subtitle: 'Fase II',
+    location: 'Terra — Ruínas de Brasília',
+    synopsis:
+      'O exército convencional caiu. Os ataques são coordenados. Aberrações maiores mostram que não são invasores: são conquistadores.',
+    width: 2820,
+    floor: 602,
+    gravity: 1950,
+    music: 1,
+    ambient: 'ash',
+    palette: {
+      skyTop: '#241812',
+      skyBottom: '#b26a3c',
+      far: '#4b3a32',
+      mid: '#2d2420',
+      near: '#191414',
+      ground: '#3a332d',
+      groundDark: '#1c1815',
+      accent: '#ffae5a',
+      accent2: '#ff5a3c',
+      fog: 'rgba(255, 170, 90, 0.12)',
+      sun: '#ffd08a',
+    },
+    waves: [
+      { at: 0, label: 'Vanguarda', spawns: [{ kind: 'warrior', count: 3 }] },
+      { at: 1000, label: 'Legião de Cinzas', spawns: [{ kind: 'warrior', count: 4 }] },
+      { at: 1900, label: 'O Ceifador', spawns: [{ kind: 'warrior', count: 3 }, { kind: 'caster', count: 1, elite: true }] },
+    ],
+    boss: 'vekthar',
+    character: 'miriam',
+    enemyNames: {
+      warrior: "Guerreiro Khar'uun Corrompido",
+      caster: 'Ceifador Incendiário',
+    },
+    eliteName: 'Ceifador Incendiário',
+    difficulty: 1.1,
+  },
+  {
+    id: 3,
+    name: 'Órbita Quebrada',
+    subtitle: 'Fase III',
+    location: 'Espaço — Estação SOLACE',
+    synopsis:
+      'Para impedir a abertura de um portal massivo, os Despertos vão ao espaço. Lá descobrem os Khar\'uun — e o que o Ferrato fez com eles.',
+    width: 2940,
+    floor: 602,
+    gravity: 1500,
+    music: 2,
+    ambient: 'stars',
+    palette: {
+      skyTop: '#040812',
+      skyBottom: '#0d2a48',
+      far: '#122b4a',
+      mid: '#0b1b2d',
+      near: '#060d18',
+      ground: '#22344a',
+      groundDark: '#0d1723',
+      accent: '#6ff2ff',
+      accent2: '#7f6bff',
+      fog: 'rgba(90, 220, 255, 0.1)',
+      sun: '#a8f6ff',
+    },
+    waves: [
+      { at: 0, label: 'Drones Assimilados', spawns: [{ kind: 'drone', count: 3 }] },
+      { at: 1050, label: 'Tripulação', spawns: [{ kind: 'drone', count: 3 }, { kind: 'warrior', count: 2 }] },
+      { at: 1950, label: 'Sentinela', spawns: [{ kind: 'drone', count: 3 }, { kind: 'warrior', count: 3 }, { kind: 'drone', count: 1, elite: true }] },
+    ],
+    boss: 'xalmor',
+    character: 'kael',
+    enemyNames: {
+      drone: 'Drone Assimilado',
+      warrior: "Tripulante Khar'uun Corrompido",
+    },
+    eliteName: 'Sentinela Gravitacional',
+    difficulty: 1.2,
+  },
+  {
+    id: 4,
+    name: 'Portões Corrompidos',
+    subtitle: 'Fase IV',
+    location: 'Inferno — Níveis do Abismo Rubro',
+    synopsis:
+      'Ao fecharem um Portão, os Despertos são arrastados para o Inferno. As legiões de almas corrompidas são mais cruéis do que qualquer coisa já vista.',
+    width: 3040,
+    floor: 602,
+    gravity: 1950,
+    music: 3,
+    ambient: 'magma',
+    palette: {
+      skyTop: '#140306',
+      skyBottom: '#7a1119',
+      far: '#3c0c14',
+      mid: '#240810',
+      near: '#120409',
+      ground: '#2c0f14',
+      groundDark: '#150609',
+      accent: '#ff4a2f',
+      accent2: '#ff2f6a',
+      fog: 'rgba(255, 50, 40, 0.16)',
+      sun: '#ff7a3c',
+    },
+    waves: [
+      { at: 0, label: 'Almas Penitentes', spawns: [{ kind: 'shade', count: 3 }] },
+      { at: 1050, label: 'Cães Rubros', spawns: [{ kind: 'hound', count: 3 }, { kind: 'shade', count: 2 }] },
+      { at: 2050, label: 'Inquisidor', spawns: [{ kind: 'brute', count: 2 }, { kind: 'hound', count: 2 }, { kind: 'brute', count: 1, elite: true }] },
+    ],
+    boss: 'acheron',
+    character: 'ozric',
+    enemyNames: {
+      shade: 'Alma Penitente Corrompida',
+      hound: 'Cão Rubro',
+      brute: 'Carrasco Traidor',
+    },
+    eliteName: 'Inquisidor Acorrentado',
+    difficulty: 1.3,
+  },
+  {
+    id: 5,
+    name: 'Véu Rasgado',
+    subtitle: 'Fase V',
+    location: 'Céu — Eclésia Celestial em Ruínas',
+    synopsis:
+      'A maior parte do exército celestial sucumbiu. Os restantes se dividem entre purificar a Eclésia com fogo ou lutar ao lado dos Despertos.',
+    width: 3140,
+    floor: 602,
+    gravity: 1950,
+    music: 4,
+    ambient: 'feathers',
+    palette: {
+      skyTop: '#20203a',
+      skyBottom: '#c9b98a',
+      far: '#5c5a78',
+      mid: '#3c3a54',
+      near: '#25243a',
+      ground: '#4c465c',
+      groundDark: '#262232',
+      accent: '#ffe6a3',
+      accent2: '#ffcf6a',
+      fog: 'rgba(255, 235, 175, 0.14)',
+      sun: '#fff3c9',
+    },
+    waves: [
+      { at: 0, label: 'Serafins Caídos', spawns: [{ kind: 'seraph', count: 2 }] },
+      { at: 1050, label: 'Vitrais Partidos', spawns: [{ kind: 'construct', count: 2 }, { kind: 'caster', count: 2 }] },
+      { at: 2050, label: 'Cavaleiro da Aurora', spawns: [{ kind: 'seraph', count: 3 }, { kind: 'construct', count: 2 }, { kind: 'seraph', count: 1, elite: true }] },
+    ],
+    boss: 'malakhim',
+    character: 'elodie',
+    enemyNames: {
+      seraph: 'Serafim Caído',
+      caster: 'Manto de Luz Corrompida',
+      construct: 'Construto Vitral',
+    },
+    eliteName: 'Cavaleiro da Aurora Caída',
+    difficulty: 1.45,
+  },
+  {
+    id: 6,
+    name: 'Ferrato',
+    subtitle: 'Fase VI',
+    location: 'Entre Planos — Nexus Primordial',
+    synopsis:
+      'Todos os caminhos levam ao Nexus, onde o Ferrato se manifesta como uma consciência faminta. A batalha definirá o destino da existência.',
+    width: 3320,
+    floor: 602,
+    gravity: 1500,
+    music: 5,
+    ambient: 'cosmic',
+    palette: {
+      skyTop: '#08040f',
+      skyBottom: '#251046',
+      far: '#1a1040',
+      mid: '#120a28',
+      near: '#080414',
+      ground: '#24163a',
+      groundDark: '#0f081d',
+      accent: '#b48bff',
+      accent2: '#6ff2ff',
+      fog: 'rgba(180, 139, 255, 0.14)',
+      sun: '#ff8ae2',
+    },
+    waves: [
+      { at: 0, label: 'Ecos Corrompidos', spawns: [{ kind: 'echo', count: 3 }] },
+      { at: 1100, label: 'Planos Invadidos', spawns: [{ kind: 'construct', count: 2 }, { kind: 'echo', count: 3 }] },
+      { at: 2150, label: 'Manifestação', spawns: [{ kind: 'echo', count: 3 }, { kind: 'seraph', count: 2 }, { kind: 'construct', count: 1, elite: true }] },
+    ],
+    boss: 'ferrato',
+    character: 'thryc',
+    enemyNames: {
+      echo: 'Eco Corrompido dos Despertos',
+      construct: 'Manifestação dos Planos',
+      shade: 'Eco da Terra',
+      drone: 'Eco do Espaço',
+      brute: 'Eco do Inferno',
+      seraph: 'Eco do Céu',
+    },
+    eliteName: 'Manifestação dos Planos',
+    difficulty: 1.6,
+  },
+];
+
+export function getStage(id: number): StageDef {
+  return STAGES[Math.max(0, Math.min(STAGES.length - 1, id - 1))];
+}

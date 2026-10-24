@@ -1,0 +1,132 @@
+:root {
+  --ink: #04050a;
+  --ember: #ff7a3c;
+  --volt: #56e3ff;
+  --gold: #f7d488;
+  --violet: #9a7bff;
+  --crimson: #ff3357;
+  --ash: #9aa3b8;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #04050a;
+  color: #e9edf7;
+  font-family: "Rajdhani", "Segoe UI", system-ui, sans-serif;
+  overflow: hidden;
+}
+
+body {
+  background:
+    radial-gradient(1200px 700px at 50% -10%, rgba(154, 123, 255, 0.18), transparent 65%),
+    radial-gradient(900px 600px at 12% 110%, rgba(255, 51, 87, 0.12), transparent 60%),
+    radial-gradient(900px 600px at 92% 108%, rgba(86, 227, 255, 0.1), transparent 60%),
+    #04050a;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px;
+}
+
+#frame {
+  position: relative;
+  width: min(100%, calc((100vh - 62px) * 16 / 9));
+  aspect-ratio: 16 / 9;
+  max-height: calc(100vh - 62px);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #05060c;
+  box-shadow:
+    0 0 0 1px rgba(154, 123, 255, 0.28),
+    0 0 40px rgba(0, 0, 0, 0.9),
+    0 0 120px rgba(255, 51, 87, 0.08);
+}
+
+canvas#game {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: auto;
+  background: #05060c;
+  outline: none;
+  touch-action: none;
+}
+
+.crt {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px),
+    radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+  mix-blend-mode: overlay;
+  opacity: 0.55;
+}
+
+#loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #05060c;
+  z-index: 5;
+  transition: opacity 620ms ease, visibility 620ms;
+}
+
+#loading.hide { opacity: 0; visibility: hidden; }
+
+.loading-mark {
+  font-family: "Cinzel", serif;
+  font-weight: 900;
+  letter-spacing: 0.24em;
+  font-size: clamp(28px, 5vw, 64px);
+  background: linear-gradient(100deg, #f7d488, #ff7a3c 40%, #ff3357 70%, #9a7bff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 22px rgba(255, 122, 60, 0.35));
+}
+
+.loading-sub {
+  font-size: 13px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: #8d94aa;
+}
+
+#footnote {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+  font-size: 11.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6f778c;
+  font-family: "Share Tech Mono", monospace;
+  min-height: 18px;
+}
+
+#footnote span { white-space: nowrap; }
+
+@media (max-width: 760px) {
+  #footnote { display: none; }
+  #frame { width: 100%; max-height: 82vh; }
+}
+
+::selection { background: rgba(255, 122, 60, 0.35); }
