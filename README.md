@@ -2,6 +2,8 @@
 
 Beat 'em up 2D single-player para navegador, feito com **HTML5 Canvas**, **CSS3** e **TypeScript**. Seis Despertos, seis fases lineares, chefes com múltiplas fases, cutscenes e progressão salva localmente. Toda a arte e todo o áudio são gerados em tempo de execução — não há sprites, trilhas ou fontes de jogo baixadas.
 
+**Jogue online:** https://tokito-992.github.io/ferrato-a-guerra-dos-despertos/
+
 ## Jogar
 
 ```bash
@@ -114,6 +116,10 @@ O jogo roda em resolução interna fixa de **1280×720**, ajustada por CSS com l
 Requisito de build: Node.js 18 ou superior. A única dependência de desenvolvimento é o TypeScript; o jogo em si não tem dependências de runtime.
 
 ## Publicação no GitHub Pages
+
+O jogo está publicado em **https://tokito-992.github.io/ferrato-a-guerra-dos-despertos/** (branch `main`, pasta raiz).
+
+Para republicar em outro repositório:
 
 1. Envie o repositório para o GitHub.
 2. Em **Settings → Pages**, escolha **Deploy from a branch**, branch `main` e pasta `/ (root)`.
