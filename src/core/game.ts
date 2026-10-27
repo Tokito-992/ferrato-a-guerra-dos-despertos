@@ -2,7 +2,7 @@
 
 import type { CharacterId } from '../data/characters.js';
 import { CHARACTERS } from '../data/characters.js';
-import { getStage, STAGES } from '../data/stages.js';
+import { getStage, MAX_STAGE } from '../data/stages.js';
 import { STORY } from '../data/story.js';
 import { AudioEngine } from './audio.js';
 import { Input } from './input.js';
@@ -23,6 +23,8 @@ export interface Scene {
   draw(ctx: CanvasRenderingContext2D): void;
   enter?(): void;
   exit?(): void;
+  /** Posição vertical do aviso persistente; combate sobe o aviso para não cobrir o chefe. */
+  noticeY?: number;
 }
 
 export interface GameNotice {
@@ -117,10 +119,13 @@ export class Game {
     this.setScene(new CharacterSelectScene(this, stageId, selected));
   }
 
-  /** Inicia uma fase (com cutscene de abertura, se houver). */
+  /** Inicia um capítulo (com cutscene de abertura, se houver). */
   startStage(stageId: number, charId: string, skipStory = false): void {
     const stage = getStage(stageId);
-    const id = (charId in CHARACTERS ? charId : 'ravi') as CharacterId;
+    // Cada arco pertence ao seu Desperto: a narrativa e as habilidades contam a
+    // mesma história. O parâmetro fica por compatibilidade com chamadas antigas.
+    const requested = (charId in CHARACTERS ? charId : stage.character) as CharacterId;
+    const id = requested === stage.character ? requested : stage.character;
     this.save.selected = id;
     this.finishing = false;
     this.transitionTo(() => {
@@ -151,20 +156,22 @@ export class Game {
     this.save.bestCombo = Math.max(this.save.bestCombo, 0);
 
     let nextChar: CharacterId | null = null;
-    if (stageId < STAGES.length) {
-      nextChar = STAGES[stageId].character;
+    if (stageId < MAX_STAGE) {
+      const next = getStage(stageId + 1);
+      nextChar = next.character;
       if (!this.save.unlocked.includes(nextChar)) {
         this.save.unlocked.push(nextChar);
         const c = CHARACTERS[nextChar];
         this.setNotice(`${c.name.toUpperCase()} DESPERTOU — ${c.epithet.toUpperCase()}`, c.colors.accent);
       }
-      this.save.maxStage = Math.max(this.save.maxStage, Math.min(STAGES.length, stageId + 1));
+      this.save.maxStage = Math.max(this.save.maxStage, Math.min(MAX_STAGE, stageId + 1));
+      this.save.selected = nextChar;
     }
     writeSave(this.save);
 
     const outro = STORY[stageId]?.outro;
     const finish = () => {
-      if (stageId >= STAGES.length) {
+      if (stageId >= MAX_STAGE) {
         this.showVictory(id);
       } else {
         this.showCharacterSelect(stageId + 1, nextChar ?? undefined);
@@ -359,7 +366,7 @@ export class Game {
     ctx.font = `700 13px ${FONTS.mono}`;
     const w = clamp(ctx.measureText(text).width + 44, 260, 720);
     const x = this.width / 2 - w / 2;
-    const y = 660;
+    const y = this.scene.noticeY ?? 660;
     ctx.globalAlpha = alpha;
     panel(ctx, x, y, w, 34, {
       fill: 'rgba(5,8,16,0.9)',

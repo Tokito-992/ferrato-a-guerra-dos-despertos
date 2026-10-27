@@ -1,6 +1,7 @@
 /** Jogador: movimentação, combos, dash, habilidades e passivas por personagem. */
 
 import { clamp, rand, rectsOverlap, TAU } from '../core/math.js';
+import type { SfxName } from '../core/audio.js';
 import type { HitOptions, Rect, World } from '../core/types.js';
 import { Combatant } from './combatant.js';
 import { getCharacter } from '../data/characters.js';
@@ -9,6 +10,16 @@ import { MOVESETS } from '../data/movesets.js';
 import type { AttackDef, MoveSlot } from '../data/movesets.js';
 
 export type PlayerAnimState = 'idle' | 'run' | 'jump' | 'fall' | 'attack' | 'dash' | 'hurt' | 'dead';
+
+/** Cada Desperto tem uma assinatura sonora própria ao ativar a habilidade. */
+const ABILITY_SFX: Record<CharacterId, SfxName> = {
+  ravi: 'abilityRavi',
+  miriam: 'abilityMiriam',
+  kael: 'abilityKael',
+  ozric: 'abilityOzric',
+  elodie: 'abilityElodie',
+  thryc: 'abilityThryc',
+};
 
 interface ActiveAttack {
   def: AttackDef;
@@ -669,7 +680,7 @@ export class Player extends Combatant {
     this.abilityCd = this.def.ability.cooldown;
     this.abilityFlash = 0.5;
     this.invuln = Math.max(this.invuln, 0.18);
-    world.audio.sfx('confirm');
+    world.audio.sfx(ABILITY_SFX[this.charId]);
     world.hitStop(0.03);
 
     switch (this.charId) {

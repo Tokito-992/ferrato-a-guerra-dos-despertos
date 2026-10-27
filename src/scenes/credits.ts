@@ -16,7 +16,8 @@ export class CreditsScene implements Scene {
   constructor(private readonly game: Game) {}
 
   enter(): void {
-    this.game.audio.playMusic(5);
+    this.game.audio.playMusic(35);
+    this.game.audio.playAmbience('cosmic');
   }
 
   private finish(): void {
@@ -66,7 +67,7 @@ export class CreditsScene implements Scene {
       spacing: 8,
       glow: 'rgba(255,230,163,0.42)',
     });
-    label(ctx, 'FERRATO · A GUERRA DOS DESPERTOS', width / 2, 74, 9.5, 'rgba(255,230,163,0.62)', {
+    label(ctx, 'FERRATO · A GUERRA DOS DESPERTOS · 36 CAPÍTULOS', width / 2, 74, 9.5, 'rgba(255,230,163,0.62)', {
       align: 'center',
       font: FONTS.mono,
       spacing: 2.4,
@@ -89,9 +90,9 @@ export class CreditsScene implements Scene {
 
     // Bloco de abertura.
     this.drawLine(base, 0, 'UMA HISTÓRIA DE', '', 'rgba(190,198,220,0.55)', 9.5);
-    this.drawLine(base, 30, 'FERRATO', '', '#ffe6a3', 46, true);
-    this.drawLine(base, 58, 'A GUERRA DOS DESPERTOS', '', 'rgba(235,238,250,0.82)', 14);
-    this.drawLine(base, 104, 'SEIS DESPERTOS. UM VÉU FAMINTO. UMA ESCOLHA.', '', 'rgba(190,198,220,0.5)', 9.5);
+    this.drawLine(base + 48, 0, 'FERRATO', '', '#ffe6a3', 46, true);
+    this.drawLine(base + 82, 0, 'A GUERRA DOS DESPERTOS', '', 'rgba(235,238,250,0.82)', 14);
+    this.drawLine(base + 110, 0, 'SEIS ARCOS. TRINTA E SEIS CAPÍTULOS. UMA ESCOLHA.', '', 'rgba(190,198,220,0.5)', 9.5);
 
     const listTop = 178;
     CREDITS.forEach((line, i) => {
@@ -115,13 +116,13 @@ export class CreditsScene implements Scene {
     const endReached = this.scroll > base + listTop + CREDITS.length * LINE_H + 40;
     if (endReached) {
       const a = 0.55 + Math.sin(this.t * 4) * 0.3;
-      label(ctx, 'ENTER PARA VOLTAR AO MENU', width / 2, 674, 10, `rgba(255,230,163,${a})`, {
+      label(ctx, 'ENTER PARA VOLTAR AO MENU', width / 2, 704, 10, `rgba(255,230,163,${a})`, {
         align: 'center',
         font: FONTS.mono,
         spacing: 2,
       });
-    } else {
-      label(ctx, 'M ÁUDIO · ESC PULAR', width / 2, 674, 9, 'rgba(170,178,200,0.4)', {
+    } else if (this.t > 2.4) {
+      label(ctx, 'M ÁUDIO · ESC PULAR', width / 2, 704, 9, 'rgba(170,178,200,0.4)', {
         align: 'center',
         font: FONTS.mono,
         spacing: 1.6,

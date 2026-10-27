@@ -2,20 +2,63 @@
  * Áudio 100% procedural (WebAudio): trilha sintetizada por fase e efeitos
  * gerados em tempo real. Nenhum arquivo externo é necessário.
  */
-const THEMES = [
-    // Fase 1 — apocalipse urbano, rock industrial.
+/** Base sonora de cada arco. Cada capítulo aplica uma variação de humor. */
+const ARC_BASES = [
+    // Arco I — apocalipse urbano, rock industrial.
     { bpm: 94, root: 40, scale: [0, 2, 3, 5, 7, 8, 10], progression: [0, 0, 5, 3], padType: 'sawtooth', bassType: 'square', arp: false, drums: 1, padGain: 0.05 },
-    // Fase 2 — cinzas, phrygian pesado.
+    // Arco II — cinzas, phrygian pesado.
     { bpm: 104, root: 38, scale: [0, 1, 3, 5, 7, 8, 10], progression: [0, 1, 5, 4], padType: 'sawtooth', bassType: 'sawtooth', arp: false, drums: 1.15, padGain: 0.045 },
-    // Fase 3 — órbita, synthwave gélido.
+    // Arco III — órbita, synthwave gélido.
     { bpm: 86, root: 45, scale: [0, 2, 3, 5, 7, 9, 10], progression: [0, 3, 5, 4], padType: 'triangle', bassType: 'sine', arp: true, drums: 0.75, padGain: 0.055 },
-    // Fase 4 — inferno, corais distorcidos.
+    // Arco IV — inferno, corais distorcidos.
     { bpm: 118, root: 36, scale: [0, 1, 3, 4, 6, 8, 10], progression: [0, 0, 3, 1], padType: 'sawtooth', bassType: 'square', arp: false, drums: 1.3, padGain: 0.05 },
-    // Fase 5 — céu decadente, coro.
+    // Arco V — céu decadente, coro.
     { bpm: 74, root: 43, scale: [0, 2, 4, 5, 7, 9, 11], progression: [0, 5, 3, 4], padType: 'sine', bassType: 'triangle', arp: true, drums: 0.55, padGain: 0.07 },
-    // Fase 6 — Nexus, cosmos colossal.
+    // Arco VI — Nexus, cosmos colossal.
     { bpm: 132, root: 33, scale: [0, 2, 3, 6, 7, 8, 11], progression: [0, 4, 1, 5], padType: 'sawtooth', bassType: 'sawtooth', arp: true, drums: 1.2, padGain: 0.06 },
 ];
+/** Seis humores por arco: entrada, tensão, exploração, ascensão, clímax e finale. */
+const CHAPTER_MOODS = [
+    { bpm: 0.9, root: 0, progression: [0, 0, 0, 0], arp: false, drums: 0.78, pad: 1.15 },
+    { bpm: 0.96, root: 2, progression: [0, 2, 0, 1], arp: false, drums: 0.9, pad: 1.05 },
+    { bpm: 1.0, root: -2, progression: [0, 3, 1, 2], arp: true, drums: 1.0, pad: 1.0 },
+    { bpm: 1.04, root: 5, progression: [0, 1, 2, 3], arp: true, drums: 1.06, pad: 1.05 },
+    { bpm: 1.08, root: 7, progression: [0, 4, 1, 5], arp: true, drums: 1.14, pad: 1.12 },
+    { bpm: 1.12, root: 0, progression: [0, 0, 3, 1], arp: true, drums: 1.28, pad: 1.2 },
+];
+export const STAGE_THEME_COUNT = 36;
+export const BOSS_THEME_OFFSET = STAGE_THEME_COUNT;
+const STAGE_THEMES = [];
+for (let arc = 0; arc < ARC_BASES.length; arc++) {
+    const base = ARC_BASES[arc];
+    for (let chapter = 0; chapter < CHAPTER_MOODS.length; chapter++) {
+        const mood = CHAPTER_MOODS[chapter];
+        STAGE_THEMES.push({
+            bpm: Math.round(base.bpm * mood.bpm),
+            root: base.root + mood.root,
+            scale: base.scale,
+            progression: base.progression.map((step, index) => (step + mood.progression[index]) % 12),
+            padType: base.padType,
+            bassType: base.bassType,
+            arp: base.arp || mood.arp,
+            drums: Number((base.drums * mood.drums).toFixed(2)),
+            padGain: Number((base.padGain * mood.pad).toFixed(3)),
+        });
+    }
+}
+/** Temas de chefe: mais graves, rápidos e dissonantes que o arco correspondente. */
+const BOSS_THEMES = ARC_BASES.map((base, arc) => ({
+    bpm: Math.round(base.bpm * 1.22 + 6),
+    root: base.root - 5,
+    scale: [0, 1, 3, 5, 7, 8, 11],
+    progression: [0, 1, 5, 4].map((step) => (step + arc) % 12),
+    padType: 'sawtooth',
+    bassType: 'square',
+    arp: true,
+    drums: 1.5,
+    padGain: 0.07,
+}));
+const THEMES = [...STAGE_THEMES, ...BOSS_THEMES];
 const midi = (n) => 440 * Math.pow(2, (n - 69) / 12);
 export class AudioEngine {
     constructor() {
@@ -31,6 +74,9 @@ export class AudioEngine {
         this.theme = THEMES[0];
         this.musicOn = false;
         this.masters = 0.9;
+        this.ambienceGain = null;
+        this.ambienceNodes = [];
+        this.ambienceKind = null;
         this.muted = false;
     }
     init() {
@@ -107,6 +153,136 @@ export class AudioEngine {
                 }
             }, 220);
         }
+    }
+    /** Trilha de chefe: 36–41, uma para cada arco. */
+    playBossMusic(arc) {
+        const index = BOSS_THEME_OFFSET + Math.max(0, Math.min(BOSS_THEMES.length - 1, Math.round(arc) - 1));
+        this.playMusic(index);
+    }
+    /**
+     * Camada de ambiente contínua por plano. É independente da trilha para que
+     * o jogador ainda sinta o cenário durante o silêncio entre músicas.
+     */
+    playAmbience(kind) {
+        this.init();
+        const ctx = this.ctx;
+        if (!ctx || !this.master)
+            return;
+        if (this.ambienceKind === kind && this.ambienceGain)
+            return;
+        this.stopAmbience();
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.9);
+        gain.connect(this.master);
+        this.ambienceGain = gain;
+        this.ambienceKind = kind;
+        const now = ctx.currentTime;
+        switch (kind) {
+            case 'embers':
+                this.addAmbienceNoise(gain, now, 'bandpass', 850, 0.7, 0.052, 0.18, 170);
+                this.addAmbienceOsc(gain, now, 55, 'sine', 0.03);
+                this.addAmbienceOsc(gain, now, 82.4, 'triangle', 0.016, 6);
+                break;
+            case 'ash':
+                this.addAmbienceNoise(gain, now, 'lowpass', 480, 0.8, 0.06, 0.11, 230);
+                this.addAmbienceOsc(gain, now, 41.2, 'sawtooth', 0.016);
+                this.addAmbienceOsc(gain, now, 61.7, 'sine', 0.011);
+                break;
+            case 'stars':
+                this.addAmbienceNoise(gain, now, 'highpass', 5200, 0.6, 0.018, 0.05, 900);
+                this.addAmbienceOsc(gain, now, 220, 'sine', 0.011);
+                this.addAmbienceOsc(gain, now, 329.6, 'triangle', 0.007, 4);
+                break;
+            case 'magma':
+                this.addAmbienceNoise(gain, now, 'lowpass', 260, 0.9, 0.075, 0.07, 110);
+                this.addAmbienceOsc(gain, now, 36.7, 'sawtooth', 0.028);
+                this.addAmbienceOsc(gain, now, 55, 'sine', 0.016, -5);
+                break;
+            case 'feathers':
+                this.addAmbienceNoise(gain, now, 'bandpass', 1600, 0.9, 0.028, 0.13, 420);
+                this.addAmbienceOsc(gain, now, 440, 'sine', 0.011);
+                this.addAmbienceOsc(gain, now, 659.3, 'triangle', 0.007);
+                break;
+            case 'cosmic':
+                this.addAmbienceNoise(gain, now, 'lowpass', 900, 0.7, 0.045, 0.04, 180);
+                this.addAmbienceOsc(gain, now, 27.5, 'sine', 0.038);
+                this.addAmbienceOsc(gain, now, 41.2, 'sine', 0.018, 3);
+                this.addAmbienceOsc(gain, now, 82.4, 'triangle', 0.009, -4);
+                break;
+        }
+    }
+    stopAmbience() {
+        const ctx = this.ctx;
+        if (!ctx || !this.ambienceGain) {
+            this.ambienceKind = null;
+            return;
+        }
+        const gain = this.ambienceGain;
+        const nodes = this.ambienceNodes;
+        this.ambienceGain = null;
+        this.ambienceNodes = [];
+        this.ambienceKind = null;
+        gain.gain.cancelScheduledValues(ctx.currentTime);
+        gain.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.08);
+        window.setTimeout(() => {
+            for (const node of nodes) {
+                try {
+                    node.stop();
+                }
+                catch {
+                    // O nó já pode ter sido finalizado.
+                }
+            }
+            try {
+                gain.disconnect();
+            }
+            catch {
+                // Sem conexões restantes.
+            }
+        }, 320);
+    }
+    addAmbienceOsc(bus, time, freq, type, level, detune = 0) {
+        const ctx = this.ctx;
+        if (!ctx)
+            return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        osc.detune.value = detune;
+        gain.gain.value = level;
+        osc.connect(gain);
+        gain.connect(bus);
+        osc.start(time);
+        this.ambienceNodes.push(osc);
+    }
+    addAmbienceNoise(bus, time, filterType, freq, q, level, lfoRate, lfoDepth) {
+        const ctx = this.ctx;
+        if (!ctx || !this.noiseBuffer)
+            return;
+        const src = ctx.createBufferSource();
+        src.buffer = this.noiseBuffer;
+        src.loop = true;
+        const filter = ctx.createBiquadFilter();
+        filter.type = filterType;
+        filter.frequency.value = freq;
+        filter.Q.value = q;
+        const gain = ctx.createGain();
+        gain.gain.value = level;
+        src.connect(filter);
+        filter.connect(gain);
+        gain.connect(bus);
+        src.start(time);
+        this.ambienceNodes.push(src);
+        const lfo = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        lfo.frequency.value = Math.max(0.01, lfoRate);
+        lfoGain.gain.value = lfoDepth;
+        lfo.connect(lfoGain);
+        lfoGain.connect(filter.frequency);
+        lfo.start(time);
+        this.ambienceNodes.push(lfo);
     }
     scheduler() {
         const ctx = this.ctx;
@@ -339,6 +515,40 @@ export class AudioEngine {
             case 'beam':
                 this.tone(t, 1200, 'sawtooth', 0.6, 0.09, 200);
                 this.tone(t, 300, 'square', 0.6, 0.08, 90);
+                break;
+            case 'abilityRavi':
+                this.tone(t, 1800, 'sawtooth', 0.34, 0.16, 220);
+                this.tone(t + 0.035, 900, 'square', 0.3, 0.12, 140);
+                this.tone(t + 0.1, 2400, 'sine', 0.28, 0.08, 3200);
+                this.noise(t, 0.18, 0.16, 5600, 'highpass');
+                break;
+            case 'abilityMiriam':
+                this.tone(t, 62, 'sawtooth', 0.54, 0.34, 28);
+                this.tone(t + 0.08, 220, 'triangle', 0.42, 0.15, 72);
+                this.noise(t, 0.48, 0.3, 430, 'lowpass');
+                break;
+            case 'abilityKael':
+                this.tone(t, 560, 'sine', 0.58, 0.17, 52);
+                this.tone(t + 0.04, 260, 'triangle', 0.52, 0.13, 38);
+                this.tone(t + 0.2, 900, 'sine', 0.3, 0.06, 120);
+                this.noise(t, 0.38, 0.07, 300, 'lowpass');
+                break;
+            case 'abilityOzric':
+                this.tone(t, 130, 'sawtooth', 0.48, 0.24, 38);
+                this.tone(t + 0.07, 720, 'sawtooth', 0.28, 0.13, 90);
+                this.noise(t, 0.3, 0.18, 950, 'bandpass');
+                break;
+            case 'abilityElodie':
+                [880, 1320, 1760].forEach((freq, i) => {
+                    this.tone(t + i * 0.05, freq, 'sine', 0.56, 0.09, freq * 1.01);
+                });
+                this.noise(t, 0.24, 0.07, 6500, 'highpass');
+                break;
+            case 'abilityThryc':
+                this.tone(t, 520, 'sine', 0.46, 0.13, 1040);
+                this.tone(t + 0.14, 780, 'sine', 0.48, 0.09, 1560);
+                this.tone(t + 0.28, 1040, 'triangle', 0.56, 0.07, 2080);
+                this.noise(t + 0.1, 0.28, 0.07, 3000, 'bandpass');
                 break;
             case 'victory':
                 [523, 659, 784, 1046].forEach((f, i) => this.tone(t + i * 0.13, f, 'triangle', 0.6, 0.12, f));

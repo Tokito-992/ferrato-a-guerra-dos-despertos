@@ -1,10 +1,19 @@
-/** Seleção de Desperto e de fase, com detalhes de jogabilidade e lore. */
+/** Seleção de arcos e capítulos: história, lore, dificuldade e chefe de cada fase. */
 
 import type { Game, Scene } from '../core/game.js';
 import { CHARACTERS, CHARACTER_ORDER } from '../data/characters.js';
 import type { CharacterId } from '../data/characters.js';
 import { BOSSES } from '../data/bosses.js';
-import { getStage, STAGES } from '../data/stages.js';
+import {
+  arcFinaleStage,
+  arcFirstStage,
+  ARC_COUNT,
+  CHAPTERS_PER_ARC,
+  getArcStages,
+  getStage,
+  MAX_STAGE,
+  STAGE_ROMAN,
+} from '../data/stages.js';
 import { clamp, hexToRgba } from '../core/math.js';
 import { drawStageBackground } from '../render/backgrounds.js';
 import { drawCharacterPortrait, drawCharacterSilhouette } from '../render/characters.js';
@@ -17,10 +26,21 @@ interface Box {
   h: number;
 }
 
-const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
-
 function inside(box: Box, x: number, y: number): boolean {
   return x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h;
+}
+
+function fitText(ctx: CanvasRenderingContext2D, text: string, maxW: number, size: number, font = FONTS.ui): string {
+  ctx.save();
+  ctx.font = `600 ${size}px ${font}`;
+  if (ctx.measureText(text).width <= maxW) {
+    ctx.restore();
+    return text;
+  }
+  let out = text;
+  while (out.length > 1 && ctx.measureText(`${out}…`).width > maxW) out = out.slice(0, -1);
+  ctx.restore();
+  return `${out}…`;
 }
 
 function wrapped(
@@ -68,6 +88,7 @@ export class CharacterSelectScene implements Scene {
   private stageId: number;
   private charIndex = 0;
   private hoverCard = -1;
+  private hoverChapter = -1;
   private cardRects: Box[] = [];
   private stageRects: Box[] = [];
   private startRect: Box = { x: 0, y: 0, w: 0, h: 0 };
@@ -76,17 +97,16 @@ export class CharacterSelectScene implements Scene {
   constructor(
     private readonly game: Game,
     stageId: number,
-    selected?: string,
+    _selected?: string,
   ) {
-    this.stageId = clamp(stageId, 1, Math.max(1, this.game.save.maxStage));
-    const preferred = selected ?? this.game.save.selected;
-    const idx = CHARACTER_ORDER.indexOf(preferred as CharacterId);
-    this.charIndex = idx >= 0 ? idx : 0;
+    const max = Math.max(1, Math.min(MAX_STAGE, this.game.save.maxStage));
+    this.stageId = clamp(Math.round(stageId), 1, max);
+    const arc = Math.max(1, Math.min(ARC_COUNT, Math.ceil(this.stageId / CHAPTERS_PER_ARC)));
+    this.charIndex = arc - 1;
   }
 
   enter(): void {
-    const stage = getStage(this.stageId);
-    this.game.audio.playMusic(stage.music);
+    this.preview(this.stageId);
   }
 
   private get selectedId(): CharacterId {
@@ -97,30 +117,52 @@ export class CharacterSelectScene implements Scene {
     return this.game.save.unlocked.includes(this.selectedId);
   }
 
-  private chooseStage(id: number): void {
-    const clamped = clamp(id, 1, Math.max(1, this.game.save.maxStage));
-    if (clamped === this.stageId) return;
-    this.stageId = clamped;
+  private get maxStage(): number {
+    return Math.max(1, Math.min(MAX_STAGE, this.game.save.maxStage));
+  }
+
+  private preview(id: number): void {
+    this.stageId = clamp(Math.round(id), 1, MAX_STAGE);
+    const stage = getStage(this.stageId);
+    this.game.audio.playMusic(stage.music);
+    this.game.audio.playAmbience(stage.ambient);
+  }
+
+  private selectArc(index: number): void {
+    const next = (index + CHARACTER_ORDER.length) % CHARACTER_ORDER.length;
+    if (next === this.charIndex) return;
+    this.charIndex = next;
+    const arc = this.charIndex + 1;
+    const first = arcFirstStage(arc);
+    const last = Math.min(arcFinaleStage(arc), this.maxStage);
     this.game.audio.sfx('select');
-    this.game.audio.playMusic(getStage(this.stageId).music);
+    this.preview(last >= first ? last : first);
+  }
+
+  private chooseChapter(id: number): void {
+    const arc = this.charIndex + 1;
+    const first = arcFirstStage(arc);
+    const finale = arcFinaleStage(arc);
+    if (id < first || id > finale || id === this.stageId) return;
+    const available = id <= this.maxStage;
+    this.game.audio.sfx(available ? 'select' : 'ui');
+    this.preview(id);
   }
 
   private start(): void {
-    const id = this.selectedId;
-    if (!this.selectedUnlocked) {
-      const unlockStage = CHARACTERS[id].stage;
+    const stage = getStage(this.stageId);
+    const hero = stage.character;
+    if (this.stageId > this.maxStage || !this.game.save.unlocked.includes(hero)) {
       this.game.audio.sfx('ui');
-      this.game.setNotice(`SELADO — CONCLUA A FASE ${ROMAN[unlockStage - 1]} PARA DESPERTAR`, '#ff6a7a');
       return;
     }
     this.game.audio.sfx('confirm');
-    this.game.startStage(this.stageId, id);
+    this.game.startStage(this.stageId, hero);
   }
 
   update(dt: number): void {
     this.t += dt;
     const input = this.game.input;
-    const maxStage = Math.max(1, this.game.save.maxStage);
 
     if (input.pressed('back') || input.pressed('pause')) {
       this.game.audio.sfx('ui');
@@ -128,35 +170,36 @@ export class CharacterSelectScene implements Scene {
       return;
     }
 
-    if (input.pressed('left')) {
-      this.charIndex = (this.charIndex + CHARACTER_ORDER.length - 1) % CHARACTER_ORDER.length;
-      this.game.audio.sfx('select');
-    }
-    if (input.pressed('right')) {
-      this.charIndex = (this.charIndex + 1) % CHARACTER_ORDER.length;
-      this.game.audio.sfx('select');
-    }
-    if (input.pressed('up')) this.chooseStage(this.stageId - 1);
-    if (input.pressed('down')) this.chooseStage(this.stageId + 1);
+    if (input.pressed('left')) this.selectArc(this.charIndex - 1);
+    if (input.pressed('right')) this.selectArc(this.charIndex + 1);
 
-    // Mouse: abas de fase.
-    for (let i = 0; i < this.stageRects.length; i++) {
-      if (input.mouse.clicked && inside(this.stageRects[i], input.mouse.x, input.mouse.y)) {
-        if (i + 1 <= maxStage) this.chooseStage(i + 1);
-        else this.game.audio.sfx('ui');
-      }
+    const arcStages = getArcStages(this.charIndex + 1);
+    const current = arcStages.findIndex((stage) => stage.id === this.stageId);
+    if (input.pressed('up')) {
+      const next = Math.max(0, current < 0 ? 0 : current - 1);
+      if (next !== current) this.chooseChapter(arcStages[next].id);
     }
-    // Mouse: cartões.
+    if (input.pressed('down')) {
+      const next = Math.min(arcStages.length - 1, current < 0 ? 0 : current + 1);
+      if (next !== current) this.chooseChapter(arcStages[next].id);
+    }
+
+    // Mouse: abas de capítulo.
+    this.hoverChapter = -1;
+    for (let i = 0; i < this.stageRects.length; i++) {
+      if (!inside(this.stageRects[i], input.mouse.x, input.mouse.y)) continue;
+      this.hoverChapter = i;
+      if (input.mouse.clicked) this.chooseChapter(arcStages[i].id);
+    }
+
+    // Mouse: cartões de arco.
     this.hoverCard = -1;
     for (let i = 0; i < this.cardRects.length; i++) {
-      if (inside(this.cardRects[i], input.mouse.x, input.mouse.y)) {
-        this.hoverCard = i;
-        if (input.mouse.clicked) {
-          if (this.charIndex !== i) this.game.audio.sfx('select');
-          this.charIndex = i;
-        }
-      }
+      if (!inside(this.cardRects[i], input.mouse.x, input.mouse.y)) continue;
+      this.hoverCard = i;
+      if (input.mouse.clicked) this.selectArc(i);
     }
+
     if (input.mouse.clicked && inside(this.startRect, input.mouse.x, input.mouse.y)) {
       this.start();
       return;
@@ -167,106 +210,131 @@ export class CharacterSelectScene implements Scene {
       return;
     }
 
-    if (input.pressed('confirm') || input.pressed('attack')) {
-      this.start();
-    }
+    if (input.pressed('confirm') || input.pressed('attack')) this.start();
   }
 
   draw(ctx: CanvasRenderingContext2D): void {
     const { width } = this.game;
     const stage = getStage(this.stageId);
     const def = CHARACTERS[this.selectedId];
-    const unlocked = this.selectedUnlocked;
-    const accent = unlocked ? def.colors.accent : '#7c8399';
+    const heroUnlocked = this.selectedUnlocked;
+    const canStart = heroUnlocked && this.stageId <= this.maxStage;
+    const accent = heroUnlocked ? def.colors.accent : '#7c8399';
     const scroll = (stage.width - width) * 0.22;
 
     drawStageBackground(ctx, stage, scroll, this.t);
-    ctx.fillStyle = 'rgba(3,4,9,0.72)';
+    ctx.fillStyle = 'rgba(3,4,9,0.68)';
     ctx.fillRect(0, 0, width, this.game.height);
     const topFade = ctx.createLinearGradient(0, 0, 0, 180);
-    topFade.addColorStop(0, 'rgba(3,4,9,0.92)');
+    topFade.addColorStop(0, 'rgba(3,4,9,0.94)');
     topFade.addColorStop(1, 'rgba(3,4,9,0)');
     ctx.fillStyle = topFade;
     ctx.fillRect(0, 0, width, 180);
 
-    // Cabeçalho.
-    label(ctx, 'DESPERTOS', 82, 56, 38, '#f2f5ff', {
+    // ------------------------------------------------------------ cabeçalho
+    label(ctx, 'DESPERTOS & ARCOS', 82, 54, 34, '#f2f5ff', {
       weight: 800,
-      spacing: 6,
+      spacing: 5,
       glow: 'rgba(180,139,255,0.35)',
     });
-    label(ctx, 'ESCOLHA QUEM VAI ENCARAR O VÉU', 82, 76, 10, 'rgba(190,198,220,0.55)', {
+    label(ctx, 'SEIS HISTÓRIAS · TRINTA E SEIS CAPÍTULOS · UM VÉU FAMINTO', 82, 75, 9.5, 'rgba(190,198,220,0.66)', {
       font: FONTS.mono,
-      spacing: 1.5,
+      spacing: 1.35,
     });
-    label(ctx, `FASE ${ROMAN[this.stageId - 1]} · ${stage.name.toUpperCase()}`, width - 82, 50, 16, hexToRgba(stage.palette.accent, 0.95), {
+
+    label(ctx, `ARCO ${STAGE_ROMAN[stage.arc - 1]} · CAP. ${stage.chapter} / ${CHAPTERS_PER_ARC}`, width - 82, 46, 16, hexToRgba(stage.palette.accent, 0.95), {
       align: 'right',
       weight: 700,
       spacing: 2,
     });
-    label(ctx, stage.location.toUpperCase(), width - 82, 70, 9.5, 'rgba(190,198,220,0.5)', {
+    label(ctx, fitText(ctx, stage.name.toUpperCase(), 540, 11.5, FONTS.mono), width - 82, 66, 11.5, 'rgba(235,239,250,0.84)', {
       align: 'right',
       font: FONTS.mono,
-      spacing: 1,
+      weight: 600,
+      spacing: 1.1,
+    });
+    label(ctx, fitText(ctx, stage.location.toUpperCase(), 540, 9, FONTS.mono), width - 82, 84, 9, 'rgba(190,198,220,0.6)', {
+      align: 'right',
+      font: FONTS.mono,
+      spacing: 0.9,
     });
 
-    // Abas de fase.
+    // ------------------------------------------------------------ abas de capítulo
     this.stageRects = [];
-    const tabY = 92;
+    const arcStages = getArcStages(stage.arc);
     const tabW = 176;
     const tabGap = 10;
-    for (let i = 0; i < STAGES.length; i++) {
-      const x = 82 + i * (tabW + tabGap);
-      const r: Box = { x, y: tabY, w: tabW, h: 38 };
+    const tabY = 100;
+    const tabX = 87;
+    arcStages.forEach((chapter, i) => {
+      const x = tabX + i * (tabW + tabGap);
+      const r: Box = { x, y: tabY, w: tabW, h: 34 };
       this.stageRects.push(r);
-      const available = i + 1 <= this.game.save.maxStage;
-      const active = i + 1 === this.stageId;
+      const available = chapter.id <= this.maxStage;
+      const active = chapter.id === this.stageId;
+      const hovered = i === this.hoverChapter;
       ctx.save();
       ctx.fillStyle = active
-        ? hexToRgba(STAGES[i].palette.accent, 0.2)
+        ? hexToRgba(chapter.palette.accent, 0.22)
         : available
-          ? 'rgba(255,255,255,0.045)'
-          : 'rgba(255,255,255,0.015)';
-      roundRectPath(ctx, x, tabY, tabW, 38, 3);
+          ? 'rgba(255,255,255,0.07)'
+          : 'rgba(255,255,255,0.025)';
+      roundRectPath(ctx, x, tabY, tabW, 34, 3);
       ctx.fill();
       ctx.strokeStyle = active
-        ? hexToRgba(STAGES[i].palette.accent, 0.8)
-        : available
-          ? 'rgba(255,255,255,0.13)'
-          : 'rgba(255,255,255,0.04)';
-      ctx.lineWidth = 1;
+        ? hexToRgba(chapter.palette.accent, 0.85)
+        : hovered
+          ? 'rgba(255,255,255,0.24)'
+          : available
+            ? 'rgba(255,255,255,0.13)'
+            : 'rgba(255,255,255,0.04)';
+      ctx.lineWidth = active ? 1.5 : 1;
       ctx.stroke();
       ctx.restore();
-      label(ctx, `${ROMAN[i]}`, x + 14, tabY + 24, 15, active ? '#ffffff' : available ? 'rgba(220,226,242,0.7)' : 'rgba(160,168,190,0.25)', {
+      label(ctx, STAGE_ROMAN[i], x + 13, tabY + 22, 14, active ? '#ffffff' : available ? 'rgba(220,226,242,0.72)' : 'rgba(160,168,190,0.25)', {
         weight: 800,
         font: FONTS.mono,
       });
-      label(ctx, STAGES[i].name.toUpperCase(), x + 40, tabY + 23, 10, active ? hexToRgba(STAGES[i].palette.accent, 0.95) : available ? 'rgba(200,208,228,0.55)' : 'rgba(160,168,190,0.22)', {
-        weight: 600,
-        spacing: 0.6,
-      });
-      if (!available) {
-        label(ctx, '—', x + tabW - 14, tabY + 23, 12, 'rgba(160,168,190,0.3)', { align: 'right', font: FONTS.mono });
+      label(
+        ctx,
+        fitText(ctx, chapter.name.toUpperCase(), tabW - 58, 9.5),
+        x + 37,
+        tabY + 21,
+        9.5,
+        active ? hexToRgba(chapter.palette.accent, 0.98) : available ? 'rgba(210,218,236,0.74)' : 'rgba(160,168,190,0.24)',
+        { weight: 600, spacing: 0.5 },
+      );
+      if (chapter.boss) {
+        label(ctx, '◆', x + tabW - 12, tabY + 21, 9, available ? hexToRgba(chapter.palette.accent, 0.7) : 'rgba(160,168,190,0.2)', {
+          align: 'right',
+          font: FONTS.mono,
+        });
+      } else if (!available) {
+        label(ctx, '—', x + tabW - 12, tabY + 21, 9, 'rgba(160,168,190,0.3)', { align: 'right', font: FONTS.mono });
       }
-    }
+    });
 
-    // Cartões.
+    // ------------------------------------------------------------ cartões de arco
     this.cardRects = [];
-    const cardY = 144;
     const cardW = 176;
-    const cardH = 214;
+    const cardGap = 10;
+    const cardY = 146;
+    const cardH = 188;
+    const cardX = 87;
     CHARACTER_ORDER.forEach((id, i) => {
       const c = CHARACTERS[id];
-      const x = 82 + i * (cardW + 10);
+      const x = cardX + i * (cardW + cardGap);
       const r: Box = { x, y: cardY, w: cardW, h: cardH };
       this.cardRects.push(r);
       const selected = i === this.charIndex;
       const isUnlocked = this.game.save.unlocked.includes(id);
       const hovered = i === this.hoverCard;
       const col = isUnlocked ? c.colors.accent : '#4d5366';
+      const arc = i + 1;
+      const clearedInArc = getArcStages(arc).filter((s) => this.game.save.cleared.includes(s.id)).length;
 
       ctx.save();
-      ctx.fillStyle = selected ? hexToRgba(col, 0.13) : 'rgba(8,10,20,0.62)';
+      ctx.fillStyle = selected ? hexToRgba(col, 0.16) : 'rgba(8,10,20,0.55)';
       roundRectPath(ctx, x, cardY, cardW, cardH, 6);
       ctx.fill();
       if (selected) {
@@ -279,33 +347,37 @@ export class CharacterSelectScene implements Scene {
       ctx.stroke();
       ctx.restore();
 
-      // Selo de fase.
-      label(ctx, `FASE ${ROMAN[c.stage - 1]}`, x + 12, cardY + 19, 8.5, isUnlocked ? hexToRgba(col, 0.7) : 'rgba(160,168,190,0.28)', {
+      label(ctx, `ARCO ${STAGE_ROMAN[i]}`, x + 12, cardY + 19, 8.5, isUnlocked ? hexToRgba(col, 0.7) : 'rgba(160,168,190,0.28)', {
         font: FONTS.mono,
         spacing: 1.2,
       });
+      label(ctx, isUnlocked ? `${clearedInArc} / ${CHAPTERS_PER_ARC}` : 'SELADO', x + cardW - 12, cardY + 19, 8.5, isUnlocked ? 'rgba(200,208,228,0.68)' : 'rgba(255,106,122,0.5)', {
+        align: 'right',
+        font: FONTS.mono,
+        spacing: 0.9,
+      });
 
       if (isUnlocked) {
-        glow(ctx, x + cardW / 2, cardY + 96, 84, c.colors.aura, selected ? 0.18 : 0.08);
-        drawCharacterPortrait(ctx, c, x + cardW / 2, cardY + 96, 100, this.t, false);
+        glow(ctx, x + cardW / 2, cardY + 86, 80, c.colors.aura, selected ? 0.18 : 0.08);
+        drawCharacterPortrait(ctx, c, x + cardW / 2, cardY + 88, 96, this.t, false);
       } else {
-        drawCharacterSilhouette(ctx, id, x + cardW / 2, cardY + 146, 0.72, '#181a24');
-        label(ctx, 'SELADO', x + cardW / 2, cardY + 176, 10, 'rgba(170,178,200,0.42)', {
+        drawCharacterSilhouette(ctx, id, x + cardW / 2, cardY + 136, 0.72, '#181a24');
+        label(ctx, 'SELADO', x + cardW / 2, cardY + 96, 9, 'rgba(170,178,200,0.4)', {
           align: 'center',
           font: FONTS.mono,
           spacing: 2,
         });
       }
 
-      label(ctx, c.name.toUpperCase(), x + cardW / 2, cardY + 178, 19, isUnlocked ? '#f2f5ff' : 'rgba(170,178,200,0.4)', {
+      label(ctx, c.name.toUpperCase(), x + cardW / 2, cardY + 158, 18, isUnlocked ? '#f2f5ff' : 'rgba(170,178,200,0.4)', {
         align: 'center',
         weight: 800,
-        spacing: 1.8,
+        spacing: 1.6,
       });
-      label(ctx, c.epithet.toUpperCase(), x + cardW / 2, cardY + 196, 9.5, isUnlocked ? hexToRgba(col, 0.85) : 'rgba(170,178,200,0.28)', {
+      label(ctx, c.epithet.toUpperCase(), x + cardW / 2, cardY + 176, 9, isUnlocked ? hexToRgba(col, 0.85) : 'rgba(170,178,200,0.28)', {
         align: 'center',
         font: FONTS.mono,
-        spacing: 1.3,
+        spacing: 1.2,
       });
 
       if (selected) {
@@ -314,67 +386,103 @@ export class CharacterSelectScene implements Scene {
       }
     });
 
-    // Painel de detalhes.
-    panel(ctx, 82, 374, 1116, 268, {
-      fill: 'rgba(4,6,14,0.82)',
+    // ------------------------------------------------------------ painel de detalhes
+    panel(ctx, 82, 348, 1116, 294, {
+      fill: 'rgba(4,6,14,0.8)',
       border: hexToRgba(accent, 0.3),
       glow: hexToRgba(accent, 0.12),
       cut: 16,
     });
     ctx.fillStyle = hexToRgba(accent, 0.55);
-    ctx.fillRect(82, 374, 2, 268);
+    ctx.fillRect(82, 348, 2, 294);
 
     // Retrato grande.
-    const px = 202;
-    const py = 508;
-    if (unlocked) {
-      glow(ctx, px, py, 138, def.colors.aura, 0.16 + Math.sin(this.t * 2) * 0.03);
-      drawCharacterPortrait(ctx, def, px, py, 190, this.t, false);
+    const px = 200;
+    const py = 494;
+    if (heroUnlocked) {
+      glow(ctx, px, py, 128, def.colors.aura, 0.16 + Math.sin(this.t * 2) * 0.03);
+      drawCharacterPortrait(ctx, def, px, py, 168, this.t, false);
     } else {
-      glow(ctx, px, py, 130, '#5b6072', 0.08);
-      drawCharacterSilhouette(ctx, this.selectedId, px, py + 86, 1.25, '#141620');
-      label(ctx, 'SELADO', px, py + 118, 13, 'rgba(170,178,200,0.4)', {
+      glow(ctx, px, py, 122, '#5b6072', 0.08);
+      drawCharacterSilhouette(ctx, this.selectedId, px, py + 70, 1.15, '#141620');
+      label(ctx, 'SELADO', px, py + 102, 12, 'rgba(170,178,200,0.4)', {
         align: 'center',
         font: FONTS.mono,
         spacing: 3,
       });
     }
 
-    // Identidade.
-    label(ctx, def.name.toUpperCase(), 312, 420, 33, unlocked ? '#f2f5ff' : 'rgba(200,206,224,0.45)', {
+    // Identidade e lore.
+    label(ctx, def.name.toUpperCase(), 308, 392, 31, heroUnlocked ? '#f2f5ff' : 'rgba(200,206,224,0.45)', {
       weight: 800,
       spacing: 2,
-      glow: unlocked ? hexToRgba(accent, 0.3) : undefined,
+      glow: heroUnlocked ? hexToRgba(accent, 0.3) : undefined,
     });
-    label(ctx, `${def.epithet.toUpperCase()} · ${def.gender.toUpperCase()}`, 313, 442, 10, unlocked ? hexToRgba(accent, 0.9) : 'rgba(170,178,200,0.3)', {
+    label(ctx, fitText(ctx, `${def.epithet.toUpperCase()} · ${def.gender.toUpperCase()}`, 292, 9.5, FONTS.mono), 309, 414, 9.5, heroUnlocked ? hexToRgba(accent, 0.9) : 'rgba(170,178,200,0.3)', {
       font: FONTS.mono,
-      spacing: 1,
+      spacing: 0.9,
     });
-    label(ctx, def.origin, 313, 464, 12, 'rgba(215,221,238,0.72)');
-    label(ctx, `${def.combat} · ${def.style}`, 313, 482, 11, 'rgba(170,178,200,0.55)');
+    label(ctx, fitText(ctx, def.origin, 292, 11.5), 309, 436, 11.5, 'rgba(215,221,238,0.82)');
+    label(ctx, fitText(ctx, `${def.combat} · ${def.style}`, 292, 10.5), 309, 454, 10.5, 'rgba(180,188,208,0.66)');
+    wrapped(ctx, def.lore[0] ?? '', 309, 474, 292, 13, 10.5, 'rgba(205,212,230,0.68)', 3);
 
-    if (unlocked) {
-      label(ctx, `HABILIDADE · ${def.ability.name.toUpperCase()}`, 313, 514, 9.5, hexToRgba(accent, 0.95), {
+    if (heroUnlocked) {
+      label(ctx, `HABILIDADE · ${def.ability.name.toUpperCase()}`, 309, 516, 9.2, hexToRgba(accent, 0.95), {
         font: FONTS.mono,
-        spacing: 1.2,
+        spacing: 1.1,
       });
-      wrapped(ctx, def.ability.desc, 313, 532, 360, 15, 11.5, 'rgba(205,212,230,0.68)', 3);
-      label(ctx, def.ability.hint, 313, 588, 10, 'rgba(255,255,255,0.45)', { font: FONTS.mono });
-      label(ctx, `PASSIVA · ${def.passive.name.toUpperCase()}`, 313, 610, 9.5, '#ffe6a3', {
+      wrapped(ctx, def.ability.desc, 309, 532, 292, 13, 10.5, 'rgba(205,212,230,0.68)', 2);
+      label(ctx, def.ability.hint, 309, 568, 9.2, 'rgba(255,255,255,0.45)', { font: FONTS.mono });
+      label(ctx, `PASSIVA · ${def.passive.name.toUpperCase()}`, 309, 590, 9.2, '#ffe6a3', {
         font: FONTS.mono,
-        spacing: 1.2,
+        spacing: 1.1,
       });
-      wrapped(ctx, def.passive.desc, 313, 625, 360, 13, 10.5, 'rgba(205,212,230,0.58)', 1);
+      wrapped(ctx, def.passive.desc, 309, 604, 292, 12, 10, 'rgba(205,212,230,0.58)', 2);
     } else {
-      label(ctx, 'MEMÓRIA AINDA NÃO DESPERTA', 313, 516, 11, 'rgba(170,178,200,0.4)', { font: FONTS.mono, spacing: 1 });
-      wrapped(ctx, `Conclua a Fase ${ROMAN[def.stage - 1]} para desbloquear ${def.name}.`, 313, 542, 360, 18, 14, 'rgba(215,221,238,0.65)', 2);
-      label(ctx, `“${def.lore[0]}”`, 313, 590, 11.5, 'rgba(205,212,230,0.4)', { font: FONTS.ui });
+      const unlockArc = Math.ceil(stage.id / CHAPTERS_PER_ARC);
+      label(ctx, 'MEMÓRIA AINDA NÃO DESPERTA', 309, 516, 10.5, 'rgba(170,178,200,0.45)', { font: FONTS.mono, spacing: 1 });
+      wrapped(ctx, `Conclua o Capítulo ${Math.max(1, arcFirstStage(unlockArc) - 1)} para despertar ${def.name}.`, 309, 542, 292, 17, 14, 'rgba(215,221,238,0.65)', 2);
+      wrapped(ctx, `“${def.lore[0] ?? ''}”`, 309, 588, 292, 14, 11, 'rgba(205,212,230,0.4)', 3);
     }
 
-    // Atributos.
-    const statX = 712;
-    const statW = 280;
-    label(ctx, 'ATRIBUTOS', statX, 420, 9.5, 'rgba(255,230,163,0.75)', { font: FONTS.mono, spacing: 1.6 });
+    // Centro: capítulo, sinopse, motivo e guardião/chefe.
+    const infoX = 618;
+    const infoW = 280;
+    label(ctx, `CAPÍTULO ${stage.chapter} / ${CHAPTERS_PER_ARC}`, infoX, 392, 9.2, 'rgba(255,230,163,0.8)', {
+      font: FONTS.mono,
+      spacing: 1.5,
+    });
+    label(ctx, stage.name.toUpperCase(), infoX, 416, 17, '#f2f5ff', {
+      weight: 800,
+      spacing: 1.2,
+      glow: hexToRgba(stage.palette.accent, 0.28),
+    });
+    label(ctx, stage.location.toUpperCase(), infoX, 434, 8.8, 'rgba(190,198,220,0.62)', {
+      font: FONTS.mono,
+      spacing: 0.8,
+    });
+    wrapped(ctx, stage.synopsis, infoX, 456, infoW, 14, 10.5, 'rgba(215,221,238,0.76)', 3);
+    label(ctx, 'MOTIVO', infoX, 516, 9, hexToRgba(stage.palette.accent, 0.8), {
+      font: FONTS.mono,
+      spacing: 1.4,
+    });
+    wrapped(ctx, stage.motive, infoX, 530, infoW, 14, 10.5, 'rgba(235,239,250,0.84)', 3);
+
+    const boss = stage.boss ? BOSSES[stage.boss] : null;
+    label(ctx, boss ? 'CHEFE DO PLANETA' : 'GUARDIÃO DO CAPÍTULO', infoX, 588, 9, boss ? '#ff8a9a' : 'rgba(255,230,163,0.75)', {
+      font: FONTS.mono,
+      spacing: 1.3,
+    });
+    if (boss) {
+      wrapped(ctx, `${boss.name} — ${boss.title}`, infoX, 602, infoW, 14, 10.5, 'rgba(230,234,245,0.8)', 2);
+    } else {
+      wrapped(ctx, `${stage.eliteName} — elite no fim do capítulo`, infoX, 602, infoW, 14, 10.5, 'rgba(230,234,245,0.76)', 2);
+    }
+
+    // Direita: atributos, dificuldade e progresso.
+    const statX = 920;
+    const statW = 270;
+    label(ctx, 'ATRIBUTOS', statX, 392, 9.2, 'rgba(255,230,163,0.75)', { font: FONTS.mono, spacing: 1.5 });
     const stats: [string, number, string][] = [
       ['VIDA', def.maxHp / 160, '#ff6a7a'],
       ['VELOCIDADE', def.speed / 290, '#56e3ff'],
@@ -382,82 +490,89 @@ export class CharacterSelectScene implements Scene {
       ['PESO', def.weight / 1.6, '#ffae5a'],
     ];
     stats.forEach(([name, value, color], i) => {
-      const y = 440 + i * 24;
-      label(ctx, name, statX, y + 8, 9, 'rgba(190,198,220,0.55)', { font: FONTS.mono, spacing: 0.9 });
-      bar(ctx, statX + 90, y, statW - 90, 7, clamp(value, 0, 1), color, 'rgba(255,255,255,0.06)');
-      label(ctx, `${Math.round(clamp(value, 0, 1) * 100)}`, statX + statW, y + 8, 9, hexToRgba(color, 0.75), {
+      const y = 410 + i * 24;
+      label(ctx, name, statX, y + 8, 8.8, 'rgba(190,198,220,0.66)', { font: FONTS.mono, spacing: 0.8 });
+      bar(ctx, statX + 90, y, statW - 96, 7, clamp(value, 0, 1), color, 'rgba(255,255,255,0.06)');
+      label(ctx, `${Math.round(clamp(value, 0, 1) * 100)}`, statX + statW - 6, y + 8, 8.8, hexToRgba(color, 0.75), {
         align: 'right',
         font: FONTS.mono,
       });
     });
-
-    // Estilo de combate / chefe.
-    const boss = BOSSES[stage.boss];
-    label(ctx, 'CHEFE DA FASE', statX, 554, 9, hexToRgba(stage.palette.accent, 0.75), { font: FONTS.mono, spacing: 1.4 });
-    wrapped(ctx, `${boss.name} — ${boss.title}`, statX, 572, 286, 14, 11.5, 'rgba(230,234,245,0.7)', 2);
-    label(ctx, `DIFICULDADE ${'◆'.repeat(Math.round(stage.difficulty * 3))}`, statX, 612, 9, 'rgba(170,178,200,0.45)', {
+    label(ctx, `DIFICULDADE ${'◆'.repeat(clamp(Math.round(stage.difficulty * 3), 1, 8))}`, statX, 510, 8.8, 'rgba(170,178,200,0.62)', {
+      font: FONTS.mono,
+      spacing: 0.8,
+    });
+    label(ctx, `CAPÍTULO ${stage.id} / ${MAX_STAGE}`, statX, 528, 8.8, 'rgba(170,178,200,0.54)', {
       font: FONTS.mono,
       spacing: 0.8,
     });
 
     // Botão iniciar.
-    this.startRect = { x: 1020, y: 520, w: 156, h: 58 };
-    const canStart = unlocked;
+    this.startRect = { x: 974, y: 548, w: 170, h: 52 };
     ctx.save();
     if (canStart) {
-      const g = ctx.createLinearGradient(1020, 520, 1176, 578);
-      g.addColorStop(0, hexToRgba(accent, 0.85));
-      g.addColorStop(1, hexToRgba(accent, 0.35));
+      const g = ctx.createLinearGradient(this.startRect.x, this.startRect.y, this.startRect.x + this.startRect.w, this.startRect.y + this.startRect.h);
+      g.addColorStop(0, hexToRgba(accent, 0.88));
+      g.addColorStop(1, hexToRgba(accent, 0.38));
       ctx.fillStyle = g;
       ctx.shadowColor = hexToRgba(accent, 0.7);
       ctx.shadowBlur = 20;
     } else {
       ctx.fillStyle = 'rgba(90,96,116,0.25)';
     }
-    roundRectPath(ctx, 1020, 520, 156, 58, 4);
+    roundRectPath(ctx, this.startRect.x, this.startRect.y, this.startRect.w, this.startRect.h, 4);
     ctx.fill();
     ctx.restore();
-    label(ctx, 'INICIAR', 1098, 548, 18, canStart ? '#0b0910' : 'rgba(180,188,208,0.4)', {
+    label(ctx, canStart ? 'INICIAR' : 'SELADO', this.startRect.x + this.startRect.w / 2, this.startRect.y + 24, 17, canStart ? '#0b0910' : 'rgba(180,188,208,0.4)', {
       align: 'center',
       weight: 800,
-      spacing: 2.4,
+      spacing: 2.2,
     });
-    label(ctx, 'ENTER', 1098, 566, 8.5, canStart ? 'rgba(10,8,14,0.65)' : 'rgba(180,188,208,0.25)', {
+    label(ctx, canStart ? 'ENTER' : `CAP. ${this.maxStage}`, this.startRect.x + this.startRect.w / 2, this.startRect.y + 42, 8.3, canStart ? 'rgba(10,8,14,0.65)' : 'rgba(180,188,208,0.25)', {
       align: 'center',
       font: FONTS.mono,
-      spacing: 1.5,
+      spacing: 1.3,
     });
 
     // Voltar.
-    this.backRect = { x: 1020, y: 596, w: 156, h: 30 };
+    this.backRect = { x: 974, y: 610, w: 170, h: 24 };
     ctx.save();
     ctx.strokeStyle = 'rgba(255,255,255,0.14)';
     ctx.lineWidth = 1;
-    roundRectPath(ctx, 1020, 596, 156, 30, 3);
+    roundRectPath(ctx, this.backRect.x, this.backRect.y, this.backRect.w, this.backRect.h, 3);
     ctx.stroke();
     ctx.restore();
-    label(ctx, 'VOLTAR · ESC', 1098, 616, 9.5, 'rgba(190,198,220,0.55)', {
+    label(ctx, 'VOLTAR · ESC', this.backRect.x + this.backRect.w / 2, 626, 9, 'rgba(190,198,220,0.55)', {
       align: 'center',
       font: FONTS.mono,
-      spacing: 1.2,
+      spacing: 1.1,
     });
 
     // Rodapé.
-    label(ctx, '← → DESPERTOS   ↑ ↓ FASE   ENTER INICIAR   ESC VOLTAR', 82, 688, 10, 'rgba(190,198,220,0.42)', {
+    label(ctx, '← → ARCOS   ↑ ↓ CAPÍTULOS   ENTER INICIAR   ESC VOLTAR', 82, 688, 9.5, 'rgba(190,198,220,0.54)', {
       font: FONTS.mono,
-      spacing: 1.2,
+      spacing: 1.1,
     });
-    label(ctx, `${this.game.save.unlocked.length} / 6 DESPERTOS DESPERTOS`, width - 82, 688, 9.5, 'rgba(160,168,190,0.35)', {
-      align: 'right',
-      font: FONTS.mono,
-      spacing: 1,
-    });
+    const arcsDone = Array.from({ length: ARC_COUNT }, (_, i) => i + 1).filter((arc) =>
+      getArcStages(arc).every((chapter) => this.game.save.cleared.includes(chapter.id)),
+    ).length;
+    label(
+      ctx,
+      `${this.game.save.cleared.length} / ${MAX_STAGE} CAP. · ${arcsDone} / ${ARC_COUNT} ARCOS · ${this.game.save.unlocked.length} / 6 DESPERTOS`,
+      width - 82,
+      688,
+      9,
+      'rgba(160,168,190,0.48)',
+      { align: 'right', font: FONTS.mono, spacing: 0.8 },
+    );
 
-    // Selo de seleção.
-    if (!unlocked) {
-      label(ctx, 'CONCLUA A FASE ANTERIOR PARA DESPERTAR ESTE HERÓI', 82, 662, 9.5, 'rgba(255,106,122,0.5)', {
+    if (!canStart) {
+      const message = !heroUnlocked
+        ? `SELADO — CONCLUA O CAP. ${this.maxStage} PARA DESPERTAR ${def.name.toUpperCase()}`
+        : `SELADO — CONCLUA O CAP. ${this.maxStage} PARA LIBERAR ESTE CAPÍTULO`;
+      label(ctx, message, 82, 662, 9.3, 'rgba(255,106,122,0.66)', {
         font: FONTS.mono,
-        spacing: 1,
+        spacing: 0.9,
       });
     }
   }

@@ -1,6 +1,6 @@
 /** Tela-título: o Nexus observa enquanto o jogador escolhe o caminho. */
 import { CHARACTER_ORDER, CHARACTERS } from '../data/characters.js';
-import { getStage } from '../data/stages.js';
+import { ARC_COUNT, getArcStages, getStage, MAX_STAGE } from '../data/stages.js';
 import { TITLE_QUOTE } from '../data/story.js';
 import { hexToRgba } from '../core/math.js';
 import { drawTitleBackground } from '../render/backgrounds.js';
@@ -16,24 +16,24 @@ export class TitleScene {
         this.buildMenu();
     }
     enter() {
-        this.game.audio.playMusic(5);
+        this.game.audio.playMusic(35);
+        this.game.audio.playAmbience('cosmic');
         this.buildMenu();
     }
     buildMenu() {
         const save = this.game.save;
         const stage = getStage(save.maxStage);
         const hasProgress = save.cleared.length > 0;
-        const continueLabel = hasProgress ? `CONTINUAR · FASE ${['I', 'II', 'III', 'IV', 'V', 'VI'][stage.id - 1]}` : 'CONTINUAR';
         this.menu.setItems([
-            { id: 'new', label: 'NOVO JOGO', detail: 'FASE I', accent: '#ff8a3d' },
+            { id: 'new', label: 'NOVO JOGO', detail: 'ARCO I · CAP. 1', accent: '#ff8a3d' },
             {
                 id: 'continue',
-                label: continueLabel,
-                detail: `${stage.name.toUpperCase()}`,
+                label: 'CONTINUAR',
+                detail: hasProgress ? stage.subtitle.toUpperCase() : undefined,
                 disabled: !hasProgress,
                 accent: '#56e3ff',
             },
-            { id: 'select', label: 'DESPERTOS & FASES', detail: 'ARQUIVO', accent: '#b48bff' },
+            { id: 'select', label: 'DESPERTOS & ARCOS', detail: '36 CAPÍTULOS', accent: '#b48bff' },
             { id: 'credits', label: 'CRÉDITOS', detail: 'O VÉU', accent: '#ffe6a3' },
         ]);
     }
@@ -121,7 +121,7 @@ export class TitleScene {
         // Estatísticas do arquivo.
         const save = this.game.save;
         const sx = 930;
-        const sy = 528;
+        const sy = 470;
         panel(ctx, sx, sy, 300, 106, {
             fill: 'rgba(5,8,16,0.6)',
             border: 'rgba(180,139,255,0.25)',
@@ -132,15 +132,20 @@ export class TitleScene {
             font: FONTS.mono,
             spacing: 1.6,
         });
-        label(ctx, `FASES SELADAS  ${save.cleared.length} / 6`, sx + 18, sy + 47, 12, 'rgba(225,230,242,0.8)', {
+        const arcsDone = Array.from({ length: ARC_COUNT }, (_, index) => index + 1).filter((arc) => getArcStages(arc).every((chapter) => save.cleared.includes(chapter.id))).length;
+        label(ctx, `CAPÍTULOS  ${save.cleared.length} / ${MAX_STAGE}`, sx + 18, sy + 47, 11, 'rgba(225,230,242,0.8)', {
             font: FONTS.mono,
             spacing: 0.8,
         });
-        label(ctx, `ABATES  ${String(save.kills).padStart(4, '0')}`, sx + 18, sy + 66, 12, 'rgba(225,230,242,0.8)', {
+        label(ctx, `ARCOS  ${arcsDone} / ${ARC_COUNT}`, sx + 18, sy + 64, 11, 'rgba(225,230,242,0.8)', {
             font: FONTS.mono,
             spacing: 0.8,
         });
-        label(ctx, `MELHOR COMBO  ${String(save.bestCombo).padStart(3, '0')}`, sx + 18, sy + 85, 12, 'rgba(225,230,242,0.8)', {
+        label(ctx, `ABATES  ${String(save.kills).padStart(4, '0')}`, sx + 18, sy + 81, 11, 'rgba(225,230,242,0.8)', {
+            font: FONTS.mono,
+            spacing: 0.8,
+        });
+        label(ctx, `MELHOR COMBO  ${String(save.bestCombo).padStart(3, '0')}`, sx + 18, sy + 98, 11, 'rgba(225,230,242,0.8)', {
             font: FONTS.mono,
             spacing: 0.8,
         });

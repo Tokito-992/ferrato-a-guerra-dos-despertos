@@ -11,8 +11,10 @@ export const CHARACTERS = {
         combat: 'Acrobático Elétrico',
         style: 'Mobilidade e combos rápidos',
         lore: [
-            'Impulsivo, otimista e teimoso. Protege os outros antes mesmo de entender o que está acontecendo.',
-            'O Ferrato acendeu a bioeletricidade em seu sangue. Quanto mais rápido ele luta, mais forte fica.',
+            'Entregador de pizza em New Haven. Impulsivo, otimista e teimoso: protege os outros antes mesmo de entender o que está acontecendo.',
+            'Cresceu ouvindo Dona Célia, sua mãe, dizer que comida quente resolve quase tudo. A pizza que carregava virou símbolo de tudo o que ele quer salvar.',
+            'O Ferrato acendeu a bioeletricidade em seu sangue. Quanto mais rápido luta, mais forte fica — mas a pressa também cobra seu preço.',
+            'Depois de perder um vizinho no metrô, prometeu nunca mais correr sem olhar para trás. A culpa é o motor silencioso do seu ritmo.',
         ],
         colors: {
             primary: '#ff8a3d',
@@ -54,8 +56,10 @@ export const CHARACTERS = {
         combat: 'Tank Ofensivo',
         style: 'Corpo a corpo pesado e geotérmico',
         lore: [
-            'Pragmática, estoica e durona. Guarda a gentileza para civis e para os mais jovens do grupo.',
-            'As queimaduras do braço esquerdo brilham em magma. O calor que ela acumula vira arma.',
+            'Ex-bombeira voluntária de New Haven. Pragmática, estoica e durona; guarda a gentileza para civis e para os mais jovens do grupo.',
+            'Liderou 43 sobreviventes pela Rodovia dos Imortais. Carrega o capacete do Capitão Duarte e o nome de cada pessoa que não conseguiu salvar.',
+            'As queimaduras do braço esquerdo brilham em magma. O calor que acumula vira arma, e o medo de perder o controle, combustível.',
+            'Entrou no fogo quando todos corriam para fora. Agora entra no Ferrato pelo mesmo motivo: alguém precisa abrir a porta.',
         ],
         colors: {
             primary: '#c9412f',
@@ -93,12 +97,14 @@ export const CHARACTERS = {
         stage: 3,
         gender: 'Não-binário',
         sexuality: 'Heterossexual',
-        origin: 'Técnico aeroespacial da antiga iniciativa terrestre',
+        origin: 'Manutenção aeroespacial da antiga iniciativa terrestre',
         combat: 'Zoner Gravitacional',
         style: 'Controle de campo e mobilidade gravitacional',
         lore: [
-            'Reservado, analítico e sarcástico. Demonstra afeto consertando as coisas dos outros.',
+            'Cresceu no orfanato da Plataforma Amanhecer. De temperamento reservado, analítico e sarcástico, demonstra afeto consertando as coisas dos outros.',
+            'A Dra. Sora, sua mentora, ficou em SOLACE para selar o núcleo. Kael carrega o último registro dela como uma promessa e uma acusação.',
             'Manipula a gravidade ao redor do corpo: flutua, dobra o espaço curto e esmaga com singularidades.',
+            'Consertar o universo, para Kael, é apenas um problema de engenharia maior — e ninguém mais qualificado para tentar.',
         ],
         colors: {
             primary: '#7f6bff',
@@ -140,8 +146,10 @@ export const CHARACTERS = {
         combat: 'Híbrido Vampírico',
         style: 'Foice, alcance médio e drenagem de vida',
         lore: [
-            'Melancólico, honorável e rígido. Carrega culpa pelas almas que não conseguiu salvar.',
+            'Ex-Carrasco Infernal do Abismo Rubro. Melancólico, honorável e rígido, carrega culpa pelas almas que não conseguiu salvar.',
+            'No Tribunal de Ossos, recusou-se a corromper uma criança que protegera o irmão. O Barão Acheron o acorrentou no Poço das Correntes por isso.',
             'Suas chamas negras não queimam carne: queimam corrupção. A foice bebe a vida de quem a merece.',
+            'Agora mede justiça pelos próprios erros. Não busca perdão; busca impedir que outra pessoa seja julgada pelo medo.',
         ],
         colors: {
             primary: '#8a2030',
@@ -183,8 +191,10 @@ export const CHARACTERS = {
         combat: 'Duelista Sagrada',
         style: 'Precisão, contra-ataques e selamento',
         lore: [
-            'Idealista, compassiva e teimosa. É a voz da esperança em um exército de cínicos.',
+            'Aprendiz da Ordem da Aurora. Idealista, compassiva e teimosa; é a voz da esperança em um exército de cínicos.',
+            'Quebrou o voto de nunca lutar para salvar os noviços quando a Eclésia caiu. A Mestra Aurélia e o irmão Lucien foram as primeiras perdas.',
             'Sua lâmina carrega luz estelar. Em vez de purificar, ela sela a corrupção para que não volte.',
+            'Aprendeu que fé sem proteção é vazio. Luta para abrir espaço para o céu respirar — e para que ninguém mais precise ser sacrificado.',
         ],
         colors: {
             primary: '#f5e2b0',
@@ -210,7 +220,7 @@ export const CHARACTERS = {
         },
         passive: {
             name: 'Contra-ataque',
-            desc: 'O dash concede lampejo: o próximo golpe é crítico. K assume postura de contra-ataque.',
+            desc: 'O dash concede lampejo: o próximo golpe é crítico. A lâmina assume postura de contra-ataque.',
         },
         meter: 'GRAÇA DA AURORA',
         comboName: 'Sentença Celeste',
@@ -220,14 +230,16 @@ export const CHARACTERS = {
         name: 'Thryc',
         epithet: 'Eco',
         stage: 6,
-        gender: 'Agênero (pronomes neutros)',
+        gender: 'Agênero (elu/delu)',
         sexuality: 'Heterossexual',
         origin: 'Eco do Nexus Primordial',
         combat: 'Manipulador do Nexus',
         style: 'Distorção espaço-temporal e ecos',
         lore: [
-            'Calmo, enigmático e poeticamente direto. Curioso com coisas simples: comida, piadas, música.',
-            'Formado pelas memórias de realidades consumidas. Pode repetir ações recém-feitas — como um eco.',
+            'Eco nascido das memórias de realidades consumidas pelo Ferrato. De temperamento calmo, enigmático e poeticamente direto.',
+            'Elu carrega em si mundos que já não existem. Cada memória devorada deixou uma voz, e Thryc aprendeu a ouvir todas.',
+            'Tem curiosidade por coisas simples: comida, piadas, música. Foi a esperança dos Despertos que fez Thryc escolher um lado.',
+            'Pode repetir ações recém-feitas como um eco. Não sabe se é uma pessoa ou uma canção; decidiu que a resposta importa menos do que o que faz com ela.',
         ],
         colors: {
             primary: '#b48bff',

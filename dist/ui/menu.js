@@ -130,7 +130,7 @@ export class Menu {
                 spacing: style.compact ? 0.5 : 1.4,
                 glow: active ? col : undefined,
             });
-            if (item.detail) {
+            if (item.detail && !disabled) {
                 label(ctx, item.detail, x + w - 18, y0 + itemH / 2 + 6, Math.max(11, size * 0.62), disabled ? 'rgba(160,166,184,0.3)' : active ? hexToRgba(col, 0.9) : 'rgba(160,166,184,0.65)', { align: 'right', weight: 600, font: FONTS.mono });
             }
             if (disabled) {

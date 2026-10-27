@@ -3,7 +3,7 @@
 import type { Game, Scene } from '../core/game.js';
 import type { CharacterId } from '../data/characters.js';
 import { CHARACTERS, CHARACTER_ORDER } from '../data/characters.js';
-import { STAGES } from '../data/stages.js';
+import { MAX_STAGE } from '../data/stages.js';
 import { clamp, hexToRgba, TAU } from '../core/math.js';
 import { drawTitleBackground } from '../render/backgrounds.js';
 import { drawCharacterPortrait } from '../render/characters.js';
@@ -20,14 +20,15 @@ export class VictoryScene implements Scene {
     private readonly charId: CharacterId,
   ) {
     this.menu = new Menu([
-      { id: 'free', label: 'MODO LIVRE', detail: 'FASES & DESPERTOS', accent: '#56e3ff' },
+      { id: 'free', label: 'MAPA DA CAMPANHA', detail: 'ARCOS & CAPÍTULOS', accent: '#56e3ff' },
       { id: 'credits', label: 'CRÉDITOS', detail: 'O VÉU', accent: '#ffe6a3' },
       { id: 'title', label: 'MENU PRINCIPAL', detail: 'ARQUIVO SALVO', accent: '#ff8a3d' },
     ]);
   }
 
   enter(): void {
-    this.game.audio.playMusic(5);
+    this.game.audio.playMusic(35);
+    this.game.audio.playAmbience('cosmic');
     this.game.audio.sfx('victory');
     this.game.persist();
   }
@@ -90,7 +91,7 @@ export class VictoryScene implements Scene {
     ctx.fillStyle = bottom;
     ctx.fillRect(0, height - 250, width, 250);
 
-    label(ctx, 'FASE VI CONCLUÍDA · O NEXUS SE CALA', width / 2, 50, 10.5, 'rgba(255,230,163,0.78)', {
+    label(ctx, `${MAX_STAGE} CAPÍTULOS CONCLUÍDOS · O NEXUS SE CALA`, width / 2, 50, 10.5, 'rgba(255,230,163,0.78)', {
       align: 'center',
       font: FONTS.mono,
       spacing: 2.2,
@@ -131,7 +132,7 @@ export class VictoryScene implements Scene {
       cut: 14,
     });
     const stats: [string, string][] = [
-      ['FASES SELADAS', '6 / 6'],
+      ['CAPÍTULOS SELADOS', `${MAX_STAGE} / ${MAX_STAGE}`],
       ['ABATES TOTAIS', String(this.game.save.kills).padStart(4, '0')],
       ['MELHOR COMBO', String(this.game.save.bestCombo).padStart(3, '0')],
       ['QUEDAS', String(this.game.save.deaths).padStart(2, '0')],
@@ -141,8 +142,9 @@ export class VictoryScene implements Scene {
       label(ctx, v, sx, 302, 27, '#ffffff', { weight: 800, glow: 'rgba(255,230,163,0.3)' });
       label(ctx, k, sx, 322, 8.5, 'rgba(190,198,220,0.55)', { font: FONTS.mono, spacing: 0.8 });
     });
-    const names = ['RAVI', 'MIRIAM', 'KAEL', 'OZRIC', 'ÉLODIE', 'THRYC'];
-    label(ctx, `DESPERTO FINAL — ${CHARACTERS[this.charId].name.toUpperCase()} · ${names.join(' · ')}`, width / 2, 346, 9.5, 'rgba(255,230,163,0.68)', {
+    const finalName = CHARACTERS[this.charId].name.toUpperCase();
+    const names = ['RAVI', 'MIRIAM', 'KAEL', 'OZRIC', 'ÉLODIE', 'THRYC'].filter((name) => name !== finalName);
+    label(ctx, `DESPERTO FINAL — ${finalName} · ${names.join(' · ')}`, width / 2, 346, 9.5, 'rgba(255,230,163,0.68)', {
       align: 'center',
       font: FONTS.mono,
       spacing: 1.2,
@@ -198,7 +200,5 @@ export class VictoryScene implements Scene {
       ctx.arc(x, y, i % 5 === 0 ? 2.2 : 1.2, 0, TAU);
       ctx.fill();
     }
-
-    void STAGES;
   }
 }

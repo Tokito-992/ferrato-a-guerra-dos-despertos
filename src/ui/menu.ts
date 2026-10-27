@@ -171,7 +171,7 @@ export class Menu {
         glow: active ? col : undefined,
       });
 
-      if (item.detail) {
+      if (item.detail && !disabled) {
         label(
           ctx,
           item.detail,

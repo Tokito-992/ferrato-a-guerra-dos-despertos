@@ -200,7 +200,10 @@ export function drawHud(ctx: CanvasRenderingContext2D, data: HudData, viewTime: 
     spacing: 2.2,
     glow: hexToRgba(data.stage.palette.accent, 0.4),
   });
-  label(ctx, `ONDA ${Math.min(data.waveIndex + 1, data.waveCount)} / ${data.waveCount} — ${data.waveLabel.toUpperCase()}`, cx, 74, 10.5, 'rgba(190,198,220,0.72)', {
+  const flowLabel = data.boss
+    ? `CHEFE DO PLANO — ${data.waveLabel.toUpperCase()}`
+    : `ONDA ${Math.min(data.waveIndex + 1, data.waveCount)} / ${data.waveCount} — ${data.waveLabel.toUpperCase()}`;
+  label(ctx, flowLabel, cx, 74, 10.5, data.boss ? hexToRgba(data.boss.def.colors.accent, 0.85) : 'rgba(190,198,220,0.72)', {
     align: 'center',
     font: FONTS.mono,
     spacing: 0.7,

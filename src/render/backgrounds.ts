@@ -47,8 +47,8 @@ function drawSky(ctx: CanvasRenderingContext2D, stage: StageDef, cameraX: number
   // Sol / lua / núcleo distante.
   if (stage.ambient !== 'cosmic') {
     const sunX = W * 0.72 - cameraX * 0.025;
-    const sunY = stage.id === 4 ? 380 : stage.id === 3 ? 200 : 190 + Math.sin(stage.id) * 30;
-    const radius = stage.id === 5 ? 120 : stage.id === 3 ? 90 : 150;
+    const sunY = stage.arc === 4 ? 380 : stage.arc === 3 ? 200 : 190 + Math.sin(stage.arc) * 30;
+    const radius = stage.arc === 5 ? 120 : stage.arc === 3 ? 90 : 150;
     const glowG = ctx.createRadialGradient(sunX, sunY, 4, sunX, sunY, radius * 2.4);
     glowG.addColorStop(0, hexToRgba(p.sun, 0.85));
     glowG.addColorStop(0.25, hexToRgba(p.sun, 0.3));
@@ -684,7 +684,7 @@ function nexusFar(ctx: CanvasRenderingContext2D, stage: StageDef, cameraX: numbe
   }
   ctx.restore();
   // Olho do Ferrato ao fundo.
-  if (stage.id === 6) {
+  if (stage.arc === 6) {
     const ex = 860 - cameraX * 0.02;
     const ey = 300;
     ctx.save();
@@ -905,7 +905,7 @@ export function drawStageBackground(
   const p = stage.palette;
   drawSky(ctx, stage, cameraX, time);
 
-  switch (stage.id) {
+  switch (stage.arc) {
     case 1:
       cityFar(ctx, stage, cameraX);
       cityMid(ctx, stage, cameraX);
@@ -937,7 +937,7 @@ export function drawStageBackground(
   fog(ctx, p.fog, stage.floor - 190, 210, 1);
 
   drawGroundBase(ctx, stage);
-  switch (stage.id) {
+  switch (stage.arc) {
     case 1:
       cityGround(ctx, stage, cameraX, time);
       break;

@@ -2,6 +2,7 @@
 import { Camera } from '../core/camera.js';
 import { ParticleSystem } from '../core/particles.js';
 import { clamp, hexToRgba } from '../core/math.js';
+import { MAX_STAGE } from '../data/stages.js';
 import { Player } from '../entities/player.js';
 import { Enemy } from '../entities/enemy.js';
 import { Boss } from '../entities/boss.js';
@@ -12,7 +13,6 @@ import { drawBoss, drawEnemy } from '../render/enemies.js';
 import { FONTS, label, panel, roundRectPath } from '../render/theme.js';
 import { drawHud } from '../ui/hud.js';
 import { Menu } from '../ui/menu.js';
-const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
 export class GameplayScene {
     constructor(game, stage, charId) {
         this.game = game;
@@ -20,6 +20,7 @@ export class GameplayScene {
         this.time = 0;
         this.enemies = [];
         this.boss = null;
+        this.noticeY = 568;
         this.projectiles = [];
         this.hazards = [];
         this.timers = [];
@@ -53,6 +54,7 @@ export class GameplayScene {
     }
     enter() {
         this.audio.playMusic(this.stage.music);
+        this.audio.playAmbience(this.stage.ambient);
     }
     // ------------------------------------------------------------ World
     get bossActive() {
@@ -291,6 +293,11 @@ export class GameplayScene {
                 this.startWave(wave);
             return;
         }
+        // Capítulos 1–5 terminam com um elite, sem chefe de planeta.
+        if (!this.stage.boss) {
+            this.completeChapter();
+            return;
+        }
         // Arena do chefe.
         if (!this.boss) {
             const trigger = Math.max(this.stage.waves[this.stage.waves.length - 1].at + 160, this.stage.width - 760);
@@ -300,18 +307,31 @@ export class GameplayScene {
         }
         if (this.boss.isIntro === false && this.bossWasIntro) {
             this.bossWasIntro = false;
-            this.setBanner('CHEFE', this.boss.def.title, this.boss.def.colors.accent, 2.4);
+            this.setBanner('CHEFE DO PLANO', this.boss.def.title, this.boss.def.colors.accent, 2.4);
         }
         if (this.boss.dead && !this.bossCleared) {
             this.bossCleared = true;
             this.phase = 'cleared';
-            this.setBanner('VÉU ROMPIDO', this.boss.def.defeat, '#ffffff', 5);
+            const finale = this.stage.id === MAX_STAGE;
+            this.setBanner(finale ? 'VÉU ROMPIDO' : 'ARCO CONCLUÍDO', this.boss.def.defeat, finale ? '#ffffff' : this.stage.palette.accent, 5);
             this.game.slowMo(0.32, 2.6);
             this.game.flash(this.boss.def.colors.glow, 0.3);
             this.audio.sfx('victory');
             this.game.persist();
             this.after(2.7, () => this.game.finishStage(this.stage.id, this.player.charId));
         }
+    }
+    completeChapter() {
+        if (this.phase === 'cleared')
+            return;
+        this.phase = 'cleared';
+        this.waveActive = false;
+        this.setBanner('CAPÍTULO CONCLUÍDO', `${this.stage.subtitle.toUpperCase()} · ${this.stage.name.toUpperCase()}`, '#8df4a8', 3.2);
+        this.particles.ring(this.player.x, this.stage.floor - 30, this.stage.palette.accent, 180, 0.7, 6);
+        this.game.flash(this.stage.palette.accent, 0.16);
+        this.audio.sfx('victory');
+        this.game.persist();
+        this.after(2.4, () => this.game.finishStage(this.stage.id, this.player.charId));
     }
     startWave(wave) {
         this.waveActive = true;
@@ -343,7 +363,13 @@ export class GameplayScene {
         this.game.save.bestCombo = Math.max(this.game.save.bestCombo, this.maxCombo, this.player.bestCombo);
         this.game.persist();
         if (this.waveIndex >= this.stage.waves.length) {
-            this.setBanner('CAMINHO LIVRE', 'O CHEFE AGUARDA NO FIM DO PLANO', '#ffe6a3', 3.4);
+            if (this.stage.boss) {
+                this.setBanner('CAMINHO LIVRE', 'O CHEFE AGUARDA NO FIM DO PLANO', '#ffe6a3', 3.4);
+            }
+            else {
+                this.completeChapter();
+                return;
+            }
         }
         else {
             this.setBanner('ONDA LIMPA', 'AVANCE PARA O PRÓXIMO SELO', '#8df4a8', 2.4);
@@ -351,16 +377,24 @@ export class GameplayScene {
         this.audio.sfx('confirm');
     }
     spawnBoss() {
+        const bossId = this.stage.boss;
+        if (!bossId)
+            return;
         const maxCam = Math.max(0, this.stage.width - this.viewW);
         this.camera.setBounds(maxCam, maxCam);
         this.camera.snapTo(maxCam);
         const bossX = maxCam + this.viewW - 335;
-        this.boss = new Boss(this.stage.boss, bossX, this.stage.floor);
+        this.boss = new Boss(bossId, bossX, this.stage.floor);
+        // Chefes ficam mais resistentes a cada arco, sem depender apenas de dano.
+        const hpScale = 0.95 + (this.stage.arc - 1) * 0.07;
+        this.boss.maxHp = Math.round(this.boss.maxHp * hpScale);
+        this.boss.hp = this.boss.maxHp;
         this.bossWasIntro = true;
         this.bossCleared = false;
         this.game.save.bestCombo = Math.max(this.game.save.bestCombo, this.maxCombo, this.player.bestCombo);
         this.game.persist();
         this.setBanner(this.boss.def.name, this.boss.def.title, this.boss.def.colors.accent, 4.4);
+        this.audio.playBossMusic(this.stage.arc);
         this.audio.sfx('boss');
         this.audio.sfx('roar');
         this.game.flash(this.boss.def.colors.accent, 0.28);
@@ -374,8 +408,8 @@ export class GameplayScene {
         this.paused = true;
         this.pauseMenu.setItems([
             { id: 'resume', label: 'CONTINUAR', detail: 'ESC', accent: this.player.def.colors.accent },
-            { id: 'swap', label: 'TROCAR DESPERTO', detail: `${this.game.save.unlocked.length} LIBERADOS`, accent: '#56e3ff' },
-            { id: 'restart', label: 'REINICIAR FASE', detail: `FASE ${ROMAN[this.stage.id - 1]}`, accent: '#ffd166' },
+            { id: 'swap', label: 'MAPA DA CAMPANHA', detail: 'ARCOS & CAPÍTULOS', accent: '#56e3ff' },
+            { id: 'restart', label: 'REINICIAR CAPÍTULO', detail: `CAP. ${this.stage.chapter}`, accent: '#ffd166' },
             { id: 'title', label: 'SAIR PARA O MENU', detail: 'PROGRESSO SALVO', accent: '#ff6a7a' },
         ], true);
         this.audio.sfx('ui');
@@ -409,8 +443,8 @@ export class GameplayScene {
         this.game.save.bestCombo = Math.max(this.game.save.bestCombo, this.maxCombo, this.player.bestCombo);
         this.game.persist();
         this.gameOverMenu.setItems([
-            { id: 'retry', label: 'TENTAR NOVAMENTE', detail: `FASE ${ROMAN[this.stage.id - 1]}`, accent: this.player.def.colors.accent },
-            { id: 'swap', label: 'TROCAR DESPERTO', detail: 'OUTRO DESPERTO', accent: '#56e3ff' },
+            { id: 'retry', label: 'TENTAR NOVAMENTE', detail: `CAP. ${this.stage.chapter}`, accent: this.player.def.colors.accent },
+            { id: 'swap', label: 'MAPA DA CAMPANHA', detail: 'ARCOS & CAPÍTULOS', accent: '#56e3ff' },
             { id: 'title', label: 'MENU PRINCIPAL', detail: 'ARQUIVO SALVO', accent: '#ffe6a3' },
         ], false);
         this.audio.sfx('gameover');
@@ -464,8 +498,9 @@ export class GameplayScene {
     get waveLabel() {
         if (this.boss)
             return this.boss.def.name;
-        if (this.waveIndex >= this.stage.waves.length)
-            return 'RUMO AO CHEFE';
+        if (this.waveIndex >= this.stage.waves.length) {
+            return this.stage.boss ? 'RUMO AO CHEFE' : 'CAPÍTULO CONCLUÍDO';
+        }
         return this.stage.waves[this.waveIndex]?.label ?? 'COMBATE';
     }
     // ------------------------------------------------------------ desenho
@@ -552,7 +587,7 @@ export class GameplayScene {
             spacing: 7,
             glow: hexToRgba(accent, 0.5),
         });
-        label(ctx, `FASE ${ROMAN[this.stage.id - 1]} · ${this.stage.name.toUpperCase()}`, x + 34, y + 70, 10, hexToRgba(accent, 0.85), {
+        label(ctx, `${this.stage.subtitle.toUpperCase()} · ${this.stage.name.toUpperCase()}`, x + 34, y + 70, 10, hexToRgba(accent, 0.85), {
             font: FONTS.mono,
             spacing: 1.3,
         });
@@ -651,7 +686,7 @@ export class GameplayScene {
             outline: 'rgba(0,0,0,0.6)',
             outlineWidth: 4,
         });
-        label(ctx, `${this.player.def.name.toUpperCase()} CAIU NA FASE ${ROMAN[this.stage.id - 1]} — ${this.stage.name.toUpperCase()}`, this.viewW / 2, y + 100, 10.5, hexToRgba(accent, 0.9), {
+        label(ctx, `${this.player.def.name.toUpperCase()} CAIU NO ${this.stage.subtitle.toUpperCase()} — ${this.stage.name.toUpperCase()}`, this.viewW / 2, y + 100, 10.5, hexToRgba(accent, 0.9), {
             align: 'center',
             font: FONTS.mono,
             spacing: 1.2,

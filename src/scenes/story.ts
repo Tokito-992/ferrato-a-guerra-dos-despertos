@@ -12,7 +12,7 @@ import { FONTS, glow, label, panel, roundRectPath } from '../render/theme.js';
 
 type StoryPhase = 'intro' | 'outro';
 
-const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
+
 
 const SPEAKER_META: Record<SpeakerId, { name: string; color: string; role: string }> = {
   narrator: { name: 'NARRADOR', color: '#ffe6a3', role: 'A VOZ DO VÉU' },
@@ -20,10 +20,10 @@ const SPEAKER_META: Record<SpeakerId, { name: string; color: string; role: strin
   boss: { name: 'FERRATO', color: '#ff5a7a', role: 'A FOME' },
   ravi: { name: 'RAVI', color: CHARACTERS.ravi.colors.accent, role: 'O PULSO · DESPERTO' },
   miriam: { name: 'MIRIAM', color: CHARACTERS.miriam.colors.accent, role: 'A QUEBRA-OSSOS · DESPERTA' },
-  kael: { name: 'KAEL', color: CHARACTERS.kael.colors.accent, role: 'ZERO-G · DESPERTO' },
+  kael: { name: 'KAEL', color: CHARACTERS.kael.colors.accent, role: 'ZERO-G · DESPERTE' },
   ozric: { name: 'OZRIC', color: CHARACTERS.ozric.colors.accent, role: 'O EXILADO · DESPERTO' },
   elodie: { name: 'ÉLODIE', color: CHARACTERS.elodie.colors.accent, role: 'LÂMINA CELESTE · DESPERTA' },
-  thryc: { name: 'THRYC', color: CHARACTERS.thryc.colors.accent, role: 'ECO DO NEXUS · DESPERTO' },
+  thryc: { name: 'THRYC', color: CHARACTERS.thryc.colors.accent, role: 'ECO DO NEXUS · DESPERTE' },
 };
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number, size: number, font = FONTS.ui): string[] {
@@ -68,6 +68,7 @@ export class StoryScene implements Scene {
 
   enter(): void {
     this.game.audio.playMusic(this.stage.music);
+    this.game.audio.playAmbience(this.stage.ambient);
     if (this.beats.length === 0) this.finish();
   }
 
@@ -146,7 +147,7 @@ export class StoryScene implements Scene {
     ctx.lineTo(this.game.width, 686);
     ctx.stroke();
 
-    label(ctx, `FASE ${ROMAN[this.stage.id - 1]} · ${this.stage.name.toUpperCase()}`, 26, 30, 10, hexToRgba(this.stage.palette.accent, 0.8), {
+    label(ctx, `${this.stage.subtitle.toUpperCase()} · ${this.stage.name.toUpperCase()}`, 26, 30, 10, hexToRgba(this.stage.palette.accent, 0.8), {
       font: FONTS.mono,
       spacing: 1.4,
     });

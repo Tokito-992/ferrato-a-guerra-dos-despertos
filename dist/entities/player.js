@@ -3,6 +3,15 @@ import { clamp, rand, rectsOverlap } from '../core/math.js';
 import { Combatant } from './combatant.js';
 import { getCharacter } from '../data/characters.js';
 import { MOVESETS } from '../data/movesets.js';
+/** Cada Desperto tem uma assinatura sonora própria ao ativar a habilidade. */
+const ABILITY_SFX = {
+    ravi: 'abilityRavi',
+    miriam: 'abilityMiriam',
+    kael: 'abilityKael',
+    ozric: 'abilityOzric',
+    elodie: 'abilityElodie',
+    thryc: 'abilityThryc',
+};
 export class Player extends Combatant {
     constructor(x, charId, floor) {
         const def = getCharacter(charId);
@@ -638,7 +647,7 @@ export class Player extends Combatant {
         this.abilityCd = this.def.ability.cooldown;
         this.abilityFlash = 0.5;
         this.invuln = Math.max(this.invuln, 0.18);
-        world.audio.sfx('confirm');
+        world.audio.sfx(ABILITY_SFX[this.charId]);
         world.hitStop(0.03);
         switch (this.charId) {
             case 'ravi': {
