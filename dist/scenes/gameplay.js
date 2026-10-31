@@ -13,6 +13,7 @@ import { drawStageBackground } from '../render/backgrounds.js';
 import { drawCharacterPortrait, drawPlayer } from '../render/characters.js';
 import { drawBoss, drawEnemy } from '../render/enemies.js';
 import { drawHeart } from '../render/hearts.js';
+import { visualStyle } from '../render/style.js';
 import { FONTS, label, panel, roundRectPath } from '../render/theme.js';
 import { drawHud } from '../ui/hud.js';
 import { Menu } from '../ui/menu.js';
@@ -56,8 +57,13 @@ export class GameplayScene {
         this.hunterSpawned = false;
         this.hunter = null;
         this.nextAnomalyPressure = 58;
-        // Câmara do Coração.
-        this.bonusDuration = 14;
+        // Impacto estilo anime: estrela radial + flash curto.
+        this.animeImpact = 0;
+        this.animeImpactX = 0;
+        this.animeImpactY = 0;
+        this.animeImpactColor = '#fff4cd';
+        // Câmara do Coração: bônus curto e arriscado, com no máximo uma vida extra.
+        this.bonusDuration = 10;
         this.bonusTotal = 3;
         this.bonusTriggered = false;
         this.bonusAt = 0;
@@ -142,6 +148,12 @@ export class GameplayScene {
         if (opts.crit) {
             this.particles.ring(target.x, target.centerY, '#ffffff', 46, 0.28, 2);
         }
+        if (visualStyle.anime && (opts.crit || damage >= 18)) {
+            this.animeImpact = Math.max(this.animeImpact, opts.crit ? 0.2 : 0.12);
+            this.animeImpactX = target.x;
+            this.animeImpactY = target.centerY;
+            this.animeImpactColor = color;
+        }
     }
     damagePlayer(damage, opts = {}) {
         if (this.player.dead)
@@ -150,6 +162,12 @@ export class GameplayScene {
         if (dealt > 0) {
             this.damageTaken += dealt;
             this.pressure = clamp(this.pressure - 9, 0, 100);
+            if (visualStyle.anime) {
+                this.animeImpact = Math.max(this.animeImpact, 0.18);
+                this.animeImpactX = this.player.x;
+                this.animeImpactY = this.player.centerY;
+                this.animeImpactColor = '#ff3357';
+            }
         }
         return dealt;
     }
@@ -212,6 +230,12 @@ export class GameplayScene {
     heavyImpact(x, y, color) {
         this.shake(0.5);
         this.audio.sfx('heavy');
+        if (visualStyle.anime) {
+            this.animeImpact = Math.max(this.animeImpact, 0.24);
+            this.animeImpactX = x;
+            this.animeImpactY = y;
+            this.animeImpactColor = color;
+        }
         this.particles.ring(x, y, color, 120, 0.5, 5);
         this.particles.burst(x, y, 18, color, {
             speed: 320,
@@ -283,6 +307,8 @@ export class GameplayScene {
             return;
         }
         this.time += dt;
+        if (this.animeImpact > 0)
+            this.animeImpact = Math.max(0, this.animeImpact - dt);
         this.updateBanner(dt);
         this.updateTimers(dt);
         this.particles.update(dt);
@@ -511,14 +537,15 @@ export class GameplayScene {
         this.game.persist();
     }
     heartRewardCap() {
-        return Math.max(1, 4 - Math.ceil(this.stage.id / 12));
+        // A Câmara é um desafio opcional, não uma fonte de vidas em série.
+        return 1;
     }
     revivePlayer() {
         this.hearts = Math.max(0, this.hearts - 1);
         const p = this.player;
         p.dead = false;
-        p.hp = Math.max(1, Math.round(p.maxHp * 0.35));
-        p.invuln = 2.2;
+        p.hp = Math.max(1, Math.round(p.maxHp * 0.3));
+        p.invuln = 1.8;
         p.hitstun = 0;
         p.stunTime = 0;
         p.sealTime = 0;
@@ -546,7 +573,7 @@ export class GameplayScene {
             enemy.vx = Math.sign(enemy.x - p.x || 1) * 340;
             enemy.stunTime = Math.max(enemy.stunTime, 0.45);
         }
-        this.setBanner('CORAÇÃO CONSUMIDO', `${this.hearts} RESTANTE(S) · 35% DE VIDA · INVULNERÁVEL`, '#ff6a9a', 3.2);
+        this.setBanner('CORAÇÃO CONSUMIDO', `${this.hearts} RESTANTE(S) · 30% DE VIDA · INVULNERÁVEL`, '#ff6a9a', 3.2);
         this.text('VIDA EXTRA', p.x, p.centerY - 70, '#ff9bb8', 22);
         this.particles.ring(p.x, p.centerY, '#ff6a9a', 170, 0.7, 5);
         this.game.flash('#ff6a9a', 0.22);
@@ -592,7 +619,7 @@ export class GameplayScene {
         this.waveActive = false;
         this.bonusTimer = this.bonusDuration;
         this.bonusCollected = 0;
-        this.bonusHazardTimer = 1.4;
+        this.bonusHazardTimer = 1.15;
         this.bonusHazardCount = 0;
         this.bonusMotes = [];
         this.hazards = this.hazards.filter((h) => h.owner !== 'enemy');
@@ -607,16 +634,16 @@ export class GameplayScene {
             const y = this.stage.floor - 120 - (i % 2) * 55;
             this.bonusMotes.push({ x, y, baseY: y, phase: Math.random() * Math.PI * 2 });
         }
-        this.setBanner('CÂMARA DO CORAÇÃO', `COLETE ${this.bonusTotal} CORAÇÕES · RECOMPENSA MÁX. ${this.bonusRewardCap}`, '#ff6a9a', 3.8);
+        this.setBanner('CÂMARA DO CORAÇÃO', `COLETE TODOS OS ${this.bonusTotal} CORAÇÕES · ${this.bonusRewardCap} VIDA EXTRA`, '#ff6a9a', 3.8);
         this.audio.sfx('confirm');
         this.game.flash('#ff6a9a', 0.14);
     }
     updateBonus(dt) {
         this.bonusTimer -= dt;
         this.bonusHazardTimer -= dt;
-        if (this.bonusHazardTimer <= 0 && this.bonusTimer > 1.5 && this.bonusHazardCount < 7) {
+        if (this.bonusHazardTimer <= 0 && this.bonusTimer > 1.2 && this.bonusHazardCount < 10) {
             this.spawnBonusHazard();
-            this.bonusHazardTimer = Math.max(0.8, 1.75 - this.stage.arc * 0.08);
+            this.bonusHazardTimer = Math.max(0.7, 1.35 - this.stage.arc * 0.06);
         }
         for (const mote of this.bonusMotes) {
             mote.phase += dt;
@@ -629,8 +656,8 @@ export class GameplayScene {
                 continue;
             this.bonusMotes.splice(i, 1);
             this.bonusCollected++;
-            this.addScore(220);
-            this.pressure = clamp(this.pressure + 2.5, 0, 100);
+            this.addScore(120);
+            this.pressure = clamp(this.pressure + 1.2, 0, 100);
             this.particles.ring(mote.x, mote.y, '#ff6a9a', 64, 0.45, 3);
             this.particles.burst(mote.x, mote.y, 14, '#ff9bb8', {
                 speed: 150,
@@ -654,25 +681,26 @@ export class GameplayScene {
             kind: 'explosion',
             x,
             y: this.stage.floor,
-            radius: 86,
+            radius: 90,
             duration: 0.1,
-            damage: 8 + this.stage.arc * 2,
+            damage: 10 + this.stage.arc * 2.2,
             owner: 'enemy',
             color: '#ff6a9a',
             accent: '#ffffff',
-            delay: 0.95,
+            delay: 0.85,
         });
         this.bonusHazardCount++;
     }
     finishBonus() {
         if (this.phase !== 'bonus')
             return;
-        const reward = Math.min(this.bonusRewardCap, this.bonusCollected);
+        const fullClear = this.bonusCollected >= this.bonusTotal;
+        const reward = fullClear ? this.bonusRewardCap : 0;
         const before = this.hearts;
         this.hearts = Math.min(this.maxHearts, this.hearts + reward);
         const gained = this.hearts - before;
-        this.addScore(300 + this.bonusCollected * 180);
-        this.pressure = clamp(this.pressure + 4, 0, 100);
+        this.addScore(200 + this.bonusCollected * 90);
+        this.pressure = clamp(this.pressure + 2.5, 0, 100);
         this.phase = 'combat';
         this.bonusMotes = [];
         this.bonusTimer = 0;
@@ -686,12 +714,12 @@ export class GameplayScene {
             this.game.flash('#ff6a9a', 0.18);
             this.audio.sfx('heal');
         }
-        else if (reward > 0) {
+        else if (fullClear && reward > 0) {
             this.setBanner('CORAÇÕES CHEIOS', 'A CÂMARA NÃO PÔDE AUMENTAR SUAS VIDAS', '#ff9bb8', 3.2);
             this.audio.sfx('ui');
         }
         else {
-            this.setBanner('CÂMARA VAZIA', 'NENHUM CORAÇÃO COLETADO', '#9aa3b8', 3.2);
+            this.setBanner('CÂMARA INCOMPLETA', `${this.bonusCollected}/${this.bonusTotal} · COLETE TODOS PARA GANHAR ${this.bonusRewardCap} VIDA EXTRA`, '#9aa3b8', 3.2);
             this.audio.sfx('ui');
         }
     }
@@ -843,6 +871,8 @@ export class GameplayScene {
         }
         this.particles.draw(ctx);
         ctx.restore();
+        if (visualStyle.anime)
+            this.drawAnimeScreen(ctx, camX);
         if (this.phase === 'bonus') {
             ctx.save();
             const vignette = ctx.createRadialGradient(this.viewW / 2, this.viewH / 2, 120, this.viewW / 2, this.viewH / 2, this.viewW * 0.7);
@@ -885,6 +915,74 @@ export class GameplayScene {
             this.drawPause(ctx);
         if (this.gameOver)
             this.drawGameOver(ctx);
+    }
+    /** Camada de pós-processamento do modo anime: linhas de velocidade, impacto e cor. */
+    drawAnimeScreen(ctx, camX) {
+        const w = this.viewW;
+        const h = this.viewH;
+        const speed = Math.abs(this.player.vx);
+        const dashing = this.player.dashTime > 0;
+        if (dashing || speed > 260) {
+            const power = dashing ? 1 : clamp((speed - 260) / 180, 0, 1);
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.strokeStyle = hexToRgba('#ffffff', 0.08 + power * 0.08);
+            ctx.lineWidth = 1.2;
+            const cx = w / 2;
+            const cy = h * 0.48;
+            for (let i = 0; i < 24; i++) {
+                const a = (i / 24) * Math.PI * 2 + Math.sin(this.time * 2 + i) * 0.02;
+                const r0 = 240 + (i % 4) * 40;
+                const r1 = r0 + 80 + power * 160;
+                ctx.beginPath();
+                ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0 * 0.55);
+                ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1 * 0.55);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+        if (this.animeImpact > 0) {
+            const t = clamp(this.animeImpact / 0.24, 0, 1);
+            const sx = this.animeImpactX - camX;
+            const sy = this.animeImpactY + this.camera.offsetY;
+            const color = this.animeImpactColor;
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.globalAlpha = t;
+            for (let i = 0; i < 16; i++) {
+                const a = (i / 16) * Math.PI * 2 + this.time * 1.5;
+                const r0 = 10 + (1 - t) * 20;
+                const r1 = 70 + (i % 3) * 28 + (1 - t) * 60;
+                ctx.strokeStyle = i % 2 === 0 ? '#ffffff' : color;
+                ctx.lineWidth = i % 3 === 0 ? 3 : 1.5;
+                ctx.beginPath();
+                ctx.moveTo(sx + Math.cos(a) * r0, sy + Math.sin(a) * r0 * 0.7);
+                ctx.lineTo(sx + Math.cos(a) * r1, sy + Math.sin(a) * r1 * 0.7);
+                ctx.stroke();
+            }
+            const burst = ctx.createRadialGradient(sx, sy, 0, sx, sy, 90);
+            burst.addColorStop(0, hexToRgba('#ffffff', 0.5 * t));
+            burst.addColorStop(0.35, hexToRgba(color, 0.3 * t));
+            burst.addColorStop(1, hexToRgba(color, 0));
+            ctx.fillStyle = burst;
+            ctx.beginPath();
+            ctx.arc(sx, sy, 90, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            ctx.save();
+            ctx.globalAlpha = 0.08 * t;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, w, h);
+            ctx.restore();
+        }
+        ctx.save();
+        const grade = ctx.createLinearGradient(0, 0, w, h);
+        grade.addColorStop(0, 'rgba(86, 227, 255, 0.035)');
+        grade.addColorStop(0.5, 'rgba(255, 106, 213, 0.025)');
+        grade.addColorStop(1, 'rgba(255, 138, 61, 0.04)');
+        ctx.fillStyle = grade;
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
     }
     drawArenaFrame(ctx) {
         const locked = this.waveActive || this.boss !== null || this.phase === 'bonus';

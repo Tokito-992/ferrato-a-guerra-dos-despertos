@@ -96,8 +96,8 @@ Cada herói tem atributos, golpes, alcance, hitboxes, passiva, efeitos e som de 
 - **Pressão do Véu**: medidor de 0–100 que sobe com combos, abates, ondas limpas e corações; cai ao apanhar. Define o rank ao vivo (**D → C → B → A → S → SS**), multiplica os pontos e libera eventos de alta pressão.
 - **Caçador do Véu**: com rank **S** durante uma onda, um elite único é invocado. Abatê-lo rende pontos extras e cura. Acima de 58% de pressão, anomalias temporárias (fraturas) surgem no campo.
 - **Obstáculos de arena**: cada fase distribui santuários (cura), fraturas (dano periódico em área), âncoras (puxam jogador e inimigos) e sobrecargas (recarregam a habilidade e concedem +25% de dano por 5 s). Arcos avançados recebem mais obstáculos.
-- **Câmara do Coração**: após a segunda onda, ao avançar pelo mapa, uma fase bônus de 14 s pede para coletar 3 corações saltando. A recompensa em vidas extras diminui com o progresso: **3** nos capítulos 1–12, **2** nos capítulos 13–24 e **1** nos capítulos 25–36.
-- **Vidas extras**: até 3 corações. Ao cair, um coração revive o Desperto com 35% de vida, invulnerabilidade temporária e limpeza de projéteis/hazards próximos. A cura ao limpar ondas foi reduzida para manter o risco.
+- **Câmara do Coração**: após a segunda onda, ao avançar pelo mapa, uma fase bônus de 10 s pede para coletar os 3 corações saltando enquanto desvia das explosões. Só a coleta completa concede **1 vida extra**; coletas parciais dão apenas pontuação e pressão.
+- **Vidas extras**: a Câmara pode conceder 1 coração por capítulo (limite de 3 no HUD). Ao cair, um coração revive o Desperto com 30% de vida, invulnerabilidade curta e limpeza de projéteis/hazards próximos. A cura ao limpar ondas foi reduzida para manter o risco.
 - **Recordes competitivos**: pontuação e melhor rank são gravados e exibidos no título e no game over.
 - Combos com contador, hitstun, knockback, launch, críticos, hitstop, partículas e números de dano.
 - Invulnerabilidade em dash, após dano e em transições; inimigos com i-frames, status (selo, queimadura, marca) e resistências.
@@ -106,6 +106,7 @@ Cada herói tem atributos, golpes, alcance, hitboxes, passiva, efeitos e som de 
 - Chefes com telegrafia, padrões por fase, invocação de reforços, projéteis, feixes, hazards e mudança de fase com invulnerabilidade temporária.
 - Câmera lateral com limites por arena, parallax em camadas, clima e paleta próprios para cada capítulo.
 - Assinaturas visuais exclusivas: cada Desperto tem silhueta, ombreiras, botas, manoplas/armas detalhadas, aura, rastro de golpe e motivo de retrato próprios; cada capítulo tem céu, marco de cenário, atmosfera e placa de local próprios.
+- **Modo anime-inspired** (experimental): contornos cel-shading, aura, linhas de velocidade, impactos radiais e color grade. Pressione **F2** para alternar ou use `?anime=0` para forçar o estilo clássico.
 - Menu principal (Novo Jogo, Continuar, Despertos & Arcos, Créditos), pausa (continuar, trocar Desperto, reiniciar, sair), game over (tentar novamente, trocar, menu) e vitória.
 - Seleção por arcos e capítulos, com sinopse, motivo do herói, lore, guardião/chefe, dificuldade e progresso.
 - Progressão em `localStorage` (chave `ferrato_guerra_dos_despertos_save_v1`, esquema **v2**): capítulos concluídos, capítulo máximo, heróis desbloqueados, herói selecionado, abates, quedas, melhor combo, melhor pontuação (`bestScore`), melhor rank (`bestRank`) e áudio. Saves antigos recebem os novos campos com valores padrão.

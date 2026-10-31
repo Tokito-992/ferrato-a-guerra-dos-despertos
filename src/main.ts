@@ -1,6 +1,7 @@
 /** Bootstrap do jogo: valida o canvas, inicia o loop e remove a tela de carregamento. */
 
 import { Game } from './core/game.js';
+import { toggleAnimeStyle, visualStyle } from './render/style.js';
 
 function hideLoading(): void {
   const loading = document.getElementById('loading');
@@ -34,6 +35,19 @@ try {
 
   const game = new Game(canvas);
   game.start();
+
+  // Alternância reversível do estilo visual. `?anime=0` força o clássico.
+  document.body.classList.toggle('anime-style', visualStyle.anime);
+  window.addEventListener('keydown', (event) => {
+    if (event.code !== 'F2') return;
+    event.preventDefault();
+    const on = toggleAnimeStyle();
+    document.body.classList.toggle('anime-style', on);
+    game.setNotice(
+      on ? 'ESTILO ANIME ATIVADO' : 'ESTILO CLÁSSICO ATIVADO',
+      on ? '#ff6ad5' : '#56e3ff',
+    );
+  });
 
   // Só revela o jogo depois que as fontes estiverem prontas (ou após um curto prazo).
   const fontsReady = document.fonts?.ready ?? Promise.resolve();
