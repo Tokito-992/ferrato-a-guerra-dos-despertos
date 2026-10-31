@@ -102,8 +102,8 @@ export class GameplayScene implements Scene, World {
   private animeImpactY = 0;
   private animeImpactColor = '#fff4cd';
 
-  // Câmara do Coração.
-  private readonly bonusDuration = 14;
+  // Câmara do Coração: bônus curto e arriscado, com no máximo uma vida extra.
+  private readonly bonusDuration = 10;
   private readonly bonusTotal = 3;
   private bonusTriggered = false;
   private bonusAt = 0;
@@ -646,15 +646,16 @@ export class GameplayScene implements Scene, World {
   }
 
   private heartRewardCap(): number {
-    return Math.max(1, 4 - Math.ceil(this.stage.id / 12));
+    // A Câmara é um desafio opcional, não uma fonte de vidas em série.
+    return 1;
   }
 
   private revivePlayer(): void {
     this.hearts = Math.max(0, this.hearts - 1);
     const p = this.player;
     p.dead = false;
-    p.hp = Math.max(1, Math.round(p.maxHp * 0.35));
-    p.invuln = 2.2;
+    p.hp = Math.max(1, Math.round(p.maxHp * 0.3));
+    p.invuln = 1.8;
     p.hitstun = 0;
     p.stunTime = 0;
     p.sealTime = 0;
@@ -682,7 +683,7 @@ export class GameplayScene implements Scene, World {
       enemy.stunTime = Math.max(enemy.stunTime, 0.45);
     }
 
-    this.setBanner('CORAÇÃO CONSUMIDO', `${this.hearts} RESTANTE(S) · 35% DE VIDA · INVULNERÁVEL`, '#ff6a9a', 3.2);
+    this.setBanner('CORAÇÃO CONSUMIDO', `${this.hearts} RESTANTE(S) · 30% DE VIDA · INVULNERÁVEL`, '#ff6a9a', 3.2);
     this.text('VIDA EXTRA', p.x, p.centerY - 70, '#ff9bb8', 22);
     this.particles.ring(p.x, p.centerY, '#ff6a9a', 170, 0.7, 5);
     this.game.flash('#ff6a9a', 0.22);
@@ -743,7 +744,7 @@ export class GameplayScene implements Scene, World {
     this.waveActive = false;
     this.bonusTimer = this.bonusDuration;
     this.bonusCollected = 0;
-    this.bonusHazardTimer = 1.4;
+    this.bonusHazardTimer = 1.15;
     this.bonusHazardCount = 0;
     this.bonusMotes = [];
     this.hazards = this.hazards.filter((h) => h.owner !== 'enemy');
@@ -767,7 +768,7 @@ export class GameplayScene implements Scene, World {
 
     this.setBanner(
       'CÂMARA DO CORAÇÃO',
-      `COLETE ${this.bonusTotal} CORAÇÕES · RECOMPENSA MÁX. ${this.bonusRewardCap}`,
+      `COLETE TODOS OS ${this.bonusTotal} CORAÇÕES · ${this.bonusRewardCap} VIDA EXTRA`,
       '#ff6a9a',
       3.8,
     );
@@ -778,9 +779,9 @@ export class GameplayScene implements Scene, World {
   private updateBonus(dt: number): void {
     this.bonusTimer -= dt;
     this.bonusHazardTimer -= dt;
-    if (this.bonusHazardTimer <= 0 && this.bonusTimer > 1.5 && this.bonusHazardCount < 7) {
+    if (this.bonusHazardTimer <= 0 && this.bonusTimer > 1.2 && this.bonusHazardCount < 10) {
       this.spawnBonusHazard();
-      this.bonusHazardTimer = Math.max(0.8, 1.75 - this.stage.arc * 0.08);
+      this.bonusHazardTimer = Math.max(0.7, 1.35 - this.stage.arc * 0.06);
     }
 
     for (const mote of this.bonusMotes) {
@@ -794,8 +795,8 @@ export class GameplayScene implements Scene, World {
       if (Math.hypot(p.x - mote.x, p.centerY - mote.y) > 58) continue;
       this.bonusMotes.splice(i, 1);
       this.bonusCollected++;
-      this.addScore(220);
-      this.pressure = clamp(this.pressure + 2.5, 0, 100);
+      this.addScore(120);
+      this.pressure = clamp(this.pressure + 1.2, 0, 100);
       this.particles.ring(mote.x, mote.y, '#ff6a9a', 64, 0.45, 3);
       this.particles.burst(mote.x, mote.y, 14, '#ff9bb8', {
         speed: 150,
@@ -824,25 +825,26 @@ export class GameplayScene implements Scene, World {
       kind: 'explosion',
       x,
       y: this.stage.floor,
-      radius: 86,
+      radius: 90,
       duration: 0.1,
-      damage: 8 + this.stage.arc * 2,
+      damage: 10 + this.stage.arc * 2.2,
       owner: 'enemy',
       color: '#ff6a9a',
       accent: '#ffffff',
-      delay: 0.95,
+      delay: 0.85,
     });
     this.bonusHazardCount++;
   }
 
   private finishBonus(): void {
     if (this.phase !== 'bonus') return;
-    const reward = Math.min(this.bonusRewardCap, this.bonusCollected);
+    const fullClear = this.bonusCollected >= this.bonusTotal;
+    const reward = fullClear ? this.bonusRewardCap : 0;
     const before = this.hearts;
     this.hearts = Math.min(this.maxHearts, this.hearts + reward);
     const gained = this.hearts - before;
-    this.addScore(300 + this.bonusCollected * 180);
-    this.pressure = clamp(this.pressure + 4, 0, 100);
+    this.addScore(200 + this.bonusCollected * 90);
+    this.pressure = clamp(this.pressure + 2.5, 0, 100);
     this.phase = 'combat';
     this.bonusMotes = [];
     this.bonusTimer = 0;
@@ -861,11 +863,16 @@ export class GameplayScene implements Scene, World {
       this.particles.ring(this.player.x, this.player.centerY, '#ff6a9a', 190, 0.7, 6);
       this.game.flash('#ff6a9a', 0.18);
       this.audio.sfx('heal');
-    } else if (reward > 0) {
+    } else if (fullClear && reward > 0) {
       this.setBanner('CORAÇÕES CHEIOS', 'A CÂMARA NÃO PÔDE AUMENTAR SUAS VIDAS', '#ff9bb8', 3.2);
       this.audio.sfx('ui');
     } else {
-      this.setBanner('CÂMARA VAZIA', 'NENHUM CORAÇÃO COLETADO', '#9aa3b8', 3.2);
+      this.setBanner(
+        'CÂMARA INCOMPLETA',
+        `${this.bonusCollected}/${this.bonusTotal} · COLETE TODOS PARA GANHAR ${this.bonusRewardCap} VIDA EXTRA`,
+        '#9aa3b8',
+        3.2,
+      );
       this.audio.sfx('ui');
     }
   }
