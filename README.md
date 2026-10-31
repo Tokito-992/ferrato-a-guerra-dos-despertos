@@ -36,6 +36,22 @@ No GitHub Pages, publique a raiz do repositório (mantendo `index.html`, `styles
 
 Menus também aceitam mouse (clique e hover).
 
+### No celular e no tablet
+
+O jogo funciona em navegadores móveis e ocupa a tela inteira no modo horizontal. Os controles virtuais aparecem apenas durante o combate:
+
+| Botão | Ação |
+| --- | --- |
+| `◀` / `▶` | Mover |
+| `⤒` | Pular |
+| `J` | Ataque leve |
+| `K` | Ataque pesado |
+| `L` | Dash |
+| `E` | Habilidade especial |
+| `II` | Pausar |
+
+Os menus respondem a toque diretamente no canvas. Em retrato, uma tela de aviso pede para girar o dispositivo, pois a arena foi desenhada em 16:9 horizontal. Os botões respeitam as áreas seguras (notch) e a barra de vida do chefe sobe automaticamente para não ficar sob os controles.
+
 ## Conteúdo
 
 ### Campanha em seis arcos
@@ -77,6 +93,12 @@ Cada herói tem atributos, golpes, alcance, hitboxes, passiva, efeitos e som de 
 
 ## Sistemas
 
+- **Pressão do Véu**: medidor de 0–100 que sobe com combos, abates, ondas limpas e corações; cai ao apanhar. Define o rank ao vivo (**D → C → B → A → S → SS**), multiplica os pontos e libera eventos de alta pressão.
+- **Caçador do Véu**: com rank **S** durante uma onda, um elite único é invocado. Abatê-lo rende pontos extras e cura. Acima de 58% de pressão, anomalias temporárias (fraturas) surgem no campo.
+- **Obstáculos de arena**: cada fase distribui santuários (cura), fraturas (dano periódico em área), âncoras (puxam jogador e inimigos) e sobrecargas (recarregam a habilidade e concedem +25% de dano por 5 s). Arcos avançados recebem mais obstáculos.
+- **Câmara do Coração**: após a segunda onda, ao avançar pelo mapa, uma fase bônus de 14 s pede para coletar 3 corações saltando. A recompensa em vidas extras diminui com o progresso: **3** nos capítulos 1–12, **2** nos capítulos 13–24 e **1** nos capítulos 25–36.
+- **Vidas extras**: até 3 corações. Ao cair, um coração revive o Desperto com 35% de vida, invulnerabilidade temporária e limpeza de projéteis/hazards próximos. A cura ao limpar ondas foi reduzida para manter o risco.
+- **Recordes competitivos**: pontuação e melhor rank são gravados e exibidos no título e no game over.
 - Combos com contador, hitstun, knockback, launch, críticos, hitstop, partículas e números de dano.
 - Invulnerabilidade em dash, após dano e em transições; inimigos com i-frames, status (selo, queimadura, marca) e resistências.
 - Habilidades com recarga e medidor de calor/ritmo próprio de cada herói, com efeito sonoro exclusivo.
@@ -86,7 +108,7 @@ Cada herói tem atributos, golpes, alcance, hitboxes, passiva, efeitos e som de 
 - Assinaturas visuais exclusivas: cada Desperto tem silhueta, acessórios, aura, rastro de golpe e motivo de retrato próprios; cada capítulo tem céu, marco de cenário, atmosfera e placa de local próprios.
 - Menu principal (Novo Jogo, Continuar, Despertos & Arcos, Créditos), pausa (continuar, trocar Desperto, reiniciar, sair), game over (tentar novamente, trocar, menu) e vitória.
 - Seleção por arcos e capítulos, com sinopse, motivo do herói, lore, guardião/chefe, dificuldade e progresso.
-- Progressão em `localStorage` (chave `ferrato_guerra_dos_despertos_save_v1`, esquema **v2**): capítulos concluídos, capítulo máximo, heróis desbloqueados, herói selecionado, abates, quedas, melhor combo e áudio.
+- Progressão em `localStorage` (chave `ferrato_guerra_dos_despertos_save_v1`, esquema **v2**): capítulos concluídos, capítulo máximo, heróis desbloqueados, herói selecionado, abates, quedas, melhor combo, melhor pontuação (`bestScore`), melhor rank (`bestRank`) e áudio. Saves antigos recebem os novos campos com valores padrão.
 - Áudio procedural via WebAudio: 36 temas de fase, 6 temas de chefe, 6 ambientes e efeitos sintetizados.
 - Dificuldade progressiva por arco e capítulo; o HP dos chefes acompanha o arco.
 - Sem dependências de runtime; arte e som são desenhados/sintetizados no navegador.
@@ -120,13 +142,13 @@ location.reload();
 ```
 src/
   main.ts              bootstrap do canvas e do loop
-  core/                Game (loop, cenas, transições), input, áudio, save v2,
-                       câmera, partículas, matemática e tipos compartilhados
+  core/                Game (loop, cenas, transições), input (teclado, mouse e toque),
+                       áudio, save v2, câmera, partículas, rank, matemática e tipos
   data/                heróis, 36 capítulos, chefes, inimigos, história e créditos
-  entities/            Combatant, Player, Enemy, Boss, projéteis e hazards
-  render/              tema, personagens, retratos, inimigos, chefes e cenários
+  entities/            Combatant, Player, Enemy, Boss, projéteis, hazards e obstáculos
+  render/              tema, personagens, retratos, inimigos, chefes, corações e cenários
   scenes/              título, seleção por arcos, história, gameplay, vitória e créditos
-  ui/                  HUD e menus (teclado + mouse)
+  ui/                  HUD (vida, corações, rank, pressão, bônus) e menus (teclado + mouse + toque)
 styles/main.css        moldura, letterbox e tipografia
 index.html             entrada estática
 dist/                  JavaScript compilado (gerado por `tsc`)

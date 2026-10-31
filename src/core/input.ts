@@ -49,22 +49,30 @@ interface KeyState {
 
 export class Input {
   readonly canvas: HTMLCanvasElement;
+  readonly touchMode: boolean;
   private state: KeyState = {
     raw: new Set(),
     down: new Set(),
     pressed: new Set(),
     released: new Set(),
   };
+  private virtualDown = new Set<Action>();
+  private virtualPressed = new Set<Action>();
+  private virtualReleased = new Set<Action>();
 
   mouse = { x: 0, y: 0, down: false, clicked: false, moved: false };
 
   /** Chamado no primeiro gesto do usuário (para liberar áudio). */
   onFirstGesture: (() => void) | null = null;
   private gestureFired = false;
-  private scale = 1;
+  private lastTouchAt = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
+    this.touchMode =
+      'ontouchstart' in window ||
+      (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0) ||
+      window.matchMedia('(pointer: coarse)').matches;
     window.addEventListener('keydown', this.handleKeyDown, { passive: false });
     window.addEventListener('keyup', this.handleKeyUp);
     window.addEventListener('blur', this.handleBlur);
@@ -73,6 +81,10 @@ export class Input {
     window.addEventListener('mouseup', this.handleMouseUp);
     canvas.addEventListener('click', this.handleClick);
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    canvas.addEventListener('touchstart', this.handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+    canvas.addEventListener('touchend', this.handleTouchEnd, { passive: false });
+    canvas.addEventListener('touchcancel', this.handleTouchEnd, { passive: false });
   }
 
   private fireGesture(): void {
@@ -120,14 +132,14 @@ export class Input {
   private handleBlur = (): void => {
     this.state.raw.clear();
     this.state.down.clear();
+    this.releaseAllVirtual();
   };
 
-  private eventToCanvas(e: MouseEvent): { x: number; y: number } {
+  private eventToCanvas(e: MouseEvent | Touch): { x: number; y: number } {
     const rect = this.canvas.getBoundingClientRect();
-    this.scale = this.canvas.width / rect.width;
     return {
-      x: (e.clientX - rect.left) * this.scale,
-      y: (e.clientY - rect.top) * this.scale,
+      x: ((e.clientX - rect.left) / Math.max(1, rect.width)) * this.canvas.width,
+      y: ((e.clientY - rect.top) / Math.max(1, rect.height)) * this.canvas.height,
     };
   }
 
@@ -153,28 +165,81 @@ export class Input {
 
   private handleClick = (e: MouseEvent): void => {
     if (e.button !== 0) return;
+    // O toque já registra o clique em touchstart; evita confirmação dupla.
+    if (performance.now() - this.lastTouchAt < 700) return;
     const p = this.eventToCanvas(e);
     this.mouse.x = p.x;
     this.mouse.y = p.y;
     this.mouse.clicked = true;
   };
 
+  private handleTouchStart = (e: TouchEvent): void => {
+    const touch = e.changedTouches[0];
+    if (!touch) return;
+    this.fireGesture();
+    const p = this.eventToCanvas(touch);
+    this.mouse.x = p.x;
+    this.mouse.y = p.y;
+    this.mouse.down = true;
+    this.mouse.clicked = true;
+    this.lastTouchAt = performance.now();
+    if (e.cancelable) e.preventDefault();
+  };
+
+  private handleTouchMove = (e: TouchEvent): void => {
+    const touch = e.changedTouches[0];
+    if (!touch) return;
+    const p = this.eventToCanvas(touch);
+    this.mouse.x = p.x;
+    this.mouse.y = p.y;
+    this.mouse.moved = true;
+    if (e.cancelable) e.preventDefault();
+  };
+
+  private handleTouchEnd = (e: TouchEvent): void => {
+    this.mouse.down = false;
+    this.lastTouchAt = performance.now();
+    if (e.cancelable) e.preventDefault();
+  };
+
+  /** Entrada virtual usada pelos botões de toque. */
+  setVirtual(action: Action, down: boolean): void {
+    if (down) {
+      if (!this.virtualDown.has(action)) {
+        this.virtualDown.add(action);
+        this.virtualPressed.add(action);
+      }
+      return;
+    }
+    if (this.virtualDown.has(action)) {
+      this.virtualDown.delete(action);
+      this.virtualReleased.add(action);
+    }
+  }
+
+  releaseAllVirtual(): void {
+    for (const action of this.virtualDown) this.virtualReleased.add(action);
+    this.virtualDown.clear();
+  }
+
   isDown(action: Action): boolean {
-    return this.state.down.has(action);
+    return this.state.down.has(action) || this.virtualDown.has(action);
   }
 
   pressed(action: Action): boolean {
-    return this.state.pressed.has(action);
+    return this.state.pressed.has(action) || this.virtualPressed.has(action);
   }
 
   released(action: Action): boolean {
-    return this.state.released.has(action);
+    return this.state.released.has(action) || this.virtualReleased.has(action);
   }
 
   /** Limpa eventos de frame. Chamar ao final de cada atualização. */
   endFrame(): void {
     this.state.pressed.clear();
     this.state.released.clear();
+    this.virtualPressed.clear();
+    this.virtualReleased.clear();
     this.mouse.clicked = false;
     this.mouse.moved = false;
   }
@@ -184,5 +249,8 @@ export class Input {
     this.state.released.clear();
     this.state.down.clear();
     this.state.raw.clear();
+    this.virtualPressed.clear();
+    this.virtualReleased.clear();
+    this.virtualDown.clear();
   }
 }

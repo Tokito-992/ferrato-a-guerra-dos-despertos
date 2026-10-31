@@ -1,6 +1,7 @@
 /** Persistência local de progresso (localStorage) — campanha de 36 capítulos. */
 import { CHARACTER_ORDER } from '../data/characters.js';
 import { CHAPTERS_PER_ARC, MAX_STAGE } from '../data/stages.js';
+import { isRank } from './rank.js';
 /** Mantemos a chave v1 para conseguir migrar arquivos antigos sem perder progresso. */
 const KEY = 'ferrato_guerra_dos_despertos_save_v1';
 const LEGACY_MAX_STAGE = 6;
@@ -43,6 +44,8 @@ function sanitize(data) {
         kills: typeof data.kills === 'number' && data.kills > 0 ? Math.round(data.kills) : 0,
         deaths: typeof data.deaths === 'number' && data.deaths > 0 ? Math.round(data.deaths) : 0,
         bestCombo: typeof data.bestCombo === 'number' && data.bestCombo > 0 ? Math.round(data.bestCombo) : 0,
+        bestScore: typeof data.bestScore === 'number' && data.bestScore > 0 ? Math.round(data.bestScore) : 0,
+        bestRank: isRank(data.bestRank) ? data.bestRank : 'D',
         muted: Boolean(data.muted),
     };
 }
@@ -95,6 +98,8 @@ function migrateLegacy(data) {
         kills: typeof data.kills === 'number' && data.kills > 0 ? Math.round(data.kills) : 0,
         deaths: typeof data.deaths === 'number' && data.deaths > 0 ? Math.round(data.deaths) : 0,
         bestCombo: typeof data.bestCombo === 'number' && data.bestCombo > 0 ? Math.round(data.bestCombo) : 0,
+        bestScore: typeof data.bestScore === 'number' && data.bestScore > 0 ? Math.round(data.bestScore) : 0,
+        bestRank: isRank(data.bestRank) ? data.bestRank : 'D',
         muted: Boolean(data.muted),
     };
 }
@@ -108,6 +113,8 @@ export function defaultSave() {
         kills: 0,
         deaths: 0,
         bestCombo: 0,
+        bestScore: 0,
+        bestRank: 'D',
         muted: false,
     };
 }

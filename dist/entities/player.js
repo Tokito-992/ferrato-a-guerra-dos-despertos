@@ -36,6 +36,7 @@ export class Player extends Combatant {
         this.heat = 0;
         this.timeSinceHit = 99;
         this.auraWindow = 0;
+        this.empowerTime = 0;
         this.drained = 0;
         this.lastAttack = null;
         this.lastAttackX = 0;
@@ -91,6 +92,7 @@ export class Player extends Combatant {
         this.abilityCd = Math.max(0, this.abilityCd - dt);
         this.dashCd = Math.max(0, this.dashCd - dt);
         this.auraWindow = Math.max(0, this.auraWindow - dt);
+        this.empowerTime = Math.max(0, this.empowerTime - dt);
         this.comboTimer = Math.max(0, this.comboTimer - dt);
         this.timeSinceHit += dt;
         if (this.comboTimerDisplay > 0) {
@@ -517,6 +519,8 @@ export class Player extends Combatant {
             mult += (this.heat / 100) * 0.45;
         if (this.charId === 'ravi')
             mult += Math.min(this.comboHits, 18) * 0.012;
+        if (this.empowerTime > 0)
+            mult += 0.25;
         return mult;
     }
     startDash(world) {

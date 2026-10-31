@@ -138,7 +138,7 @@ export class TitleScene implements Scene {
     const save = this.game.save;
     const sx = 930;
     const sy = 470;
-    panel(ctx, sx, sy, 300, 106, {
+    panel(ctx, sx, sy, 300, 128, {
       fill: 'rgba(5,8,16,0.6)',
       border: 'rgba(180,139,255,0.25)',
       glow: 'rgba(180,139,255,0.15)',
@@ -166,6 +166,11 @@ export class TitleScene implements Scene {
     label(ctx, `MELHOR COMBO  ${String(save.bestCombo).padStart(3, '0')}`, sx + 18, sy + 98, 11, 'rgba(225,230,242,0.8)', {
       font: FONTS.mono,
       spacing: 0.8,
+    });
+    label(ctx, `RECORDE  ${String(save.bestScore).padStart(6, '0')}  ·  RANK ${save.bestRank}`, sx + 18, sy + 115, 10.5, '#ff9bb8', {
+      font: FONTS.mono,
+      spacing: 0.8,
+      glow: 'rgba(255,106,154,0.35)',
     });
     label(ctx, `${save.unlocked.length} / 6 DESPERTOS`, sx + 282, sy + 23, 10, 'rgba(255,230,163,0.7)', {
       font: FONTS.mono,

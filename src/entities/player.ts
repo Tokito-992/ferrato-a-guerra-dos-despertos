@@ -60,6 +60,7 @@ export class Player extends Combatant {
   heat = 0;
   timeSinceHit = 99;
   auraWindow = 0;
+  empowerTime = 0;
   drained = 0;
   lastAttack: AttackDef | null = null;
   lastAttackX = 0;
@@ -124,6 +125,7 @@ export class Player extends Combatant {
     this.abilityCd = Math.max(0, this.abilityCd - dt);
     this.dashCd = Math.max(0, this.dashCd - dt);
     this.auraWindow = Math.max(0, this.auraWindow - dt);
+    this.empowerTime = Math.max(0, this.empowerTime - dt);
     this.comboTimer = Math.max(0, this.comboTimer - dt);
     this.timeSinceHit += dt;
 
@@ -545,6 +547,7 @@ export class Player extends Combatant {
     let mult = 1;
     if (this.charId === 'miriam') mult += (this.heat / 100) * 0.45;
     if (this.charId === 'ravi') mult += Math.min(this.comboHits, 18) * 0.012;
+    if (this.empowerTime > 0) mult += 0.25;
     return mult;
   }
 

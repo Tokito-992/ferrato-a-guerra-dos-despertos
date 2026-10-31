@@ -3,6 +3,8 @@
 import { CHARACTER_ORDER } from '../data/characters.js';
 import type { CharacterId } from '../data/characters.js';
 import { CHAPTERS_PER_ARC, MAX_STAGE } from '../data/stages.js';
+import { isRank } from './rank.js';
+import type { Rank } from './rank.js';
 
 export interface SaveData {
   version: number;
@@ -14,6 +16,10 @@ export interface SaveData {
   kills: number;
   deaths: number;
   bestCombo: number;
+  /** Maior pontuação competitiva registrada. */
+  bestScore: number;
+  /** Melhor rank do Véu registrado. */
+  bestRank: Rank;
   muted: boolean;
 }
 
@@ -26,6 +32,8 @@ interface LegacySave {
   kills?: number;
   deaths?: number;
   bestCombo?: number;
+  bestScore?: number;
+  bestRank?: string;
   muted?: boolean;
 }
 
@@ -83,6 +91,8 @@ function sanitize(data: LegacySave): SaveData {
     kills: typeof data.kills === 'number' && data.kills > 0 ? Math.round(data.kills) : 0,
     deaths: typeof data.deaths === 'number' && data.deaths > 0 ? Math.round(data.deaths) : 0,
     bestCombo: typeof data.bestCombo === 'number' && data.bestCombo > 0 ? Math.round(data.bestCombo) : 0,
+    bestScore: typeof data.bestScore === 'number' && data.bestScore > 0 ? Math.round(data.bestScore) : 0,
+    bestRank: isRank(data.bestRank) ? data.bestRank : 'D',
     muted: Boolean(data.muted),
   };
 }
@@ -141,6 +151,8 @@ function migrateLegacy(data: LegacySave): SaveData {
     kills: typeof data.kills === 'number' && data.kills > 0 ? Math.round(data.kills) : 0,
     deaths: typeof data.deaths === 'number' && data.deaths > 0 ? Math.round(data.deaths) : 0,
     bestCombo: typeof data.bestCombo === 'number' && data.bestCombo > 0 ? Math.round(data.bestCombo) : 0,
+    bestScore: typeof data.bestScore === 'number' && data.bestScore > 0 ? Math.round(data.bestScore) : 0,
+    bestRank: isRank(data.bestRank) ? data.bestRank : 'D',
     muted: Boolean(data.muted),
   };
 }
@@ -155,6 +167,8 @@ export function defaultSave(): SaveData {
     kills: 0,
     deaths: 0,
     bestCombo: 0,
+    bestScore: 0,
+    bestRank: 'D',
     muted: false,
   };
 }

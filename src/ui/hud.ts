@@ -4,8 +4,11 @@ import type { Boss } from '../entities/boss.js';
 import type { Player } from '../entities/player.js';
 import type { StageDef } from '../data/stages.js';
 import { clamp, hexToRgba } from '../core/math.js';
+import { rankColor } from '../core/rank.js';
+import type { Rank } from '../core/rank.js';
 import { FONTS, bar, glow, label, panel, roundRectPath } from '../render/theme.js';
 import { drawCharacterPortrait } from '../render/characters.js';
+import { drawHeart } from '../render/hearts.js';
 
 export interface HudBanner {
   text: string;
@@ -13,6 +16,14 @@ export interface HudBanner {
   color: string;
   t: number;
   max: number;
+}
+
+export interface HudBonus {
+  time: number;
+  maxTime: number;
+  collected: number;
+  total: number;
+  rewardCap: number;
 }
 
 export interface HudData {
@@ -26,6 +37,14 @@ export interface HudData {
   time: number;
   banner: HudBanner | null;
   showHints: boolean;
+  hearts: number;
+  maxHearts: number;
+  score: number;
+  rank: Rank;
+  pressure: number;
+  bestScore: number;
+  bonus: HudBonus | null;
+  touch: boolean;
 }
 
 const VIEW_W = 1280;
@@ -59,14 +78,14 @@ export function drawHud(ctx: CanvasRenderingContext2D, data: HudData, viewTime: 
   }
 
   // ------------------------------------------------------------ jogador
-  panel(ctx, 20, 16, 392, 146, {
+  panel(ctx, 20, 16, 392, 176, {
     fill: 'rgba(5, 8, 16, 0.72)',
     border: hexToRgba(accent, 0.3),
     glow: hexToRgba(accent, 0.18),
     cut: 14,
   });
   ctx.fillStyle = hexToRgba(accent, 0.9);
-  ctx.fillRect(20, 16, 3, 146);
+  ctx.fillRect(20, 16, 3, 176);
 
   // Retrato.
   ctx.save();
@@ -117,12 +136,32 @@ export function drawHud(ctx: CanvasRenderingContext2D, data: HudData, viewTime: 
     outlineWidth: 3,
   });
 
+  // Corações / vidas extras.
+  label(ctx, 'CORAÇÕES', 128, 110, 8.5, 'rgba(200,208,228,0.58)', {
+    font: FONTS.mono,
+    spacing: 1.1,
+  });
+  for (let i = 0; i < data.maxHearts; i++) {
+    const filled = i < data.hearts;
+    drawHeart(ctx, 196 + i * 19, 104, 15, filled ? '#ff6a9a' : 'rgba(255,255,255,0.1)', {
+      filled,
+      outline: filled ? '#ffd0de' : 'rgba(255,255,255,0.22)',
+      glow: filled ? 10 : 0,
+      alpha: filled ? 1 : 0.8,
+    });
+  }
+  label(ctx, `${data.hearts} / ${data.maxHearts}`, 390, 110, 9, data.hearts > 0 ? '#ff9bb8' : 'rgba(180,188,208,0.45)', {
+    align: 'right',
+    font: FONTS.mono,
+    spacing: 0.5,
+  });
+
   // Habilidade.
   const ready = p.abilityReady;
   const boxCol = ready ? accent : 'rgba(130,140,165,0.6)';
   ctx.save();
   ctx.fillStyle = ready ? hexToRgba(accent, 0.22) : 'rgba(255,255,255,0.05)';
-  roundRectPath(ctx, 128, 104, 22, 22, 3);
+  roundRectPath(ctx, 128, 116, 22, 22, 3);
   ctx.fill();
   ctx.strokeStyle = boxCol;
   ctx.lineWidth = 1.2;
@@ -130,22 +169,22 @@ export function drawHud(ctx: CanvasRenderingContext2D, data: HudData, viewTime: 
   if (!ready) {
     ctx.globalAlpha = 0.35;
     ctx.fillStyle = '#000000';
-    ctx.fillRect(128, 104, 22, 22);
+    ctx.fillRect(128, 116, 22, 22);
     ctx.globalAlpha = 1;
   }
   ctx.restore();
-  label(ctx, 'E', 139, 120, 13, ready ? '#ffffff' : 'rgba(190,196,214,0.55)', {
+  label(ctx, 'E', 139, 132, 13, ready ? '#ffffff' : 'rgba(190,196,214,0.55)', {
     align: 'center',
     weight: 800,
     font: FONTS.mono,
   });
-  label(ctx, def.ability.name.toUpperCase(), 160, 120, 12.5, ready ? '#e8edf9' : 'rgba(180,188,208,0.55)', {
+  label(ctx, def.ability.name.toUpperCase(), 160, 132, 12.5, ready ? '#e8edf9' : 'rgba(180,188,208,0.55)', {
     weight: 700,
     spacing: 0.4,
   });
 
-  bar(ctx, 128, 132, hpW, 5, ready ? 1 : 1 - p.abilityCd / Math.max(0.01, p.abilityMax), ready ? c.accent : '#7a8298');
-  label(ctx, abilityLabel(p), 390, 139.5, 9.5, ready ? hexToRgba(accent, 0.9) : 'rgba(180,188,208,0.5)', {
+  bar(ctx, 128, 144, hpW, 5, ready ? 1 : 1 - p.abilityCd / Math.max(0.01, p.abilityMax), ready ? c.accent : '#7a8298');
+  label(ctx, abilityLabel(p), 390, 151.5, 9.5, ready ? hexToRgba(accent, 0.9) : 'rgba(180,188,208,0.5)', {
     align: 'right',
     font: FONTS.mono,
     spacing: 0.6,
@@ -153,28 +192,30 @@ export function drawHud(ctx: CanvasRenderingContext2D, data: HudData, viewTime: 
 
   // Dash.
   const dashReady = p.dashCd <= 0.01;
-  label(ctx, 'DASH', 128, 153, 9, dashReady ? hexToRgba(c.glow, 0.8) : 'rgba(160,168,190,0.35)', {
+  label(ctx, 'DASH', 128, 166, 9, dashReady ? hexToRgba(c.glow, 0.8) : 'rgba(160,168,190,0.35)', {
     font: FONTS.mono,
     spacing: 1,
   });
   for (let i = 0; i < 4; i++) {
     const filled = dashReady || (1 - p.dashCd / Math.max(0.01, p.dashCd + 0.9)) * 4 > i;
     ctx.fillStyle = filled ? hexToRgba(c.glow, 0.8) : 'rgba(255,255,255,0.1)';
-    ctx.fillRect(164 + i * 13, 147, 9, 5);
+    ctx.fillRect(164 + i * 13, 160, 9, 5);
   }
   // Estado de combo passivo.
-  if (p.charId === 'miriam') {
-    label(ctx, `CALOR ${Math.round(p.heat)}%`, 390, 153, 9, '#ff9b3c', { align: 'right', font: FONTS.mono });
+  if (p.empowerTime > 0) {
+    label(ctx, `SOBRECARGA ${p.empowerTime.toFixed(1)}s`, 390, 166, 9, '#56e3ff', { align: 'right', font: FONTS.mono });
+  } else if (p.charId === 'miriam') {
+    label(ctx, `CALOR ${Math.round(p.heat)}%`, 390, 166, 9, '#ff9b3c', { align: 'right', font: FONTS.mono });
   } else if (p.charId === 'ravi') {
-    label(ctx, `RITMO x${(p.damageMultiplier()).toFixed(2)}`, 390, 153, 9, c.accent, { align: 'right', font: FONTS.mono });
+    label(ctx, `RITMO x${(p.damageMultiplier()).toFixed(2)}`, 390, 166, 9, c.accent, { align: 'right', font: FONTS.mono });
   } else if (p.charId === 'ozric') {
-    label(ctx, `DRENADO ${Math.round(p.drained)}`, 390, 153, 9, '#ff6a7a', { align: 'right', font: FONTS.mono });
+    label(ctx, `DRENADO ${Math.round(p.drained)}`, 390, 166, 9, '#ff6a7a', { align: 'right', font: FONTS.mono });
   } else if (p.charId === 'elodie') {
-    label(ctx, p.auraWindow > 0 ? 'LAMPEJO ATIVO' : 'LÂMINA SERENA', 390, 153, 9, '#fff4cd', { align: 'right', font: FONTS.mono });
+    label(ctx, p.auraWindow > 0 ? 'LAMPEJO ATIVO' : 'LÂMINA SERENA', 390, 166, 9, '#fff4cd', { align: 'right', font: FONTS.mono });
   } else if (p.charId === 'kael') {
-    label(ctx, 'GRAVIDADE ESTÁVEL', 390, 153, 9, '#9d8bff', { align: 'right', font: FONTS.mono });
+    label(ctx, 'GRAVIDADE ESTÁVEL', 390, 166, 9, '#9d8bff', { align: 'right', font: FONTS.mono });
   } else if (p.charId === 'thryc') {
-    label(ctx, 'MEMÓRIA ECOADA', 390, 153, 9, '#b48bff', { align: 'right', font: FONTS.mono });
+    label(ctx, 'MEMÓRIA ECOADA', 390, 166, 9, '#b48bff', { align: 'right', font: FONTS.mono });
   }
 
   // ------------------------------------------------------------ fase / onda
@@ -200,9 +241,11 @@ export function drawHud(ctx: CanvasRenderingContext2D, data: HudData, viewTime: 
     spacing: 2.2,
     glow: hexToRgba(data.stage.palette.accent, 0.4),
   });
-  const flowLabel = data.boss
-    ? `CHEFE DO PLANO — ${data.waveLabel.toUpperCase()}`
-    : `ONDA ${Math.min(data.waveIndex + 1, data.waveCount)} / ${data.waveCount} — ${data.waveLabel.toUpperCase()}`;
+  const flowLabel = data.bonus
+    ? `BÔNUS — ${data.waveLabel.toUpperCase()}`
+    : data.boss
+      ? `CHEFE DO PLANO — ${data.waveLabel.toUpperCase()}`
+      : `ONDA ${Math.min(data.waveIndex + 1, data.waveCount)} / ${data.waveCount} — ${data.waveLabel.toUpperCase()}`;
   label(ctx, flowLabel, cx, 74, 10.5, data.boss ? hexToRgba(data.boss.def.colors.accent, 0.85) : 'rgba(190,198,220,0.72)', {
     align: 'center',
     font: FONTS.mono,
@@ -212,6 +255,19 @@ export function drawHud(ctx: CanvasRenderingContext2D, data: HudData, viewTime: 
   // Progresso da fase.
   const pw = 360;
   bar(ctx, cx - pw / 2, 82, pw, 4, clamp(p.x / data.stage.width, 0, 1), data.stage.palette.accent, 'rgba(255,255,255,0.08)');
+
+  // Fase de bônus: câmara do coração.
+  if (data.bonus) {
+    const b = data.bonus;
+    const ratio = clamp(b.time / Math.max(0.01, b.maxTime), 0, 1);
+    bar(ctx, cx - pw / 2, 94, pw, 5, ratio, '#ff6a9a', 'rgba(255,255,255,0.08)');
+    label(ctx, `CÂMARA DO CORAÇÃO · ${b.collected}/${b.total} · MÁX. ${b.rewardCap}`, cx, 112, 10, '#ff9bb8', {
+      align: 'center',
+      font: FONTS.mono,
+      spacing: 1.2,
+      glow: 'rgba(255,106,154,0.45)',
+    });
+  }
 
   // ------------------------------------------------------------ combo / abates
   if (p.comboHits > 1) {
@@ -253,12 +309,35 @@ export function drawHud(ctx: CanvasRenderingContext2D, data: HudData, viewTime: 
     spacing: 1,
   });
 
+  // Rank competitivo e pressão do Véu.
+  const rankCol = rankColor(data.rank);
+  label(ctx, `RANK ${data.rank}`, 1248, 132, 22, rankCol, {
+    align: 'right',
+    weight: 800,
+    spacing: 1.6,
+    glow: hexToRgba(rankCol, 0.5),
+    outline: 'rgba(0,0,0,0.6)',
+    outlineWidth: 3,
+  });
+  label(ctx, `PONTOS ${String(data.score).padStart(6, '0')}`, 1248, 148, 9.5, 'rgba(225,230,242,0.78)', {
+    align: 'right',
+    font: FONTS.mono,
+    spacing: 1,
+  });
+  bar(ctx, 1128, 156, 120, 3, data.pressure, rankCol, 'rgba(255,255,255,0.1)');
+  label(ctx, `PRESSÃO ${Math.round(data.pressure * 100)}%`, 1248, 172, 8.5, hexToRgba(rankCol, 0.72), {
+    align: 'right',
+    font: FONTS.mono,
+    spacing: 0.8,
+  });
+
   // ------------------------------------------------------------ chefe
   const boss = data.boss;
   if (boss && !boss.dead) {
     const bw = 600;
     const bx = cx - bw / 2;
-    const by = 650;
+    // No toque, a barra sobe para não ficar sob os botões virtuais.
+    const by = data.touch ? 566 : 650;
     const bossCol = boss.def.colors.accent;
     ctx.save();
     const bg = ctx.createLinearGradient(0, by - 64, 0, by + 28);
@@ -381,24 +460,27 @@ export function drawHud(ctx: CanvasRenderingContext2D, data: HudData, viewTime: 
   }
 
   // ------------------------------------------------------------ dicas
-  if (data.showHints) {
-    ctx.save();
-    ctx.globalAlpha = clamp((18 - data.time) / 4, 0, 1);
-    label(ctx, 'A/D MOVER   ESPAÇO PULAR   J LEVE   K PESADO   L DASH   E HABILIDADE', 24, 702, 10.5, 'rgba(210,216,232,0.55)', {
+  // No toque, os próprios botões rotulados ocupam o rodapé.
+  if (!data.touch) {
+    if (data.showHints) {
+      ctx.save();
+      ctx.globalAlpha = clamp((18 - data.time) / 4, 0, 1);
+      label(ctx, 'A/D MOVER   ESPAÇO PULAR   J LEVE   K PESADO   L DASH   E HABILIDADE', 24, 702, 10.5, 'rgba(210,216,232,0.55)', {
+        font: FONTS.mono,
+        spacing: 1,
+        outline: 'rgba(0,0,0,0.7)',
+        outlineWidth: 3,
+      });
+      ctx.restore();
+    }
+    label(ctx, 'ESC PAUSAR · M ÁUDIO', 1256, 702, 10, 'rgba(170,178,200,0.45)', {
+      align: 'right',
       font: FONTS.mono,
       spacing: 1,
       outline: 'rgba(0,0,0,0.7)',
       outlineWidth: 3,
     });
-    ctx.restore();
   }
-  label(ctx, 'ESC PAUSAR · M ÁUDIO', 1256, 702, 10, 'rgba(170,178,200,0.45)', {
-    align: 'right',
-    font: FONTS.mono,
-    spacing: 1,
-    outline: 'rgba(0,0,0,0.7)',
-    outlineWidth: 3,
-  });
 
   // Pulso de habilidade pronta.
   if (ready && p.abilityFlash <= 0) {

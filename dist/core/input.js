@@ -31,11 +31,14 @@ export class Input {
             pressed: new Set(),
             released: new Set(),
         };
+        this.virtualDown = new Set();
+        this.virtualPressed = new Set();
+        this.virtualReleased = new Set();
         this.mouse = { x: 0, y: 0, down: false, clicked: false, moved: false };
         /** Chamado no primeiro gesto do usuário (para liberar áudio). */
         this.onFirstGesture = null;
         this.gestureFired = false;
-        this.scale = 1;
+        this.lastTouchAt = 0;
         this.handleKeyDown = (e) => {
             const action = KEYMAP[e.code];
             this.fireGesture();
@@ -71,6 +74,7 @@ export class Input {
         this.handleBlur = () => {
             this.state.raw.clear();
             this.state.down.clear();
+            this.releaseAllVirtual();
         };
         this.handleMouseMove = (e) => {
             const p = this.eventToCanvas(e);
@@ -93,12 +97,50 @@ export class Input {
         this.handleClick = (e) => {
             if (e.button !== 0)
                 return;
+            // O toque já registra o clique em touchstart; evita confirmação dupla.
+            if (performance.now() - this.lastTouchAt < 700)
+                return;
             const p = this.eventToCanvas(e);
             this.mouse.x = p.x;
             this.mouse.y = p.y;
             this.mouse.clicked = true;
         };
+        this.handleTouchStart = (e) => {
+            const touch = e.changedTouches[0];
+            if (!touch)
+                return;
+            this.fireGesture();
+            const p = this.eventToCanvas(touch);
+            this.mouse.x = p.x;
+            this.mouse.y = p.y;
+            this.mouse.down = true;
+            this.mouse.clicked = true;
+            this.lastTouchAt = performance.now();
+            if (e.cancelable)
+                e.preventDefault();
+        };
+        this.handleTouchMove = (e) => {
+            const touch = e.changedTouches[0];
+            if (!touch)
+                return;
+            const p = this.eventToCanvas(touch);
+            this.mouse.x = p.x;
+            this.mouse.y = p.y;
+            this.mouse.moved = true;
+            if (e.cancelable)
+                e.preventDefault();
+        };
+        this.handleTouchEnd = (e) => {
+            this.mouse.down = false;
+            this.lastTouchAt = performance.now();
+            if (e.cancelable)
+                e.preventDefault();
+        };
         this.canvas = canvas;
+        this.touchMode =
+            'ontouchstart' in window ||
+                (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0) ||
+                window.matchMedia('(pointer: coarse)').matches;
         window.addEventListener('keydown', this.handleKeyDown, { passive: false });
         window.addEventListener('keyup', this.handleKeyUp);
         window.addEventListener('blur', this.handleBlur);
@@ -107,6 +149,10 @@ export class Input {
         window.addEventListener('mouseup', this.handleMouseUp);
         canvas.addEventListener('click', this.handleClick);
         canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        canvas.addEventListener('touchstart', this.handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', this.handleTouchEnd, { passive: false });
+        canvas.addEventListener('touchcancel', this.handleTouchEnd, { passive: false });
     }
     fireGesture() {
         if (this.gestureFired)
@@ -116,25 +162,45 @@ export class Input {
     }
     eventToCanvas(e) {
         const rect = this.canvas.getBoundingClientRect();
-        this.scale = this.canvas.width / rect.width;
         return {
-            x: (e.clientX - rect.left) * this.scale,
-            y: (e.clientY - rect.top) * this.scale,
+            x: ((e.clientX - rect.left) / Math.max(1, rect.width)) * this.canvas.width,
+            y: ((e.clientY - rect.top) / Math.max(1, rect.height)) * this.canvas.height,
         };
     }
+    /** Entrada virtual usada pelos botões de toque. */
+    setVirtual(action, down) {
+        if (down) {
+            if (!this.virtualDown.has(action)) {
+                this.virtualDown.add(action);
+                this.virtualPressed.add(action);
+            }
+            return;
+        }
+        if (this.virtualDown.has(action)) {
+            this.virtualDown.delete(action);
+            this.virtualReleased.add(action);
+        }
+    }
+    releaseAllVirtual() {
+        for (const action of this.virtualDown)
+            this.virtualReleased.add(action);
+        this.virtualDown.clear();
+    }
     isDown(action) {
-        return this.state.down.has(action);
+        return this.state.down.has(action) || this.virtualDown.has(action);
     }
     pressed(action) {
-        return this.state.pressed.has(action);
+        return this.state.pressed.has(action) || this.virtualPressed.has(action);
     }
     released(action) {
-        return this.state.released.has(action);
+        return this.state.released.has(action) || this.virtualReleased.has(action);
     }
     /** Limpa eventos de frame. Chamar ao final de cada atualização. */
     endFrame() {
         this.state.pressed.clear();
         this.state.released.clear();
+        this.virtualPressed.clear();
+        this.virtualReleased.clear();
         this.mouse.clicked = false;
         this.mouse.moved = false;
     }
@@ -143,6 +209,9 @@ export class Input {
         this.state.released.clear();
         this.state.down.clear();
         this.state.raw.clear();
+        this.virtualPressed.clear();
+        this.virtualReleased.clear();
+        this.virtualDown.clear();
     }
 }
 //# sourceMappingURL=input.js.map

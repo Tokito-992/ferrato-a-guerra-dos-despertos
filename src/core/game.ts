@@ -6,6 +6,7 @@ import { getStage, MAX_STAGE } from '../data/stages.js';
 import { STORY } from '../data/story.js';
 import { AudioEngine } from './audio.js';
 import { Input } from './input.js';
+import type { Action } from './input.js';
 import { ParticleSystem } from './particles.js';
 import { loadSave, writeSave } from './save.js';
 import type { SaveData } from './save.js';
@@ -77,6 +78,7 @@ export class Game {
   private lastTimestamp = 0;
   private started = false;
   private finishing = false;
+  private touchControls: HTMLElement | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -91,6 +93,82 @@ export class Game {
       this.audio.init();
       this.audio.setMuted(this.save.muted);
     };
+    this.setupTouchControls();
+  }
+
+  get isTouchDevice(): boolean {
+    return this.input.touchMode;
+  }
+
+  /** Botões de toque independentes do canvas; aparecem apenas em combate. */
+  private setupTouchControls(): void {
+    if (!this.input.touchMode) return;
+    document.body.classList.add('touch-device');
+
+    const wrap = document.createElement('div');
+    wrap.id = 'touch-controls';
+    wrap.setAttribute('aria-label', 'Controles de toque');
+
+    const left = document.createElement('div');
+    left.className = 'touch-cluster touch-cluster-left';
+    const right = document.createElement('div');
+    right.className = 'touch-cluster touch-cluster-right';
+
+    const makeButton = (action: Action, text: string, extra = ''): HTMLButtonElement => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `touch-btn${extra ? ` ${extra}` : ''}`;
+      button.dataset.action = action;
+      button.textContent = text;
+      button.setAttribute('aria-label', action);
+      const press = (event: PointerEvent): void => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.input.setVirtual(action, true);
+        try {
+          button.setPointerCapture(event.pointerId);
+        } catch {
+          // Alguns navegadores móveis não expõem captura para todos os pointers.
+        }
+      };
+      const release = (event: PointerEvent): void => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.input.setVirtual(action, false);
+      };
+      button.addEventListener('pointerdown', press, { passive: false });
+      button.addEventListener('pointerup', release, { passive: false });
+      button.addEventListener('pointercancel', release, { passive: false });
+      button.addEventListener('lostpointercapture', release);
+      button.addEventListener('contextmenu', (event) => event.preventDefault());
+      return button;
+    };
+
+    left.append(
+      makeButton('left', '◀', 'touch-move'),
+      makeButton('right', '▶', 'touch-move'),
+    );
+    right.append(
+      makeButton('jump', '⤒', 'touch-jump'),
+      makeButton('attack', 'J', 'touch-action'),
+      makeButton('heavy', 'K', 'touch-action'),
+      makeButton('dash', 'L', 'touch-action'),
+      makeButton('ability', 'E', 'touch-ability'),
+    );
+
+    const pause = document.createElement('div');
+    pause.className = 'touch-cluster touch-cluster-pause';
+    pause.append(makeButton('pause', 'II', 'touch-pause'));
+
+    wrap.append(left, right, pause);
+    (document.getElementById('frame') ?? document.body).appendChild(wrap);
+    this.touchControls = wrap;
+  }
+
+  setTouchControlsVisible(visible: boolean): void {
+    if (!this.touchControls) return;
+    document.body.classList.toggle('touch-gameplay', visible);
+    if (!visible) this.input.releaseAllVirtual();
   }
 
   start(): void {
