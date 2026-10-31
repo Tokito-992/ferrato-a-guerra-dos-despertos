@@ -796,9 +796,9 @@ export class Player extends Combatant {
           x: this.x,
           y: this.centerY,
           life: 0.55,
-          size: 92,
+          size: 84,
           color: '#ff3357',
-          color2: '#ffe6ea',
+          color2: '#ff6a9a',
         });
         world.particles.burst(this.x, this.centerY, 26, '#ff3357', {
           speed: 430,
@@ -842,19 +842,21 @@ export class Player extends Combatant {
             statusTime: 4,
             shake: 0.14,
           });
-          world.particles.burst(t.x, t.centerY, 6, '#ff9bb8', {
-            speed: 130,
-            gravity: -35,
-            size: 1.8,
-            color2: '#ffe6ea',
-            life: 0.35,
+          world.particles.ring(t.x, t.centerY, '#ffe6ea', 34, 0.28, 2);
+          world.particles.burst(t.x, t.centerY, 9, '#ffe6ea', {
+            speed: 120,
+            gravity: -45,
+            size: 1.7,
+            color2: '#ff6a9a',
+            life: 0.4,
           });
           this.pullSoul(world, t.x, t.centerY);
         }
 
-        world.after(0.34, () => {
+        world.after(0.4, () => {
           world.particles.ring(this.x, this.centerY, '#ffe6ea', 104, 0.4, 3);
-          world.particles.burst(this.x, this.centerY, 16, '#ff3357', {
+          world.particles.ring(this.x, this.centerY, '#ff6a9a', 142, 0.45, 2);
+          world.particles.burst(this.x, this.centerY, 20, '#ff6a9a', {
             speed: 190,
             gravity: -40,
             size: 2.6,
@@ -930,7 +932,7 @@ export class Player extends Combatant {
     const dx = this.x - fromX;
     const dy = this.centerY - fromY;
     const dist = Math.max(1, Math.hypot(dx, dy));
-    const life = clamp(dist / 560, 0.24, 0.62);
+    const life = clamp(dist / 460, 0.42, 0.85);
     const midX = (fromX + this.x) / 2;
     const midY = (fromY + this.centerY) / 2 - 26;
     world.particles.bolt(
@@ -940,14 +942,14 @@ export class Player extends Combatant {
         { x: this.x, y: this.centerY },
       ],
       '#ff3357',
-      0.3,
-      2.4,
+      0.42,
+      3.2,
     );
     world.particles.bolt(
       [{ x: fromX, y: fromY + 7 }, { x: this.x, y: this.centerY - 5 }],
-      '#ffe6ea',
-      0.2,
-      1.1,
+      '#ffffff',
+      0.3,
+      1.6,
     );
 
     // Espectro principal, seguido por um rastro de almas menores.
@@ -958,34 +960,34 @@ export class Player extends Combatant {
       vx: dx / life,
       vy: dy / life,
       life,
-      size: 6.2,
-      color: '#ff3357',
-      color2: '#ffe6ea',
+      size: 8.2,
+      color: '#ff6a9a',
+      color2: '#ffffff',
       drag: 0.06,
       gravity: -26,
       rot: rand(-0.4, 0.4),
       vrot: rand(-7, 7),
       additive: true,
     });
-    for (let i = 0; i < 3; i++) {
-      const spread = i - 1;
+    for (let i = 0; i < 4; i++) {
+      const spread = i - 1.5;
       world.particles.spawn({
         kind: 'soul',
         x: fromX + rand(-10, 10),
         y: fromY + rand(-14, 14),
         vx: dx / life * (0.9 + i * 0.07) + spread * 14 + rand(-10, 10),
         vy: dy / life * (0.9 + i * 0.07) + rand(-14, 14),
-        life: life * (0.82 + i * 0.08),
-        size: 3.6 + i * 0.55,
-        color: '#ff3357',
-        color2: '#ffe6ea',
+        life: life * (0.78 + i * 0.07),
+        size: 4.4 + i * 0.55,
+        color: '#ff6a9a',
+        color2: '#ffffff',
         drag: 0.08,
         gravity: -24,
         rot: rand(-0.6, 0.6),
         vrot: rand(-9, 9),
         flicker: 1,
         additive: true,
-        delay: 0.05 + i * 0.055,
+        delay: 0.04 + i * 0.05,
       });
     }
   }
