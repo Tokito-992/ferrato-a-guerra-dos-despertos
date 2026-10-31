@@ -102,7 +102,7 @@ Cada herói tem atributos, golpes, alcance, hitboxes, passiva, efeitos e som de 
 - Combos com contador, hitstun, knockback, launch, críticos, hitstop, partículas e números de dano.
 - Invulnerabilidade em dash, após dano e em transições; inimigos com i-frames, status (selo, queimadura, marca) e resistências.
 - Habilidades com recarga e medidor de calor/ritmo próprio de cada herói, com efeito sonoro exclusivo.
-- Dez arquétipos de inimigos com IA distinta (rastejantes, guerreiros, drones, ceifadores, cães, brutamontes, serafins, construtos, ecos) e variações elite.
+- Dez arquétipos de inimigos com IA distinta (rastejantes, guerreiros, drones, ceifadores, cães, brutamontes, serafins, construtos, ecos) e variações elite. Cada arquétipo tem silhueta em camadas, carapaça/armadura, arma e olhos próprios; elites recebem coroa, halo e anel rúnico.
 - Chefes com telegrafia, padrões por fase, invocação de reforços, projéteis, feixes, hazards e mudança de fase com invulnerabilidade temporária.
 - Câmera lateral com limites por arena, parallax em camadas, clima e paleta próprios para cada capítulo.
 - Assinaturas visuais exclusivas: cada Desperto tem silhueta, ombreiras, botas, manoplas/armas detalhadas, aura, rastro de golpe e motivo de retrato próprios; cada capítulo tem céu, marco de cenário, atmosfera e placa de local próprios.
