@@ -62,7 +62,7 @@ export class GameplayScene {
         this.animeImpactX = 0;
         this.animeImpactY = 0;
         this.animeImpactColor = '#fff4cd';
-        // Câmara do Coração: bônus curto e arriscado, com no máximo uma vida extra.
+        // Câmara do Coração: evento raro (capítulo 3 de cada arco), curto e com no máximo uma vida extra.
         this.bonusDuration = 10;
         this.bonusTotal = 3;
         this.bonusTriggered = false;
@@ -381,8 +381,9 @@ export class GameplayScene {
                 this.finishWave();
             return;
         }
-        // Câmara do Coração: bônus opcional entre a segunda e a terceira onda.
-        if (!this.bonusTriggered &&
+        // Câmara do Coração: evento raro, apenas no capítulo central de cada arco.
+        if (this.stage.chapter === 3 &&
+            !this.bonusTriggered &&
             this.waveIndex >= 2 &&
             this.waveIndex < this.stage.waves.length &&
             this.player.x >= this.bonusAt) {

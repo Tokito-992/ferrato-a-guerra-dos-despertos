@@ -346,6 +346,36 @@ export class ParticleSystem {
                     ctx.fill();
                     break;
                 }
+                case 'soul': {
+                    const wobble = Math.sin(p.rot + t * 16) * p.size * 0.45;
+                    const r = p.size * (1.05 + Math.sin(t * 20) * 0.14);
+                    const grad = ctx.createRadialGradient(p.x, p.y + wobble, 0, p.x, p.y + wobble, r * 1.8);
+                    grad.addColorStop(0, '#ffffff');
+                    grad.addColorStop(0.24, p.color2);
+                    grad.addColorStop(0.58, p.color);
+                    grad.addColorStop(1, 'rgba(0,0,0,0)');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y + wobble, r * 1.8, 0, TAU);
+                    ctx.fill();
+                    ctx.strokeStyle = p.color;
+                    ctx.lineWidth = Math.max(1, p.size * 0.38 * alpha);
+                    ctx.beginPath();
+                    ctx.moveTo(p.x - p.vx * 0.012, p.y + wobble - p.vy * 0.012);
+                    ctx.quadraticCurveTo(p.x - p.vx * 0.032 + Math.sin(t * 14) * p.size * 1.2, p.y - p.vy * 0.032 + p.size * 2.4, p.x - p.vx * 0.06, p.y - p.vy * 0.06 + p.size * 3.8);
+                    ctx.stroke();
+                    ctx.globalAlpha = alpha * 0.55;
+                    ctx.beginPath();
+                    ctx.moveTo(p.x - p.vx * 0.008, p.y + wobble - p.vy * 0.008);
+                    ctx.quadraticCurveTo(p.x - p.vx * 0.026 - Math.sin(t * 12) * p.size, p.y - p.vy * 0.026 + p.size * 2.1, p.x - p.vx * 0.048, p.y - p.vy * 0.048 + p.size * 3.2);
+                    ctx.stroke();
+                    ctx.globalAlpha = alpha;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y + wobble, Math.max(1, p.size * 0.32), 0, TAU);
+                    ctx.fill();
+                    break;
+                }
                 case 'rune': {
                     ctx.save();
                     ctx.translate(p.x, p.y);

@@ -206,14 +206,14 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     scale: 1.06,
     weapon: 'scythe',
     ability: {
-      name: 'Colheita de Chamas Negras',
-      desc: 'Um arco de fogo negro devora a corrupção à frente e devolve parte do dano como vida.',
+      name: 'Colheita de Almas',
+      desc: 'Correntes de chamas negras puxam as almas de até 5 inimigos ao redor, queimando-os por 4s. A colheita não recupera vida diretamente.',
       cooldown: 9,
-      hint: 'E — colheita que drena vida',
+      hint: 'E — puxa as almas dos inimigos ao redor',
     },
     passive: {
       name: 'Sentença',
-      desc: 'Todos os golpes drenam 8% do dano causado. Chamas negras queimam inimigos por 4s.',
+      desc: 'Golpes básicos e pesados drenam 8% do dano causado. Chamas negras queimam inimigos por 4s.',
     },
     meter: 'VIDA DRENADA',
     comboName: 'Julgamento',

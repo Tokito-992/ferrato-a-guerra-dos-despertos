@@ -6,6 +6,7 @@ import { AudioEngine } from './audio.js';
 import { Input } from './input.js';
 import { ParticleSystem } from './particles.js';
 import { loadSave, writeSave } from './save.js';
+import { canFullscreen, toggleFullscreen } from './fullscreen.js';
 import { clamp, hexToRgba } from './math.js';
 import { FONTS, label, panel, roundRectPath } from '../render/theme.js';
 import { TitleScene } from '../scenes/title.js';
@@ -114,6 +115,21 @@ export class Game {
         const pause = document.createElement('div');
         pause.className = 'touch-cluster touch-cluster-pause';
         pause.append(makeButton('pause', 'II', 'touch-pause'));
+        if (canFullscreen()) {
+            const fullscreen = document.createElement('button');
+            fullscreen.type = 'button';
+            fullscreen.className = 'touch-btn touch-fullscreen';
+            fullscreen.textContent = '⛶';
+            fullscreen.setAttribute('aria-label', 'Tela cheia');
+            fullscreen.title = 'Tela cheia';
+            fullscreen.addEventListener('pointerdown', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                void toggleFullscreen();
+            });
+            fullscreen.addEventListener('contextmenu', (event) => event.preventDefault());
+            pause.append(fullscreen);
+        }
         wrap.append(left, right, pause);
         (document.getElementById('frame') ?? document.body).appendChild(wrap);
         this.touchControls = wrap;

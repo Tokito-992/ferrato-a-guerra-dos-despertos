@@ -18,16 +18,19 @@
 <body>
   <div id="app">
     <div id="frame">
-      <canvas id="game" width="1280" height="720" aria-label="Jogo Ferrato: A Guerra Dos Despertos"></canvas>
-      <div class="crt" aria-hidden="true"></div>
+      <div id="stage">
+        <canvas id="game" width="1280" height="720" aria-label="Jogo Ferrato: A Guerra Dos Despertos"></canvas>
+        <div class="crt" aria-hidden="true"></div>
+      </div>
     </div>
+    <button id="fullscreen-toggle" type="button" aria-label="Tela cheia" title="Tela cheia">⛶</button>
     <div id="loading">
       <div class="loading-mark">FERRATO</div>
       <div class="loading-sub">abrindo o Véu…</div>
     </div>
     <p id="footnote">
       <span>WASD / ← → mover</span><span>ESPAÇO pular</span><span>J atacar</span><span>K pesado</span>
-      <span>L dash</span><span>E habilidade</span><span>ESC pausar</span><span>M áudio</span>
+      <span>L dash</span><span>E habilidade</span><span>ESC pausar</span><span>M áudio</span><span>F tela cheia</span>
     </p>
   </div>
   <div id="rotate-hint" aria-hidden="true">

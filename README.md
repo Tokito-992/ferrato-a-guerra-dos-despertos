@@ -49,8 +49,9 @@ O jogo funciona em navegadores móveis e ocupa a tela inteira no modo horizontal
 | `L` | Dash |
 | `E` | Habilidade especial |
 | `II` | Pausar |
+| `⛶` | Entrar/sair da tela cheia |
 
-Os menus respondem a toque diretamente no canvas. Em retrato, uma tela de aviso pede para girar o dispositivo, pois a arena foi desenhada em 16:9 horizontal. Os botões respeitam as áreas seguras (notch) e a barra de vida do chefe sobe automaticamente para não ficar sob os controles.
+Os menus respondem a toque diretamente no canvas. Em retrato, uma tela de aviso pede para girar o dispositivo, pois a arena foi desenhada em 16:9 horizontal. Os controles ficam em um **dock inferior fora da área de combate**, então não cobrem inimigos nem personagens. O jogo tenta entrar em tela cheia no primeiro toque e também oferece o botão `⛶`; a orientação é travada em paisagem quando o navegador permite. As áreas seguras (notch) são respeitadas.
 
 ## Conteúdo
 
@@ -85,19 +86,19 @@ Cada capítulo tem três ondas com composições e elites próprias, arena com c
 | Ravi | O Pulso | Acrobático elétrico | Pulso Voltaico | I |
 | Miriam | A Quebra-Ossos | Tank ofensivo geotérmico | Erupção Magmática | II |
 | Kael | Zero-G | Zoner gravitacional | Singularidade | III |
-| Ozric | O Exilado | Híbrido vampírico com foice | Colheita de Chamas Negras | IV |
+| Ozric | O Exilado | Híbrido vampírico com foice | Colheita de Almas | IV |
 | Élodie | Lâmina Celeste | Duelista sagrada | Selo da Aurora | V |
 | Thryc | Eco | Manipulador do Nexus | Eco | VI |
 
-Cada herói tem atributos, golpes, alcance, hitboxes, passiva, efeitos e som de habilidade próprios. Kael é **não-binário**; Thryc é **agênero** e usa pronomes neutros (**elu/delu**).
+Cada herói tem atributos, golpes, alcance, hitboxes, passiva, efeitos e som de habilidade próprios. Kael é **não-binário**; Thryc é **agênero** e usa pronomes neutros (**elu/delu**). Ozric usa **Colheita de Almas**: correntes de chamas negras puxam as almas de até 5 inimigos ao redor, queimando-os por 4 s. A habilidade **não recupera vida**; a drenagem de Ozric vem dos golpes básicos e pesados.
 
 ## Sistemas
 
 - **Pressão do Véu**: medidor de 0–100 que sobe com combos, abates, ondas limpas e corações; cai ao apanhar. Define o rank ao vivo (**D → C → B → A → S → SS**), multiplica os pontos e libera eventos de alta pressão.
 - **Caçador do Véu**: com rank **S** durante uma onda, um elite único é invocado. Abatê-lo rende pontos extras e cura. Acima de 58% de pressão, anomalias temporárias (fraturas) surgem no campo.
 - **Obstáculos de arena**: cada fase distribui santuários (cura), fraturas (dano periódico em área), âncoras (puxam jogador e inimigos) e sobrecargas (recarregam a habilidade e concedem +25% de dano por 5 s). Arcos avançados recebem mais obstáculos.
-- **Câmara do Coração**: após a segunda onda, ao avançar pelo mapa, uma fase bônus de 10 s pede para coletar os 3 corações saltando enquanto desvia das explosões. Só a coleta completa concede **1 vida extra**; coletas parciais dão apenas pontuação e pressão.
-- **Vidas extras**: a Câmara pode conceder 1 coração por capítulo (limite de 3 no HUD). Ao cair, um coração revive o Desperto com 30% de vida, invulnerabilidade curta e limpeza de projéteis/hazards próximos. A cura ao limpar ondas foi reduzida para manter o risco.
+- **Câmara do Coração**: evento raro que aparece apenas no **capítulo 3 de cada arco** (3, 9, 15, 21, 27 e 33). Após a segunda onda, uma fase bônus de 10 s pede para coletar os 3 corações saltando enquanto desvia das explosões. Só a coleta completa concede **1 vida extra**; coletas parciais dão apenas pontuação e pressão.
+- **Vidas extras**: a Câmara pode conceder 1 coração por aparição (limite de 3 no HUD). Ao cair, um coração revive o Desperto com 30% de vida, invulnerabilidade curta e limpeza de projéteis/hazards próximos. A cura ao limpar ondas foi reduzida para manter o risco.
 - **Recordes competitivos**: pontuação e melhor rank são gravados e exibidos no título e no game over.
 - Combos com contador, hitstun, knockback, launch, críticos, hitstop, partículas e números de dano.
 - Invulnerabilidade em dash, após dano e em transições; inimigos com i-frames, status (selo, queimadura, marca) e resistências.

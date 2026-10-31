@@ -755,52 +755,73 @@ export class Player extends Combatant {
                 break;
             }
             case 'ozric': {
-                world.audio.sfx('slash');
-                world.audio.sfx('heal');
-                world.shake(0.6);
-                world.flash('#ff3357', 0.16);
-                const box = {
-                    x: this.x + (this.facing > 0 ? 0 : -250),
-                    y: this.y - 150,
-                    w: 250,
-                    h: 150,
-                };
-                world.particles.slash(this.x + this.facing * 110, this.centerY - 10, this.facing > 0 ? -0.15 : Math.PI + 0.15, '#ff3357', 150, 0.3);
-                world.particles.burst(this.x + this.facing * 120, this.centerY - 30, 26, '#ff3357', {
-                    speed: 300,
-                    gravity: -80,
-                    size: 4,
-                    color2: '#2a0a14',
-                    life: 0.6,
+                world.shake(0.68);
+                world.flash('#ff3357', 0.2);
+                world.particles.ring(this.x, this.centerY, '#ff3357', 300, 0.55, 6);
+                world.particles.ring(this.x, this.centerY, '#ffe6ea', 210, 0.4, 3);
+                world.particles.spawn({
+                    kind: 'glow',
+                    x: this.x,
+                    y: this.centerY,
+                    life: 0.55,
+                    size: 92,
+                    color: '#ff3357',
+                    color2: '#ffe6ea',
                 });
-                const targets = [...world.enemies];
+                world.particles.burst(this.x, this.centerY, 26, '#ff3357', {
+                    speed: 430,
+                    gravity: -60,
+                    size: 3.2,
+                    color2: '#2a0a14',
+                    life: 0.7,
+                });
+                world.particles.slash(this.x, this.centerY - 8, this.facing > 0 ? -0.15 : Math.PI + 0.15, '#ff3357', 178, 0.36);
+                const radius = 300;
+                const maxTargets = 5;
+                const candidates = [...world.enemies];
                 if (world.boss && !world.boss.dead)
-                    targets.push(world.boss);
-                let total = 0;
-                for (const t of targets) {
+                    candidates.push(world.boss);
+                const targets = candidates
+                    .filter((t) => {
                     if (t.dead)
-                        continue;
-                    if (!rectsOverlap(box, t.hurtbox))
-                        continue;
-                    total += 34;
-                    world.damageEnemy(t, 34 * this.damageMultiplier(), {
-                        fromX: this.x,
-                        knockback: 220,
-                        launch: 100,
-                        hitstun: 0.5,
+                        return false;
+                    const dx = t.x - this.x;
+                    const dy = t.centerY - this.centerY;
+                    return dx * dx + dy * dy <= radius * radius;
+                })
+                    .sort((a, b) => Math.abs(a.x - this.x) - Math.abs(b.x - this.x))
+                    .slice(0, maxTargets);
+                for (const t of targets) {
+                    const away = Math.sign(t.x - this.x) || this.facing;
+                    world.damageEnemy(t, 28 * this.damageMultiplier(), {
+                        // `fromX` do lado oposto inverte o empurrão: o corpo é puxado para Ozric.
+                        fromX: t.x + away * 90,
+                        knockback: 165,
+                        hitstun: 0.55,
                         color: '#ff3357',
                         status: 'burn',
                         statusTime: 4,
-                        shake: 0.2,
+                        shake: 0.14,
                     });
-                    world.particles.bolt([{ x: this.x, y: this.centerY }, { x: t.x, y: t.centerY }], '#ff3357', 0.3, 3);
+                    world.particles.burst(t.x, t.centerY, 6, '#ff9bb8', {
+                        speed: 130,
+                        gravity: -35,
+                        size: 1.8,
+                        color2: '#ffe6ea',
+                        life: 0.35,
+                    });
+                    this.pullSoul(world, t.x, t.centerY);
                 }
-                const healed = this.heal(18 + total * 0.35);
-                this.drained += healed;
-                if (healed > 0) {
-                    world.text(`+${Math.round(healed)}`, this.x, this.y - 120, '#ff9b9b', 18);
-                    world.particles.ring(this.x, this.centerY, '#ff6a8a', 70, 0.5, 3);
-                }
+                world.after(0.34, () => {
+                    world.particles.ring(this.x, this.centerY, '#ffe6ea', 104, 0.4, 3);
+                    world.particles.burst(this.x, this.centerY, 16, '#ff3357', {
+                        speed: 190,
+                        gravity: -40,
+                        size: 2.6,
+                        color2: '#ffffff',
+                        life: 0.45,
+                    });
+                });
                 break;
             }
             case 'elodie': {
@@ -861,6 +882,59 @@ export class Player extends Combatant {
                 world.text('ECO', this.x, this.y - 140, c.accent, 20);
                 break;
             }
+        }
+    }
+    /** Correntes de alma: espectros saem do alvo e são arrastados até Ozric. */
+    pullSoul(world, fromX, fromY) {
+        const dx = this.x - fromX;
+        const dy = this.centerY - fromY;
+        const dist = Math.max(1, Math.hypot(dx, dy));
+        const life = clamp(dist / 560, 0.24, 0.62);
+        const midX = (fromX + this.x) / 2;
+        const midY = (fromY + this.centerY) / 2 - 26;
+        world.particles.bolt([
+            { x: fromX, y: fromY },
+            { x: midX, y: midY },
+            { x: this.x, y: this.centerY },
+        ], '#ff3357', 0.3, 2.4);
+        world.particles.bolt([{ x: fromX, y: fromY + 7 }, { x: this.x, y: this.centerY - 5 }], '#ffe6ea', 0.2, 1.1);
+        // Espectro principal, seguido por um rastro de almas menores.
+        world.particles.spawn({
+            kind: 'soul',
+            x: fromX,
+            y: fromY,
+            vx: dx / life,
+            vy: dy / life,
+            life,
+            size: 6.2,
+            color: '#ff3357',
+            color2: '#ffe6ea',
+            drag: 0.06,
+            gravity: -26,
+            rot: rand(-0.4, 0.4),
+            vrot: rand(-7, 7),
+            additive: true,
+        });
+        for (let i = 0; i < 3; i++) {
+            const spread = i - 1;
+            world.particles.spawn({
+                kind: 'soul',
+                x: fromX + rand(-10, 10),
+                y: fromY + rand(-14, 14),
+                vx: dx / life * (0.9 + i * 0.07) + spread * 14 + rand(-10, 10),
+                vy: dy / life * (0.9 + i * 0.07) + rand(-14, 14),
+                life: life * (0.82 + i * 0.08),
+                size: 3.6 + i * 0.55,
+                color: '#ff3357',
+                color2: '#ffe6ea',
+                drag: 0.08,
+                gravity: -24,
+                rot: rand(-0.6, 0.6),
+                vrot: rand(-9, 9),
+                flicker: 1,
+                additive: true,
+                delay: 0.05 + i * 0.055,
+            });
         }
     }
     counterRiposte(world) {
