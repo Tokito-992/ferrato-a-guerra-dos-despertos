@@ -105,7 +105,7 @@ Cada herói tem atributos, golpes, alcance, hitboxes, passiva, efeitos e som de 
 - Dez arquétipos de inimigos com IA distinta (rastejantes, guerreiros, drones, ceifadores, cães, brutamontes, serafins, construtos, ecos) e variações elite.
 - Chefes com telegrafia, padrões por fase, invocação de reforços, projéteis, feixes, hazards e mudança de fase com invulnerabilidade temporária.
 - Câmera lateral com limites por arena, parallax em camadas, clima e paleta próprios para cada capítulo.
-- Assinaturas visuais exclusivas: cada Desperto tem silhueta, acessórios, aura, rastro de golpe e motivo de retrato próprios; cada capítulo tem céu, marco de cenário, atmosfera e placa de local próprios.
+- Assinaturas visuais exclusivas: cada Desperto tem silhueta, ombreiras, botas, manoplas/armas detalhadas, aura, rastro de golpe e motivo de retrato próprios; cada capítulo tem céu, marco de cenário, atmosfera e placa de local próprios.
 - Menu principal (Novo Jogo, Continuar, Despertos & Arcos, Créditos), pausa (continuar, trocar Desperto, reiniciar, sair), game over (tentar novamente, trocar, menu) e vitória.
 - Seleção por arcos e capítulos, com sinopse, motivo do herói, lore, guardião/chefe, dificuldade e progresso.
 - Progressão em `localStorage` (chave `ferrato_guerra_dos_despertos_save_v1`, esquema **v2**): capítulos concluídos, capítulo máximo, heróis desbloqueados, herói selecionado, abates, quedas, melhor combo, melhor pontuação (`bestScore`), melhor rank (`bestRank`) e áudio. Saves antigos recebem os novos campos com valores padrão.
