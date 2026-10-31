@@ -1,9 +1,8 @@
 /**
  * Chave de estilo visual reversível.
  *
- * O padrão desta branch é o modo anime-inspired. Para comparar com o estilo
- * clássico, use `?anime=0` na URL ou pressione F2 durante o jogo. A `main`
- * permanece com o estilo clássico até a branch ser aprovada e mesclada.
+ * O padrão é o modo anime-inspired. Para comparar com o estilo clássico,
+ * use `?anime=0` na URL ou pressione F2 durante o jogo.
  */
 
 const params = new URLSearchParams(window.location.search);
