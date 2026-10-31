@@ -4,6 +4,7 @@ import { clamp, hexToRgba, mixColor, TAU } from '../core/math.js';
 import type { Enemy } from '../entities/enemy.js';
 import type { Boss } from '../entities/boss.js';
 import { getStage } from '../data/stages.js';
+import { visualStyle } from './style.js';
 import { glow, joint, limb, roundRectPath } from './theme.js';
 
 function tint(color: string, flash: number): string {
@@ -227,6 +228,20 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy, time: number)
   ctx.scale(e.facing * scale, scale);
   ctx.globalAlpha = e.alpha;
 
+  if (visualStyle.anime) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const halo = ctx.createRadialGradient(0, -e.h * 0.5, 2, 0, -e.h * 0.5, e.w * 0.82);
+    halo.addColorStop(0, hexToRgba(accent, 0.12));
+    halo.addColorStop(0.55, hexToRgba(accent, 0.05));
+    halo.addColorStop(1, hexToRgba(accent, 0));
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(0, -e.h * 0.5, e.w * 0.82, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+  }
+
   if (e.dead) {
     ctx.rotate(-Math.min(1.3, e.deathTimer * 2));
   }
@@ -251,6 +266,26 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy, time: number)
     for (let i = 0; i < 6; i++) {
       const a = time * 0.7 + (i * TAU) / 6;
       runeMark(ctx, Math.cos(a) * e.w * 0.72, Math.sin(a) * e.w * 0.2, 3, accent, a);
+    }
+    ctx.restore();
+  }
+
+  // Explosão de linhas de velocidade ao carregar ou levar um golpe.
+  if (visualStyle.anime && (e.state === 'windup' || flash > 0.02)) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = flash > 0.02 ? 0.55 : 0.3;
+    const cy = -e.h * 0.5;
+    const inner = e.w * 0.34;
+    const outer = e.w * (0.6 + (flash > 0.02 ? 0.22 : 0));
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * TAU + time * 0.7;
+      ctx.strokeStyle = flash > 0.02 ? '#ffffff' : accent;
+      ctx.lineWidth = i % 3 === 0 ? 2 : 1;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * inner, cy + Math.sin(a) * inner * 0.7);
+      ctx.lineTo(Math.cos(a) * outer, cy + Math.sin(a) * outer * 0.7);
+      ctx.stroke();
     }
     ctx.restore();
   }

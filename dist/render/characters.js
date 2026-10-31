@@ -1,6 +1,7 @@
 /** Ilustração procedural dos seis Despertos (corpo inteiro, retratos e poses). */
 import { clamp, easeInCubic, easeOutCubic, hexToRgba, lerp, mixColor, TAU } from '../core/math.js';
 import { CHARACTERS } from '../data/characters.js';
+import { visualStyle } from './style.js';
 import { glow, joint, limb, roundRectPath } from './theme.js';
 const BASE = {
     bob: 0,
@@ -170,11 +171,17 @@ function tint(color, flash) {
 }
 /** Membro com contorno, volume cilíndrico e brilho direcional. */
 function limbShaded(ctx, x1, y1, x2, y2, width, base) {
-    limb(ctx, x1, y1, x2, y2, width + 1.8, 'rgba(6, 5, 10, 0.55)');
+    const anime = visualStyle.anime;
+    limb(ctx, x1, y1, x2, y2, width + (anime ? 2.8 : 1.8), anime ? 'rgba(3, 2, 6, 0.92)' : 'rgba(6, 5, 10, 0.55)');
     limb(ctx, x1, y1, x2, y2, width, base);
+    if (anime) {
+        const sx = -width * 0.18;
+        const sy = width * 0.18;
+        limb(ctx, x1 + sx, y1 + sy, x2 + sx, y2 + sy, Math.max(1.2, width * 0.32), mixColor(base, '#05040a', 0.48));
+    }
     const ox = width * 0.16;
     const oy = -width * 0.16;
-    limb(ctx, x1 + ox, y1 + oy, x2 + ox, y2 + oy, Math.max(1.2, width * 0.3), mixColor(base, '#ffffff', 0.34));
+    limb(ctx, x1 + ox, y1 + oy, x2 + ox, y2 + oy, Math.max(1.2, width * (anime ? 0.38 : 0.3)), mixColor(base, '#ffffff', anime ? 0.48 : 0.34));
 }
 /** Faixa curta atravessando um membro (tiras, munhequeiras, ligas). */
 function limbBand(ctx, a, b, t, color, width) {
@@ -869,7 +876,7 @@ export function drawCharacterFigure(ctx, def, x, y, facing, scale, time, build, 
     const accent = tint(c.accent, flash);
     const hair = tint(c.hair, flash);
     const dark = tint('#0d0b14', flash);
-    const outline = 'rgba(6, 5, 10, 0.9)';
+    const outline = visualStyle.anime ? 'rgba(3, 2, 6, 0.98)' : 'rgba(6, 5, 10, 0.9)';
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(facing * scale, scale);
@@ -969,7 +976,7 @@ export function drawCharacterFigure(ctx, def, x, y, facing, scale, time, build, 
     ctx.fillStyle = primary;
     ctx.fill();
     ctx.strokeStyle = outline;
-    ctx.lineWidth = 1.6;
+    ctx.lineWidth = visualStyle.anime ? 2.4 : 1.6;
     ctx.stroke();
     // Volume do traje: sombra lateral, brilho de peito e dobras.
     ctx.save();
@@ -981,6 +988,17 @@ export function drawCharacterFigure(ctx, def, x, y, facing, scale, time, build, 
     torsoShade.addColorStop(1, 'rgba(255, 255, 255, 0.02)');
     ctx.fillStyle = torsoShade;
     ctx.fillRect(chestX - chestW - 6, chestY - 12, chestW * 2 + 12, hipY - chestY + 24);
+    if (visualStyle.anime) {
+        // Sombra cel com borda dura, no lugar do degradê suave.
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+        ctx.beginPath();
+        ctx.moveTo(chestX - chestW - 2, chestY + 8);
+        ctx.lineTo(chestX - chestW * 0.12, chestY - 5);
+        ctx.lineTo(hipX - hipW * 0.08, hipY + 6);
+        ctx.lineTo(hipX - hipW - 2, hipY + 2);
+        ctx.closePath();
+        ctx.fill();
+    }
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.28)';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -1220,14 +1238,22 @@ export function drawCharacterFigure(ctx, def, x, y, facing, scale, time, build, 
         ctx.globalAlpha = build.alpha;
     }
     // Brilho no cabelo/elmo e luz de contorno.
+    const anime = visualStyle.anime;
     const hairSheen = mixColor(c.hair, '#ffffff', 0.55);
-    ctx.strokeStyle = hexToRgba(hairSheen, def.id === 'thryc' ? 0.8 : 0.45);
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = hexToRgba(hairSheen, anime ? 0.95 : def.id === 'thryc' ? 0.8 : 0.45);
+    ctx.lineWidth = anime ? 1.8 : 1;
     ctx.beginPath();
     ctx.arc(-1, -4, 7.2, Math.PI * 1.08, Math.PI * 1.52);
     ctx.stroke();
-    ctx.strokeStyle = hexToRgba(c.accent, 0.3);
-    ctx.lineWidth = 1.1;
+    if (anime) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.72)';
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.arc(-2.5, -5, 6.1, Math.PI * 1.16, Math.PI * 1.42);
+        ctx.stroke();
+    }
+    ctx.strokeStyle = hexToRgba(c.accent, anime ? 0.55 : 0.3);
+    ctx.lineWidth = anime ? 1.7 : 1.1;
     ctx.beginPath();
     ctx.arc(0, 0, isSlim ? 8 : 9, -0.55, 0.65);
     ctx.stroke();
@@ -2464,6 +2490,100 @@ function drawCombatFlair(ctx, p, time) {
     ctx.restore();
     void time;
 }
+/** Linhas de velocidade, aura e brilhos de shonen ao redor do Desperto. */
+function drawAnimePlayerFx(ctx, p, time) {
+    if (p.dead)
+        return;
+    const speed = Math.abs(p.vx);
+    const moving = clamp(speed / 340, 0, 1);
+    const dashing = p.dashTime > 0 ? 1 : 0;
+    const attacking = p.attackPhase === 'active' ? 1 : p.attackPhase === 'windup' ? 0.45 : 0;
+    const power = Math.max(moving, dashing, attacking * 0.8, clamp(p.abilityFlash * 2, 0, 1));
+    if (power < 0.04)
+        return;
+    const accent = p.def.colors.accent;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.scale(p.facing * p.scale, p.scale);
+    ctx.globalCompositeOperation = 'lighter';
+    const aura = ctx.createRadialGradient(0, -48, 4, 0, -48, 64);
+    aura.addColorStop(0, hexToRgba(accent, 0.12 + power * 0.12));
+    aura.addColorStop(0.5, hexToRgba(accent, 0.04 + power * 0.05));
+    aura.addColorStop(1, hexToRgba(accent, 0));
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.ellipse(0, -48, 58, 68, 0, 0, TAU);
+    ctx.fill();
+    for (let i = 0; i < 14; i++) {
+        const a = (i / 14) * TAU + Math.sin(time * 1.7 + i) * 0.08;
+        const r0 = 30 + (i % 3) * 6;
+        const r1 = r0 + 18 + power * 36 + (i % 4) * 8;
+        ctx.strokeStyle = hexToRgba(i % 3 === 0 ? '#ffffff' : accent, 0.08 + power * 0.16);
+        ctx.lineWidth = i % 3 === 0 ? 1.6 : 1;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * r0, -46 + Math.sin(a) * r0 * 1.1);
+        ctx.lineTo(Math.cos(a) * r1, -46 + Math.sin(a) * r1 * 1.1);
+        ctx.stroke();
+    }
+    for (let i = 0; i < 6; i++) {
+        const a = time * 1.2 + i * 1.7;
+        const px = Math.cos(a) * (20 + i * 4);
+        const py = -40 + Math.sin(a * 1.3) * (26 + i * 3);
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(a);
+        ctx.fillStyle = hexToRgba(i % 2 === 0 ? '#ffffff' : accent, 0.35 + power * 0.25);
+        ctx.beginPath();
+        ctx.moveTo(0, -3);
+        ctx.lineTo(2, 0);
+        ctx.lineTo(0, 3);
+        ctx.lineTo(-2, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+    if (dashing > 0) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.32)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 4; i++) {
+            const y = -70 + i * 18;
+            ctx.beginPath();
+            ctx.moveTo(-70 - i * 10, y);
+            ctx.lineTo(-18, y);
+            ctx.stroke();
+        }
+    }
+    ctx.restore();
+}
+/** Contorno luminoso do lado da luz, no estilo de pintura de anime. */
+function drawAnimeRimLight(ctx, p, time) {
+    if (p.dead)
+        return;
+    const accent = p.def.colors.accent;
+    const pulse = 0.35 + Math.sin(time * 4) * 0.05;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.scale(p.facing * p.scale, p.scale);
+    ctx.globalCompositeOperation = 'lighter';
+    const rim = ctx.createLinearGradient(6, -90, 34, -10);
+    rim.addColorStop(0, hexToRgba(accent, 0.22 * pulse));
+    rim.addColorStop(0.55, hexToRgba(accent, 0.08 * pulse));
+    rim.addColorStop(1, hexToRgba(accent, 0));
+    ctx.fillStyle = rim;
+    ctx.beginPath();
+    ctx.ellipse(18, -48, 22, 48, 0, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(0, -78, 15, -1.25, 0.55);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.beginPath();
+    ctx.ellipse(9, -60, 3.2, 1.2, -0.5, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+}
 /** Desenha o jogador em combate. */
 export function drawPlayer(ctx, p, time) {
     const build = playerBuild(p, time);
@@ -2480,15 +2600,20 @@ export function drawPlayer(ctx, p, time) {
         ctx.fill();
         ctx.restore();
     }
+    if (visualStyle.anime)
+        drawAnimePlayerFx(ctx, p, time);
     drawPlayerAura(ctx, p, time);
     drawCharacterFigure(ctx, p.def, p.x, p.y, p.facing, p.def.scale, time, build, p.hitFlash);
+    if (visualStyle.anime)
+        drawAnimeRimLight(ctx, p, time);
     drawCombatFlair(ctx, p, time);
     // Rastro de dash.
     if (p.dashTime > 0) {
         ctx.save();
-        ctx.globalAlpha = 0.25;
-        for (let i = 1; i <= 3; i++) {
-            drawCharacterFigure(ctx, p.def, p.x - p.dashDir * i * 22, p.y, p.facing, p.def.scale, time, build, p.hitFlash);
+        ctx.globalAlpha = visualStyle.anime ? 0.14 : 0.25;
+        const copies = visualStyle.anime ? 5 : 3;
+        for (let i = 1; i <= copies; i++) {
+            drawCharacterFigure(ctx, p.def, p.x - p.dashDir * i * (visualStyle.anime ? 18 : 22), p.y, p.facing, p.def.scale, time, build, p.hitFlash);
         }
         ctx.restore();
     }
