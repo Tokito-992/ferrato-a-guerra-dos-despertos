@@ -19,6 +19,8 @@ import { GameplayScene } from '../scenes/gameplay.js';
 import { StoryScene } from '../scenes/story.js';
 import { VictoryScene } from '../scenes/victory.js';
 import { CreditsScene } from '../scenes/credits.js';
+import { SettingsScene } from '../scenes/settings.js';
+import { TutorialScene } from '../scenes/tutorial.js';
 
 export interface Scene {
   update(dt: number): void;
@@ -95,6 +97,13 @@ export class Game {
       this.audio.setMuted(this.save.muted);
     };
     this.setupTouchControls();
+    this.applyTouchSettings();
+  }
+
+  /** Aplica as preferências de layout dos controles de toque. */
+  applyTouchSettings(): void {
+    document.body.classList.toggle('touch-lefty', this.save.touchLayout === 'lefty');
+    document.body.classList.toggle('touch-dock-top', this.save.touchDock === 'top');
   }
 
   get isTouchDevice(): boolean {
@@ -115,13 +124,30 @@ export class Game {
     const right = document.createElement('div');
     right.className = 'touch-cluster touch-cluster-right';
 
-    const makeButton = (action: Action, text: string, extra = ''): HTMLButtonElement => {
+    const makeButton = (
+      action: Action,
+      icon: string,
+      extra = '',
+      label = '',
+      ariaLabel = '',
+    ): HTMLButtonElement => {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = `touch-btn${extra ? ` ${extra}` : ''}`;
       button.dataset.action = action;
-      button.textContent = text;
-      button.setAttribute('aria-label', action);
+      button.setAttribute('aria-label', ariaLabel || label || action);
+      const iconEl = document.createElement('span');
+      iconEl.className = 'touch-icon';
+      iconEl.textContent = icon;
+      iconEl.setAttribute('aria-hidden', 'true');
+      button.append(iconEl);
+      if (label) {
+        const labelEl = document.createElement('span');
+        labelEl.className = 'touch-label';
+        labelEl.textContent = label;
+        labelEl.setAttribute('aria-hidden', 'true');
+        button.append(labelEl);
+      }
       const press = (event: PointerEvent): void => {
         event.preventDefault();
         event.stopPropagation();
@@ -146,20 +172,20 @@ export class Game {
     };
 
     left.append(
-      makeButton('left', '◀', 'touch-move'),
-      makeButton('right', '▶', 'touch-move'),
+      makeButton('left', '◀', 'touch-move', '', 'Mover para a esquerda'),
+      makeButton('right', '▶', 'touch-move', '', 'Mover para a direita'),
     );
     right.append(
-      makeButton('jump', '⤒', 'touch-jump'),
-      makeButton('attack', 'J', 'touch-action'),
-      makeButton('heavy', 'K', 'touch-action'),
-      makeButton('dash', 'L', 'touch-action'),
-      makeButton('ability', 'E', 'touch-ability'),
+      makeButton('jump', '⤒', 'touch-jump', 'PULAR', 'Pular'),
+      makeButton('attack', '⚔', 'touch-action', 'LEVE', 'Ataque leve'),
+      makeButton('heavy', '✹', 'touch-action', 'PESADO', 'Ataque pesado'),
+      makeButton('dash', '»', 'touch-action', 'DASH', 'Dash'),
+      makeButton('ability', '✦', 'touch-ability', 'ESPECIAL', 'Habilidade especial'),
     );
 
     const pause = document.createElement('div');
     pause.className = 'touch-cluster touch-cluster-pause';
-    pause.append(makeButton('pause', 'II', 'touch-pause'));
+    pause.append(makeButton('pause', 'Ⅱ', 'touch-pause', '', 'Pausa'));
 
     if (canFullscreen()) {
       const fullscreen = document.createElement('button');
@@ -292,6 +318,14 @@ export class Game {
 
   gotoCredits(): void {
     this.transitionTo(() => this.setScene(new CreditsScene(this)));
+  }
+
+  gotoSettings(): void {
+    this.transitionTo(() => this.setScene(new SettingsScene(this)));
+  }
+
+  gotoTutorial(onDone: () => void): void {
+    this.transitionTo(() => this.setScene(new TutorialScene(this, onDone)));
   }
 
   // ------------------------------------------------------------- cenas

@@ -40,6 +40,7 @@ export class TitleScene implements Scene {
         accent: '#56e3ff',
       },
       { id: 'select', label: 'DESPERTOS & ARCOS', detail: '36 CAPÍTULOS', accent: '#b48bff' },
+      { id: 'settings', label: 'CONFIGURAÇÕES', detail: 'CONTROLES & TELA', accent: '#56e3ff' },
       { id: 'credits', label: 'CRÉDITOS', detail: 'O VÉU', accent: '#ffe6a3' },
     ]);
   }
@@ -51,13 +52,18 @@ export class TitleScene implements Scene {
     if (!action) return;
     switch (action) {
       case 'new':
-        this.game.gotoCharacterSelect(1, this.game.save.selected);
+        this.game.gotoTutorial(() =>
+          this.game.gotoCharacterSelect(1, this.game.save.selected),
+        );
         break;
       case 'continue':
         this.game.gotoCharacterSelect(this.game.save.maxStage, this.game.save.selected);
         break;
       case 'select':
         this.game.gotoCharacterSelect(this.game.save.maxStage, this.game.save.selected);
+        break;
+      case 'settings':
+        this.game.gotoSettings();
         break;
       case 'credits':
         this.game.gotoCredits();
@@ -127,10 +133,10 @@ export class TitleScene implements Scene {
     });
 
     // Menu.
-    this.menu.draw(ctx, 90, 412, 414, {
-      itemHeight: 52,
-      gap: 7,
-      size: 19,
+    this.menu.draw(ctx, 90, 400, 414, {
+      itemHeight: 46,
+      gap: 6,
+      size: 17.5,
       accent: '#ff8a3d',
     });
 
@@ -199,10 +205,20 @@ export class TitleScene implements Scene {
     });
 
     // Dica inferior.
-    label(ctx, 'SETAS NAVEGAR   ENTER CONFIRMAR   M ÁUDIO', 90, 694, 10, 'rgba(190,198,220,0.45)', {
-      font: FONTS.mono,
-      spacing: 1.1,
-    });
+    label(
+      ctx,
+      this.game.isTouchDevice
+        ? 'TOQUE PARA CONFIRMAR   ·   CONFIGURAÇÕES AJUSTAM OS CONTROLES'
+        : 'SETAS NAVEGAR   ENTER CONFIRMAR   M ÁUDIO',
+      90,
+      694,
+      10,
+      'rgba(190,198,220,0.45)',
+      {
+        font: FONTS.mono,
+        spacing: 1.1,
+      },
+    );
     label(ctx, 'HTML5 · CANVAS 2D · TYPESCRIPT · ARTE PROCEDURAL', width - 26, 694, 9.5, 'rgba(160,168,190,0.35)', {
       align: 'right',
       font: FONTS.mono,

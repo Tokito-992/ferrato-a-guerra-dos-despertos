@@ -6,6 +6,9 @@ import { CHAPTERS_PER_ARC, MAX_STAGE } from '../data/stages.js';
 import { isRank } from './rank.js';
 import type { Rank } from './rank.js';
 
+export type TouchLayout = 'standard' | 'lefty';
+export type TouchDock = 'bottom' | 'top';
+
 export interface SaveData {
   version: number;
   unlocked: string[];
@@ -21,6 +24,10 @@ export interface SaveData {
   /** Melhor rank do Véu registrado. */
   bestRank: Rank;
   muted: boolean;
+  /** Lado dos controles de toque: padrão (mover à esquerda) ou canhoto. */
+  touchLayout: TouchLayout;
+  /** Posição do dock de controles de toque. */
+  touchDock: TouchDock;
 }
 
 interface LegacySave {
@@ -35,6 +42,8 @@ interface LegacySave {
   bestScore?: number;
   bestRank?: string;
   muted?: boolean;
+  touchLayout?: string;
+  touchDock?: string;
 }
 
 /** Mantemos a chave v1 para conseguir migrar arquivos antigos sem perder progresso. */
@@ -94,6 +103,8 @@ function sanitize(data: LegacySave): SaveData {
     bestScore: typeof data.bestScore === 'number' && data.bestScore > 0 ? Math.round(data.bestScore) : 0,
     bestRank: isRank(data.bestRank) ? data.bestRank : 'D',
     muted: Boolean(data.muted),
+    touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
+    touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
   };
 }
 
@@ -154,6 +165,8 @@ function migrateLegacy(data: LegacySave): SaveData {
     bestScore: typeof data.bestScore === 'number' && data.bestScore > 0 ? Math.round(data.bestScore) : 0,
     bestRank: isRank(data.bestRank) ? data.bestRank : 'D',
     muted: Boolean(data.muted),
+    touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
+    touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
   };
 }
 
@@ -170,6 +183,8 @@ export function defaultSave(): SaveData {
     bestScore: 0,
     bestRank: 'D',
     muted: false,
+    touchLayout: 'standard',
+    touchDock: 'bottom',
   };
 }
 

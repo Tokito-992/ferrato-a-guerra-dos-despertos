@@ -252,5 +252,8 @@ export class Input {
     this.virtualPressed.clear();
     this.virtualReleased.clear();
     this.virtualDown.clear();
+    // Evita que o clique usado para trocar de cena avance a próxima tela.
+    this.mouse.clicked = false;
+    this.mouse.moved = false;
   }
 }

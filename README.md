@@ -38,20 +38,35 @@ Menus também aceitam mouse (clique e hover).
 
 ### No celular e no tablet
 
-O jogo funciona em navegadores móveis e ocupa a tela inteira no modo horizontal. Os controles virtuais aparecem apenas durante o combate:
+O jogo funciona em navegadores móveis e ocupa a tela inteira no modo horizontal. Os controles virtuais aparecem apenas durante o combate, com ícones e rótulos no estilo de jogos mobile:
 
 | Botão | Ação |
 | --- | --- |
 | `◀` / `▶` | Mover |
-| `⤒` | Pular |
-| `J` | Ataque leve |
-| `K` | Ataque pesado |
-| `L` | Dash |
-| `E` | Habilidade especial |
-| `II` | Pausar |
+| `⤒ PULAR` | Pular |
+| `⚔ LEVE` | Ataque leve |
+| `✹ PESADO` | Ataque pesado |
+| `» DASH` | Dash |
+| `✦ ESPECIAL` | Habilidade especial |
+| `Ⅱ` | Pausar |
 | `⛶` | Entrar/sair da tela cheia |
 
-Os menus respondem a toque diretamente no canvas. Em retrato, uma tela de aviso pede para girar o dispositivo, pois a arena foi desenhada em 16:9 horizontal. Os controles ficam em um **dock inferior fora da área de combate**, então não cobrem inimigos nem personagens. O jogo tenta entrar em tela cheia no primeiro toque e também oferece o botão `⛶`; a orientação é travada em paisagem quando o navegador permite. As áreas seguras (notch) são respeitadas.
+Os menus respondem a toque diretamente no canvas. Em retrato, uma tela de aviso pede para girar o dispositivo, pois a arena foi desenhada em 16:9 horizontal. Os controles ficam em um **dock fora da área de combate**, então não cobrem inimigos nem personagens. O dock pode ficar na parte inferior (padrão) ou superior. O jogo tenta entrar em tela cheia no primeiro toque e também oferece o botão `⛶`; a orientação é travada em paisagem quando o navegador permite. As áreas seguras (notch) são respeitadas.
+
+Para voltar ao título no celular, abra a pausa e toque em **⌂ MENU** (ou em **SAIR PARA O MENU**). O game over e a seleção de capítulos também têm atalhos de toque para o menu principal.
+
+### Configurações e tutorial
+
+A tela **CONFIGURAÇÕES** do menu principal permite:
+
+- alternar o lado dos controles entre **padrão** (mover à esquerda, ações à direita) e **canhoto** (mover à direita, ações à esquerda);
+- colocar o dock de toque na parte **inferior** ou **superior**;
+- ligar/desligar o áudio;
+- rever o tutorial a qualquer momento.
+
+As escolhas são salvas automaticamente no `localStorage` e uma prévia mostra o layout antes de voltar ao combate.
+
+Ao escolher **NOVO JOGO**, o jogo abre um tutorial ilustrado de quatro páginas: movimento e ataques, dash e especial, Câmara do Coração e controles de celular. É possível avançar tocando/clicando, voltar página ou pular o tutorial; ao terminar, a seleção de Despertos e capítulos abre normalmente.
 
 ## Conteúdo
 
@@ -108,9 +123,9 @@ Cada herói tem atributos, golpes, alcance, hitboxes, passiva, efeitos e som de 
 - Câmera lateral com limites por arena, parallax em camadas, clima e paleta próprios para cada capítulo.
 - Assinaturas visuais exclusivas: cada Desperto tem silhueta, ombreiras, botas, manoplas/armas detalhadas, aura, rastro de golpe e motivo de retrato próprios; cada capítulo tem céu, marco de cenário, atmosfera e placa de local próprios.
 - **Modo anime-inspired**: contornos cel-shading, aura, linhas de velocidade, impactos radiais e color grade. Pressione **F2** para alternar ou use `?anime=0` para forçar o estilo clássico.
-- Menu principal (Novo Jogo, Continuar, Despertos & Arcos, Créditos), pausa (continuar, trocar Desperto, reiniciar, sair), game over (tentar novamente, trocar, menu) e vitória.
+- Menu principal (Novo Jogo, Continuar, Despertos & Arcos, Configurações, Créditos), pausa (continuar, trocar Desperto, reiniciar, sair), game over (tentar novamente, trocar, menu) e vitória.
 - Seleção por arcos e capítulos, com sinopse, motivo do herói, lore, guardião/chefe, dificuldade e progresso.
-- Progressão em `localStorage` (chave `ferrato_guerra_dos_despertos_save_v1`, esquema **v2**): capítulos concluídos, capítulo máximo, heróis desbloqueados, herói selecionado, abates, quedas, melhor combo, melhor pontuação (`bestScore`), melhor rank (`bestRank`) e áudio. Saves antigos recebem os novos campos com valores padrão.
+- Progressão em `localStorage` (chave `ferrato_guerra_dos_despertos_save_v1`, esquema **v2**): capítulos concluídos, capítulo máximo, heróis desbloqueados, herói selecionado, abates, quedas, melhor combo, melhor pontuação (`bestScore`), melhor rank (`bestRank`), áudio, lado dos controles (`touchLayout`) e posição do dock (`touchDock`). Saves antigos recebem os novos campos com valores padrão.
 - Áudio procedural via WebAudio: 36 temas de fase, 6 temas de chefe, 6 ambientes e efeitos sintetizados.
 - Dificuldade progressiva por arco e capítulo; o HP dos chefes acompanha o arco.
 - Sem dependências de runtime; arte e som são desenhados/sintetizados no navegador.
@@ -149,7 +164,7 @@ src/
   data/                heróis, 36 capítulos, chefes, inimigos, história e créditos
   entities/            Combatant, Player, Enemy, Boss, projéteis, hazards e obstáculos
   render/              tema, personagens, retratos, inimigos, chefes, corações e cenários
-  scenes/              título, seleção por arcos, história, gameplay, vitória e créditos
+  scenes/              título, tutorial, configurações, seleção por arcos, história, gameplay, vitória e créditos
   ui/                  HUD (vida, corações, rank, pressão, bônus) e menus (teclado + mouse + toque)
 styles/main.css        moldura, letterbox e tipografia
 index.html             entrada estática

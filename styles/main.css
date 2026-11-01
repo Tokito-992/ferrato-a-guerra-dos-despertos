@@ -204,21 +204,22 @@ body.is-fullscreen #frame {
   #frame { width: 100%; max-height: 82vh; }
 }
 
-/* Controles de toque: dock inferior fora da área de combate. */
+/* Controles de toque: dock fora da área de combate, com aparência de jogo mobile. */
 #touch-controls {
   position: relative;
   z-index: 4;
   flex: 0 0 auto;
   width: 100%;
-  height: calc(92px + env(safe-area-inset-bottom));
+  height: calc(96px + env(safe-area-inset-bottom));
   display: none;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px max(10px, env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom))
-    max(10px, env(safe-area-inset-right));
+  padding: 7px max(10px, env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom))
+    max(10px, env(safe-area-inset-left));
   background:
-    linear-gradient(180deg, rgba(9, 12, 22, 0.97), rgba(4, 6, 12, 0.99)),
+    radial-gradient(ellipse at 50% 0%, rgba(86, 227, 255, 0.08), transparent 62%),
+    linear-gradient(180deg, rgba(9, 12, 22, 0.98), rgba(4, 6, 12, 0.99)),
     #04050a;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.55);
@@ -228,6 +229,17 @@ body.is-fullscreen #frame {
 }
 
 body.touch-device.touch-gameplay #touch-controls { display: flex; }
+
+/* Dock no topo: alternativa para quem prefere os polegares mais altos. */
+body.touch-dock-top #touch-controls {
+  order: -1;
+  height: calc(96px + env(safe-area-inset-top));
+  padding-top: calc(7px + env(safe-area-inset-top));
+  padding-bottom: 7px;
+  border-top: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+}
 
 .touch-cluster {
   display: flex;
@@ -241,80 +253,177 @@ body.touch-device.touch-gameplay #touch-controls { display: flex; }
 .touch-cluster-pause { order: 2; margin-left: auto; }
 .touch-cluster-right { order: 3; justify-content: flex-end; }
 
+/* Canhoto: ações à esquerda, movimento à direita. */
+body.touch-lefty .touch-cluster-left { order: 3; justify-content: flex-end; }
+body.touch-lefty .touch-cluster-pause { order: 2; margin-left: 0; margin-right: auto; }
+body.touch-lefty .touch-cluster-right { order: 1; justify-content: flex-start; }
+
 .touch-btn {
   pointer-events: auto;
-  width: clamp(40px, 6.8vw, 56px);
-  height: clamp(40px, 6.8vw, 56px);
-  padding: 0;
+  width: clamp(48px, 7vw, 62px);
+  height: clamp(48px, 7vw, 62px);
+  padding: 3px 2px 2px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(5, 8, 16, 0.82);
+  border: 1.5px solid rgba(255, 255, 255, 0.26);
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.18), transparent 34%),
+    radial-gradient(circle at 50% 70%, rgba(86, 227, 255, 0.08), transparent 68%),
+    rgba(5, 8, 16, 0.9);
   color: #eef2ff;
   font: 800 clamp(13px, 1.8vw, 18px) / 1 "Rajdhani", "Segoe UI", sans-serif;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
   backdrop-filter: blur(4px);
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.35),
-    0 0 18px rgba(0, 0, 0, 0.35);
-  opacity: 0.92;
-  transition: transform 80ms ease, background 80ms ease, opacity 80ms ease;
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -4px 10px rgba(0, 0, 0, 0.35),
+    0 5px 14px rgba(0, 0, 0, 0.46),
+    0 0 18px rgba(86, 227, 255, 0.08);
+  opacity: 0.94;
+  transition: transform 80ms ease, background 80ms ease, opacity 80ms ease, box-shadow 80ms ease;
 }
 
 .touch-btn:active,
 .touch-btn:focus-visible {
-  background: rgba(255, 106, 154, 0.32);
-  border-color: rgba(255, 208, 222, 0.7);
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.24), transparent 38%),
+    rgba(255, 106, 154, 0.26);
+  border-color: rgba(255, 208, 222, 0.76);
   transform: scale(0.94);
   opacity: 1;
   outline: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 0 22px rgba(255, 106, 154, 0.3);
+}
+
+.touch-icon {
+  display: block;
+  font-size: clamp(18px, 2.7vw, 26px);
+  line-height: 1;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.18);
+}
+
+.touch-label {
+  display: block;
+  margin-top: 1px;
+  font: 700 clamp(5.5px, 0.62vw, 7.5px) / 1 "Share Tech Mono", "Consolas", monospace;
+  letter-spacing: 0.08em;
+  opacity: 0.68;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .touch-move {
-  width: clamp(46px, 8vw, 62px);
-  height: clamp(46px, 8vw, 62px);
-  border-color: rgba(86, 227, 255, 0.38);
+  width: clamp(52px, 8vw, 68px);
+  height: clamp(52px, 8vw, 68px);
+  border-color: rgba(86, 227, 255, 0.44);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -4px 10px rgba(0, 0, 0, 0.35),
+    0 5px 14px rgba(0, 0, 0, 0.46),
+    0 0 20px rgba(86, 227, 255, 0.13);
 }
 
-.touch-jump { border-color: rgba(255, 209, 102, 0.5); }
-.touch-action { border-color: rgba(255, 122, 60, 0.48); }
-.touch-ability { border-color: rgba(86, 227, 255, 0.52); }
+.touch-move .touch-icon { font-size: clamp(22px, 3.2vw, 32px); }
+
+.touch-jump {
+  width: clamp(52px, 7.6vw, 66px);
+  height: clamp(52px, 7.6vw, 66px);
+  border-color: rgba(255, 209, 102, 0.56);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -4px 10px rgba(0, 0, 0, 0.35),
+    0 5px 14px rgba(0, 0, 0, 0.46),
+    0 0 20px rgba(255, 209, 102, 0.12);
+}
+
+.touch-action {
+  border-color: rgba(255, 122, 60, 0.52);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -4px 10px rgba(0, 0, 0, 0.35),
+    0 5px 14px rgba(0, 0, 0, 0.46),
+    0 0 20px rgba(255, 122, 60, 0.1);
+}
+
+.touch-ability {
+  width: clamp(56px, 8.4vw, 72px);
+  height: clamp(56px, 8.4vw, 72px);
+  border-color: rgba(86, 227, 255, 0.62);
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.2), transparent 34%),
+    radial-gradient(circle at 50% 70%, rgba(86, 227, 255, 0.2), transparent 68%),
+    rgba(5, 12, 20, 0.94);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -4px 12px rgba(0, 0, 0, 0.35),
+    0 5px 14px rgba(0, 0, 0, 0.46),
+    0 0 26px rgba(86, 227, 255, 0.22);
+}
+
+.touch-ability .touch-icon { font-size: clamp(21px, 3.1vw, 30px); }
 
 .touch-pause,
 .touch-fullscreen {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   font-size: 12px;
-  opacity: 0.72;
-  border-color: rgba(255, 255, 255, 0.2);
+  opacity: 0.78;
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(5, 8, 16, 0.78);
 }
 
+.touch-pause .touch-icon { font-size: 17px; }
+
 .touch-fullscreen {
-  font-size: 17px;
+  font-size: 18px;
   opacity: 0.9;
 }
 
 /* Telas de celular em paisagem são baixas: dock compacto para sobrar mais arena. */
 @media (max-height: 460px) {
   #touch-controls {
-    height: calc(78px + env(safe-area-inset-bottom));
-    padding-top: 5px;
-    padding-bottom: calc(5px + env(safe-area-inset-bottom));
+    height: calc(80px + env(safe-area-inset-bottom));
+    padding-top: 4px;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom));
+  }
+
+  body.touch-dock-top #touch-controls {
+    height: calc(80px + env(safe-area-inset-top));
+    padding-top: calc(4px + env(safe-area-inset-top));
+    padding-bottom: 4px;
   }
 
   .touch-btn {
-    width: 46px;
-    height: 46px;
-    font-size: 15px;
+    width: 48px;
+    height: 48px;
   }
 
   .touch-move {
+    width: 54px;
+    height: 54px;
+  }
+
+  .touch-jump {
     width: 52px;
     height: 52px;
   }
+
+  .touch-ability {
+    width: 56px;
+    height: 56px;
+  }
+
+  .touch-icon { font-size: 17px; }
+  .touch-move .touch-icon { font-size: 21px; }
+  .touch-ability .touch-icon { font-size: 20px; }
+  .touch-label { font-size: 5.5px; }
 
   .touch-pause,
   .touch-fullscreen {
@@ -323,6 +432,7 @@ body.touch-device.touch-gameplay #touch-controls { display: flex; }
     font-size: 11px;
   }
 
+  .touch-pause .touch-icon { font-size: 15px; }
   .touch-fullscreen { font-size: 16px; }
 }
 

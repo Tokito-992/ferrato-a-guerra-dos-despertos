@@ -17,6 +17,9 @@ import { visualStyle } from '../render/style.js';
 import { FONTS, label, panel, roundRectPath } from '../render/theme.js';
 import { drawHud } from '../ui/hud.js';
 import { Menu } from '../ui/menu.js';
+function insideRect(rect, x, y) {
+    return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
+}
 export class GameplayScene {
     constructor(game, stage, charId) {
         this.game = game;
@@ -43,6 +46,8 @@ export class GameplayScene {
         this.paused = false;
         this.bossCleared = false;
         this.bossWasIntro = true;
+        this.pauseHomeRect = { x: 0, y: 0, w: 0, h: 0 };
+        this.gameOverHomeRect = { x: 0, y: 0, w: 0, h: 0 };
         // Sistema competitivo e de vidas extras.
         this.hearts = 0;
         this.maxHearts = 3;
@@ -746,6 +751,11 @@ export class GameplayScene {
             this.audio.sfx('ui');
             return;
         }
+        // Atalho de toque: o botão de casa no topo da pausa volta direto ao título.
+        if (this.input.mouse.clicked && insideRect(this.pauseHomeRect, this.input.mouse.x, this.input.mouse.y)) {
+            this.game.gotoTitle();
+            return;
+        }
         const action = this.pauseMenu.update(this.input, this.audio);
         if (!action)
             return;
@@ -778,6 +788,10 @@ export class GameplayScene {
     }
     updateGameOverMenu() {
         if (this.input.pressed('back')) {
+            this.game.gotoTitle();
+            return;
+        }
+        if (this.input.mouse.clicked && insideRect(this.gameOverHomeRect, this.input.mouse.x, this.input.mouse.y)) {
             this.game.gotoTitle();
             return;
         }
@@ -1030,6 +1044,18 @@ export class GameplayScene {
             font: FONTS.mono,
             spacing: 1.3,
         });
+        // Atalho de toque para voltar ao título sem procurar o item no menu.
+        this.pauseHomeRect = { x: x + w - 144, y: y + 24, w: 112, h: 34 };
+        panel(ctx, this.pauseHomeRect.x, this.pauseHomeRect.y, this.pauseHomeRect.w, this.pauseHomeRect.h, {
+            fill: 'rgba(255,106,122,0.1)',
+            border: 'rgba(255,106,122,0.42)',
+            r: 5,
+        });
+        label(ctx, '⌂ MENU', this.pauseHomeRect.x + this.pauseHomeRect.w / 2, this.pauseHomeRect.y + 22, 10, '#ffb3bd', {
+            align: 'center',
+            font: FONTS.mono,
+            spacing: 1.1,
+        });
         // Retrato e ficha do Desperto.
         ctx.save();
         ctx.beginPath();
@@ -1073,10 +1099,10 @@ export class GameplayScene {
             ? [
                 ['◀ ▶', 'MOVER'],
                 ['⤒', 'PULAR'],
-                ['J', 'LEVE'],
-                ['K', 'PESADO'],
-                ['L', 'DASH'],
-                ['E', 'HABILIDADE'],
+                ['⚔', 'LEVE'],
+                ['✹', 'PESADO'],
+                ['»', 'DASH'],
+                ['✦', 'ESPECIAL'],
             ]
             : [
                 ['A / D', 'MOVER'],
@@ -1101,7 +1127,7 @@ export class GameplayScene {
             label(ctx, key, cx + 31, cyy, 9, '#ffffff', { align: 'center', font: FONTS.mono, weight: 700 });
             label(ctx, action, cx + 72, cyy, 10, 'rgba(200,208,228,0.65)', { font: FONTS.mono, spacing: 0.8 });
         });
-        label(ctx, this.game.isTouchDevice ? 'II FECHAR' : 'ESC / BACKSPACE FECHAR · M ÁUDIO', x + w - 32, y + h - 18, 9, 'rgba(170,178,200,0.42)', {
+        label(ctx, this.game.isTouchDevice ? 'TOQUE NOS ITENS · ⌂ MENU ACIMA' : 'ESC / BACKSPACE FECHAR · M ÁUDIO', x + w - 32, y + h - 18, 9, 'rgba(170,178,200,0.42)', {
             align: 'right',
             font: FONTS.mono,
             spacing: 1,
@@ -1130,6 +1156,17 @@ export class GameplayScene {
         });
         ctx.fillStyle = accent;
         ctx.fillRect(x, y, 3, h);
+        this.gameOverHomeRect = { x: x + w - 144, y: y + 24, w: 112, h: 34 };
+        panel(ctx, this.gameOverHomeRect.x, this.gameOverHomeRect.y, this.gameOverHomeRect.w, this.gameOverHomeRect.h, {
+            fill: 'rgba(255,209,102,0.08)',
+            border: 'rgba(255,209,102,0.38)',
+            r: 5,
+        });
+        label(ctx, '⌂ MENU', this.gameOverHomeRect.x + this.gameOverHomeRect.w / 2, this.gameOverHomeRect.y + 22, 10, '#ffe6a3', {
+            align: 'center',
+            font: FONTS.mono,
+            spacing: 1.1,
+        });
         label(ctx, 'O VÉU O DEVOROU', this.viewW / 2, y + 76, 40, '#ffe7eb', {
             align: 'center',
             weight: 800,

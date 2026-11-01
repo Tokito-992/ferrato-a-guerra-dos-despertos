@@ -465,29 +465,30 @@ export class CharacterSelectScene {
             weight: 800,
             spacing: 2.2,
         });
-        label(ctx, canStart ? 'ENTER' : `CAP. ${this.maxStage}`, this.startRect.x + this.startRect.w / 2, this.startRect.y + 42, 8.3, canStart ? 'rgba(10,8,14,0.65)' : 'rgba(180,188,208,0.25)', {
+        label(ctx, canStart ? (this.game.isTouchDevice ? 'TOQUE PARA INICIAR' : 'ENTER') : `CAP. ${this.maxStage}`, this.startRect.x + this.startRect.w / 2, this.startRect.y + 42, 8.3, canStart ? 'rgba(10,8,14,0.65)' : 'rgba(180,188,208,0.25)', {
             align: 'center',
             font: FONTS.mono,
             spacing: 1.3,
         });
-        // Voltar.
-        this.backRect = { x: 974, y: 610, w: 170, h: 24 };
+        // Voltar: alvo grande o bastante para o polegar no celular.
+        this.backRect = { x: 954, y: 610, w: 190, h: 40 };
         ctx.save();
-        ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+        ctx.fillStyle = 'rgba(255,255,255,0.04)';
+        roundRectPath(ctx, this.backRect.x, this.backRect.y, this.backRect.w, this.backRect.h, 4);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
         ctx.lineWidth = 1;
-        roundRectPath(ctx, this.backRect.x, this.backRect.y, this.backRect.w, this.backRect.h, 3);
         ctx.stroke();
         ctx.restore();
-        label(ctx, 'VOLTAR · ESC', this.backRect.x + this.backRect.w / 2, 626, 9, 'rgba(190,198,220,0.55)', {
+        label(ctx, '⌂ VOLTAR AO MENU', this.backRect.x + this.backRect.w / 2, 635, 9.5, 'rgba(210,218,238,0.72)', {
             align: 'center',
             font: FONTS.mono,
             spacing: 1.1,
         });
         // Rodapé.
-        label(ctx, '← → ARCOS   ↑ ↓ CAPÍTULOS   ENTER INICIAR   ESC VOLTAR', 82, 688, 9.5, 'rgba(190,198,220,0.54)', {
-            font: FONTS.mono,
-            spacing: 1.1,
-        });
+        label(ctx, this.game.isTouchDevice
+            ? 'TOQUE NOS ARCOS E CAPÍTULOS   ·   ⌂ VOLTAR AO MENU'
+            : '← → ARCOS   ↑ ↓ CAPÍTULOS   ENTER INICIAR   ESC VOLTAR', 82, 688, 9.5, 'rgba(190,198,220,0.54)', { font: FONTS.mono, spacing: 1.1 });
         const arcsDone = Array.from({ length: ARC_COUNT }, (_, i) => i + 1).filter((arc) => getArcStages(arc).every((chapter) => this.game.save.cleared.includes(chapter.id))).length;
         label(ctx, `${this.game.save.cleared.length} / ${MAX_STAGE} CAP. · ${arcsDone} / ${ARC_COUNT} ARCOS · ${this.game.save.unlocked.length} / 6 DESPERTOS`, width - 82, 688, 9, 'rgba(160,168,190,0.48)', { align: 'right', font: FONTS.mono, spacing: 0.8 });
         if (!canStart) {

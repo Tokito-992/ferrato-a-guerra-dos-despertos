@@ -47,6 +47,8 @@ function sanitize(data) {
         bestScore: typeof data.bestScore === 'number' && data.bestScore > 0 ? Math.round(data.bestScore) : 0,
         bestRank: isRank(data.bestRank) ? data.bestRank : 'D',
         muted: Boolean(data.muted),
+        touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
+        touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
     };
 }
 /**
@@ -101,6 +103,8 @@ function migrateLegacy(data) {
         bestScore: typeof data.bestScore === 'number' && data.bestScore > 0 ? Math.round(data.bestScore) : 0,
         bestRank: isRank(data.bestRank) ? data.bestRank : 'D',
         muted: Boolean(data.muted),
+        touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
+        touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
     };
 }
 export function defaultSave() {
@@ -116,6 +120,8 @@ export function defaultSave() {
         bestScore: 0,
         bestRank: 'D',
         muted: false,
+        touchLayout: 'standard',
+        touchDock: 'bottom',
     };
 }
 export function loadSave() {
