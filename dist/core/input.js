@@ -40,6 +40,9 @@ export class Input {
         this.gestureFired = false;
         this.lastTouchAt = 0;
         this.handleKeyDown = (e) => {
+            // Overlays de interface (ex.: guia de instalação) têm prioridade no teclado.
+            if (document.body.classList.contains('ui-overlay-open'))
+                return;
             const action = KEYMAP[e.code];
             this.fireGesture();
             if (!action)

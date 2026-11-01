@@ -1,22 +1,24 @@
 /** Núcleo do jogo: loop, troca de cenas, transições, hitstop e persistência. */
-import { CHARACTERS } from '../data/characters.js?v=ab11b465bc0a';
-import { getStage, MAX_STAGE } from '../data/stages.js?v=ab11b465bc0a';
-import { STORY } from '../data/story.js?v=ab11b465bc0a';
-import { AudioEngine } from './audio.js?v=ab11b465bc0a';
-import { Input } from './input.js?v=ab11b465bc0a';
-import { ParticleSystem } from './particles.js?v=ab11b465bc0a';
-import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=ab11b465bc0a';
-import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=ab11b465bc0a';
-import { clamp, hexToRgba } from './math.js?v=ab11b465bc0a';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=ab11b465bc0a';
-import { TitleScene } from '../scenes/title.js?v=ab11b465bc0a';
-import { CharacterSelectScene } from '../scenes/characterSelect.js?v=ab11b465bc0a';
-import { GameplayScene } from '../scenes/gameplay.js?v=ab11b465bc0a';
-import { StoryScene } from '../scenes/story.js?v=ab11b465bc0a';
-import { VictoryScene } from '../scenes/victory.js?v=ab11b465bc0a';
-import { CreditsScene } from '../scenes/credits.js?v=ab11b465bc0a';
-import { SettingsScene } from '../scenes/settings.js?v=ab11b465bc0a';
-import { TutorialScene } from '../scenes/tutorial.js?v=ab11b465bc0a';
+import { CHARACTERS } from '../data/characters.js?v=c5d0d69737a2';
+import { getStage, MAX_STAGE } from '../data/stages.js?v=c5d0d69737a2';
+import { STORY } from '../data/story.js?v=c5d0d69737a2';
+import { AudioEngine } from './audio.js?v=c5d0d69737a2';
+import { Input } from './input.js?v=c5d0d69737a2';
+import { ParticleSystem } from './particles.js?v=c5d0d69737a2';
+import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=c5d0d69737a2';
+import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=c5d0d69737a2';
+import { needsIOSInstallGuide } from './platform.js?v=c5d0d69737a2';
+import { showInstallGuide } from '../ui/install-guide.js?v=c5d0d69737a2';
+import { clamp, hexToRgba } from './math.js?v=c5d0d69737a2';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=c5d0d69737a2';
+import { TitleScene } from '../scenes/title.js?v=c5d0d69737a2';
+import { CharacterSelectScene } from '../scenes/characterSelect.js?v=c5d0d69737a2';
+import { GameplayScene } from '../scenes/gameplay.js?v=c5d0d69737a2';
+import { StoryScene } from '../scenes/story.js?v=c5d0d69737a2';
+import { VictoryScene } from '../scenes/victory.js?v=c5d0d69737a2';
+import { CreditsScene } from '../scenes/credits.js?v=c5d0d69737a2';
+import { SettingsScene } from '../scenes/settings.js?v=c5d0d69737a2';
+import { TutorialScene } from '../scenes/tutorial.js?v=c5d0d69737a2';
 /** Posições normalizadas usadas quando não há layout livre salvo. */
 function presetTouchPositions(layout, dock) {
     const y = dock === 'top' ? 0.1 : 0.9;
@@ -72,6 +74,7 @@ export class Game {
         this.touchButtons = new Map();
         this.touchEditing = false;
         this.touchEditPositions = {};
+        this.overlayPause = false;
         this.handleTouchEditorDown = (event) => {
             if (!this.touchEditing)
                 return;
@@ -231,21 +234,31 @@ export class Game {
         const pause = document.createElement('div');
         pause.className = 'touch-cluster touch-cluster-pause';
         pause.append(makeButton('pause', 'Ⅱ', 'touch-pause', '', 'Pausa'));
-        if (canFullscreen()) {
+        // No iPhone a Fullscreen API não existe: o botão vira o atalho do guia
+        // de instalação na Tela de Início (web app standalone).
+        const useIOSGuide = !canFullscreen() && needsIOSInstallGuide();
+        if (canFullscreen() || useIOSGuide) {
             const fullscreen = document.createElement('button');
             fullscreen.type = 'button';
             fullscreen.className = 'touch-btn touch-fullscreen';
             fullscreen.dataset.touchId = 'fullscreen';
             fullscreen.textContent = '⛶';
-            fullscreen.setAttribute('aria-label', 'Tela cheia');
-            fullscreen.title = 'Tela cheia';
+            fullscreen.setAttribute('aria-label', useIOSGuide ? 'Tela cheia no iPhone — instalar' : 'Tela cheia');
+            fullscreen.title = useIOSGuide ? 'Tela cheia no iPhone — instalar' : 'Tela cheia';
+            if (useIOSGuide)
+                fullscreen.dataset.iosGuide = 'true';
             this.touchButtons.set('fullscreen', fullscreen);
             fullscreen.addEventListener('pointerdown', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
                 if (this.touchEditing)
                     return;
-                void toggleFullscreen();
+                if (useIOSGuide) {
+                    this.openIOSInstallGuide();
+                }
+                else {
+                    void toggleFullscreen();
+                }
             });
             fullscreen.addEventListener('contextmenu', (event) => event.preventDefault());
             pause.append(fullscreen);
@@ -376,6 +389,21 @@ export class Game {
         document.body.classList.toggle('touch-gameplay', visible);
         if (!visible)
             this.input.releaseAllVirtual();
+    }
+    /** Abre o guia de instalação no iPhone e congela a cena enquanto ele estiver aberto. */
+    openIOSInstallGuide() {
+        if (!needsIOSInstallGuide())
+            return;
+        showInstallGuide({
+            onOpen: () => {
+                this.overlayPause = true;
+                this.input.releaseAllVirtual();
+                this.audio.sfx('ui');
+            },
+            onClose: () => {
+                this.overlayPause = false;
+            },
+        });
     }
     start() {
         if (this.started)
@@ -531,6 +559,9 @@ export class Game {
         return this.hitStopTimer > 0;
     }
     update(dt) {
+        // Guia de instalação aberto: congela a cena e ignora a entrada do jogo.
+        if (this.overlayPause)
+            return;
         // Transições de cena.
         if (this.fade.phase === 1) {
             this.fade.alpha = Math.min(1, this.fade.alpha + dt / this.fade.duration);

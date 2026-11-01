@@ -1,9 +1,9 @@
 /** Tutorial ilustrado de abertura: controles, combate, Câmara do Coração e celular. */
-import { clamp, hexToRgba, TAU } from '../core/math.js?v=ab11b465bc0a';
-import { drawTitleBackground } from '../render/backgrounds.js?v=ab11b465bc0a';
-import { drawCharacterSilhouette } from '../render/characters.js?v=ab11b465bc0a';
-import { drawHeart } from '../render/hearts.js?v=ab11b465bc0a';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=ab11b465bc0a';
+import { clamp, hexToRgba, TAU } from '../core/math.js?v=c5d0d69737a2';
+import { drawTitleBackground } from '../render/backgrounds.js?v=c5d0d69737a2';
+import { drawCharacterSilhouette } from '../render/characters.js?v=c5d0d69737a2';
+import { drawHeart } from '../render/hearts.js?v=c5d0d69737a2';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=c5d0d69737a2';
 function inside(box, x, y) {
     return x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h;
 }
@@ -53,8 +53,9 @@ const PAGES = [
             { icon: '⚙', text: 'Em CONFIGURAÇÕES, abra POSIÇÃO DOS BOTÕES.' },
             { icon: '✥', text: 'Arraste cada botão e solte para salvar seu layout.' },
             { icon: '⌂', text: 'Na pausa, use SAIR PARA O MENU para voltar ao título.' },
+            { icon: '⛶', text: 'No iPhone, adicione à Tela de Início para jogar em tela cheia.' },
         ],
-        tip: 'Lado e dock são presets. Arraste os botões para criar um layout só seu; ele fica salvo neste dispositivo.',
+        tip: 'Lado e dock são presets. Arraste os botões para criar um layout só seu.',
     },
 ];
 export class TutorialScene {
@@ -187,8 +188,9 @@ export class TutorialScene {
             font: FONTS.mono,
             spacing: 1.8,
         });
+        const bulletGap = page.bullets.length > 4 ? 50 : 58;
         page.bullets.forEach((bullet, i) => {
-            const by = y + 138 + i * 58;
+            const by = y + 138 + i * bulletGap;
             ctx.save();
             ctx.beginPath();
             ctx.arc(x + 56, by - 5, 17, 0, TAU);
@@ -493,7 +495,7 @@ export class TutorialScene {
             font: FONTS.mono,
             spacing: 1.2,
         });
-        label(ctx, 'CONFIGURAÇÕES', x + w / 2, y + 22, 9, hexToRgba(accent, 0.8), {
+        label(ctx, 'NO IPHONE · TELA DE INÍCIO', x + w / 2, y + 22, 9, hexToRgba(accent, 0.8), {
             align: 'center',
             font: FONTS.mono,
             spacing: 1.4,

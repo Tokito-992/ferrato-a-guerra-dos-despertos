@@ -77,8 +77,9 @@ const PAGES: TutorialPage[] = [
       { icon: '⚙', text: 'Em CONFIGURAÇÕES, abra POSIÇÃO DOS BOTÕES.' },
       { icon: '✥', text: 'Arraste cada botão e solte para salvar seu layout.' },
       { icon: '⌂', text: 'Na pausa, use SAIR PARA O MENU para voltar ao título.' },
+      { icon: '⛶', text: 'No iPhone, adicione à Tela de Início para jogar em tela cheia.' },
     ],
-    tip: 'Lado e dock são presets. Arraste os botões para criar um layout só seu; ele fica salvo neste dispositivo.',
+    tip: 'Lado e dock são presets. Arraste os botões para criar um layout só seu.',
   },
 ];
 
@@ -233,8 +234,9 @@ export class TutorialScene implements Scene {
       spacing: 1.8,
     });
 
+    const bulletGap = page.bullets.length > 4 ? 50 : 58;
     page.bullets.forEach((bullet, i) => {
-      const by = y + 138 + i * 58;
+      const by = y + 138 + i * bulletGap;
       ctx.save();
       ctx.beginPath();
       ctx.arc(x + 56, by - 5, 17, 0, TAU);
@@ -597,7 +599,7 @@ export class TutorialScene implements Scene {
       font: FONTS.mono,
       spacing: 1.2,
     });
-    label(ctx, 'CONFIGURAÇÕES', x + w / 2, y + 22, 9, hexToRgba(accent, 0.8), {
+    label(ctx, 'NO IPHONE · TELA DE INÍCIO', x + w / 2, y + 22, 9, hexToRgba(accent, 0.8), {
       align: 'center',
       font: FONTS.mono,
       spacing: 1.4,

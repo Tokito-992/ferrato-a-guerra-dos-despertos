@@ -1,8 +1,8 @@
 /** Chefes com múltiplos estágios, telegrafia e padrões únicos por fase. */
-import { clamp, rand, rectsOverlap, TAU } from '../core/math.js?v=ab11b465bc0a';
-import { Combatant } from './combatant.js?v=ab11b465bc0a';
-import { BOSSES } from '../data/bosses.js?v=ab11b465bc0a';
-import { getStage } from '../data/stages.js?v=ab11b465bc0a';
+import { clamp, rand, rectsOverlap, TAU } from '../core/math.js?v=c5d0d69737a2';
+import { Combatant } from './combatant.js?v=c5d0d69737a2';
+import { BOSSES } from '../data/bosses.js?v=c5d0d69737a2';
+import { getStage } from '../data/stages.js?v=c5d0d69737a2';
 const ATTACK_LABELS = {
     slam: 'PISADA',
     charge: 'INVESTIDA',

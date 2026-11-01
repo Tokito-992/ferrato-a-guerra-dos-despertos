@@ -49,9 +49,22 @@ O jogo funciona em navegadores móveis e ocupa a tela inteira no modo horizontal
 | `» DASH` | Dash |
 | `✦ ESPECIAL` | Habilidade especial |
 | `Ⅱ` | Pausar |
-| `⛶` | Entrar/sair da tela cheia |
+| `⛶` | Entrar/sair da tela cheia (no iPhone, abre o guia de instalação) |
 
 Os menus respondem a toque diretamente no canvas. Em retrato, uma tela de aviso pede para girar o dispositivo, pois a arena foi desenhada em 16:9 horizontal. Os controles ficam em um **dock fora da área de combate** por padrão, então não cobrem inimigos nem personagens. O dock pode ficar na parte inferior (padrão) ou superior. Se preferir, use **CONFIGURAÇÕES → POSIÇÃO DOS BOTÕES** para arrastar cada botão livremente para qualquer ponto da tela; nesse modo eles flutuam sobre a arena e a posição fica salva. O jogo tenta entrar em tela cheia no primeiro toque e também oferece o botão `⛶`; a orientação é travada em paisagem quando o navegador permite. As áreas seguras (notch) são respeitadas.
+
+#### Tela cheia no iPhone (web app instalado)
+
+O Safari do iPhone não expõe a Fullscreen API para elementos da página, então `requestFullscreen()` não funciona fora de um `<video>`. A tela cheia real no iPhone vem de instalar o jogo como web app:
+
+1. Abra o jogo no **Safari** do iPhone.
+2. Toque em **Compartilhar** (o quadrado com uma seta para cima).
+3. Escolha **Adicionar à Tela de Início** e confirme em **Adicionar**.
+4. Abra o FERRATO pelo novo ícone. Ele inicia em modo **standalone**, sem as barras do Safari.
+
+No modo instalado, o jogo ocupa a tela e respeita as áreas seguras (notch). O botão `⛶`, o item **CONFIGURAÇÕES → TELA CHEIA NO IPHONE** e o tutorial móvel abrem um guia ilustrado com esses passos. Em navegadores que suportam a Fullscreen API (desktop, Android e futuros Safari), o botão continua alternando a tela cheia normalmente; se o navegador não suportar nem a API nem a instalação, ele é removido. No iPhone, prefira o Safari: o menu Compartilhar de outros navegadores pode não oferecer a instalação.
+
+O manifest (`manifest.webmanifest`) declara `display: standalone`, orientação `landscape`, cores e ícones de 192/512 px, incluindo versões maskable. Não há service worker: o build continua usando `?v=<hash>` para evitar cache antigo.
 
 Para voltar ao título no celular, abra a pausa e toque em **⌂ MENU** (ou em **SAIR PARA O MENU**). O game over e a seleção de capítulos também têm atalhos de toque para o menu principal.
 
@@ -63,11 +76,12 @@ A tela **CONFIGURAÇÕES** do menu principal permite:
 - colocar o dock de toque na parte **inferior** ou **superior**;
 - abrir **POSIÇÃO DOS BOTÕES** e arrastar cada botão individualmente para onde for mais confortável; **CONCLUIR** salva e **RESTAURAR PADRÃO** volta ao preset de lado/dock;
 - ligar/desligar o áudio;
+- abrir **TELA CHEIA NO IPHONE** (quando o jogo está no Safari do iPhone e ainda não foi instalado);
 - rever o tutorial a qualquer momento.
 
 As escolhas são salvas automaticamente no `localStorage` e uma prévia mostra o layout antes de voltar ao combate. Lado e dock funcionam como presets: alterar um deles descarta o layout livre e aplica o preset escolhido.
 
-Ao escolher **NOVO JOGO**, o jogo abre um tutorial ilustrado de quatro páginas: movimento e ataques, dash e especial, Câmara do Coração e controles de celular. É possível avançar tocando/clicando, voltar página ou pular o tutorial; ao terminar, a seleção de Despertos e capítulos abre normalmente.
+Ao escolher **NOVO JOGO**, o jogo abre um tutorial ilustrado de quatro páginas: movimento e ataques, dash e especial, Câmara do Coração e controles de celular. A página móvel inclui a dica de instalação na Tela de Início para iPhone. É possível avançar tocando/clicando, voltar página ou pular o tutorial; ao terminar, a seleção de Despertos e capítulos abre normalmente.
 
 ## Conteúdo
 
@@ -161,14 +175,18 @@ location.reload();
 src/
   main.ts              bootstrap do canvas e do loop
   core/                Game (loop, cenas, transições), input (teclado, mouse e toque),
-                       áudio, save v2, câmera, partículas, rank, matemática e tipos
+                       áudio, save v2, câmera, partículas, rank, matemática, tipos
+                       e detecção de plataforma (iOS/standalone)
   data/                heróis, 36 capítulos, chefes, inimigos, história e créditos
   entities/            Combatant, Player, Enemy, Boss, projéteis, hazards e obstáculos
   render/              tema, personagens, retratos, inimigos, chefes, corações e cenários
   scenes/              título, tutorial, configurações, seleção por arcos, história, gameplay, vitória e créditos
-  ui/                  HUD (vida, corações, rank, pressão, bônus) e menus (teclado + mouse + toque)
-styles/main.css        moldura, letterbox e tipografia
+  ui/                  HUD (vida, corações, rank, pressão, bônus), menus (teclado + mouse + toque)
+                       e guia de instalação no iPhone
+styles/main.css        moldura, letterbox, tipografia e guia de instalação
 index.html             entrada estática
+manifest.webmanifest   manifest PWA (standalone, landscape e ícones)
+icons/                 ícones 180/192/512 px e versões maskable
 dist/                  JavaScript compilado (gerado por `tsc`)
 ```
 
@@ -193,7 +211,7 @@ Para republicar em outro repositório:
 
 1. Envie o repositório para o GitHub.
 2. Em **Settings → Pages**, escolha **Deploy from a branch**, branch `main` e pasta `/ (root)`.
-3. O `index.html` da raiz carrega `styles/main.css` e `dist/main.js`; mantenha os dois no repositório.
+3. O `index.html` da raiz carrega `styles/main.css`, `dist/main.js`, `manifest.webmanifest` e `icons/`; mantenha todos no repositório.
 4. Não é necessário passo de build no CI, pois `dist/` é versionado. Se preferir compilar no deploy, rode `npm run build` antes de publicar.
 
 ## Créditos

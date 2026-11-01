@@ -11,6 +11,8 @@ import { ParticleSystem } from './particles.js';
 import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js';
 import type { SaveData, TouchButtonId, TouchDock, TouchLayout, TouchPositions } from './save.js';
 import { canFullscreen, toggleFullscreen } from './fullscreen.js';
+import { needsIOSInstallGuide } from './platform.js';
+import { showInstallGuide } from '../ui/install-guide.js';
 import { clamp, hexToRgba } from './math.js';
 import { FONTS, label, panel, roundRectPath } from '../render/theme.js';
 import { TitleScene } from '../scenes/title.js';
@@ -114,6 +116,7 @@ export class Game {
   private readonly touchButtons = new Map<string, HTMLButtonElement>();
   private touchEditing = false;
   private touchEditPositions: TouchPositions = {};
+  private overlayPause = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -274,20 +277,31 @@ export class Game {
     pause.className = 'touch-cluster touch-cluster-pause';
     pause.append(makeButton('pause', 'Ⅱ', 'touch-pause', '', 'Pausa'));
 
-    if (canFullscreen()) {
+    // No iPhone a Fullscreen API não existe: o botão vira o atalho do guia
+    // de instalação na Tela de Início (web app standalone).
+    const useIOSGuide = !canFullscreen() && needsIOSInstallGuide();
+    if (canFullscreen() || useIOSGuide) {
       const fullscreen = document.createElement('button');
       fullscreen.type = 'button';
       fullscreen.className = 'touch-btn touch-fullscreen';
       fullscreen.dataset.touchId = 'fullscreen';
       fullscreen.textContent = '⛶';
-      fullscreen.setAttribute('aria-label', 'Tela cheia');
-      fullscreen.title = 'Tela cheia';
+      fullscreen.setAttribute(
+        'aria-label',
+        useIOSGuide ? 'Tela cheia no iPhone — instalar' : 'Tela cheia',
+      );
+      fullscreen.title = useIOSGuide ? 'Tela cheia no iPhone — instalar' : 'Tela cheia';
+      if (useIOSGuide) fullscreen.dataset.iosGuide = 'true';
       this.touchButtons.set('fullscreen', fullscreen);
       fullscreen.addEventListener('pointerdown', (event) => {
         event.preventDefault();
         event.stopPropagation();
         if (this.touchEditing) return;
-        void toggleFullscreen();
+        if (useIOSGuide) {
+          this.openIOSInstallGuide();
+        } else {
+          void toggleFullscreen();
+        }
       });
       fullscreen.addEventListener('contextmenu', (event) => event.preventDefault());
       pause.append(fullscreen);
@@ -434,6 +448,21 @@ export class Game {
     if (!this.touchControls) return;
     document.body.classList.toggle('touch-gameplay', visible);
     if (!visible) this.input.releaseAllVirtual();
+  }
+
+  /** Abre o guia de instalação no iPhone e congela a cena enquanto ele estiver aberto. */
+  openIOSInstallGuide(): void {
+    if (!needsIOSInstallGuide()) return;
+    showInstallGuide({
+      onOpen: () => {
+        this.overlayPause = true;
+        this.input.releaseAllVirtual();
+        this.audio.sfx('ui');
+      },
+      onClose: () => {
+        this.overlayPause = false;
+      },
+    });
   }
 
   start(): void {
@@ -627,6 +656,9 @@ export class Game {
   };
 
   private update(dt: number): void {
+    // Guia de instalação aberto: congela a cena e ignora a entrada do jogo.
+    if (this.overlayPause) return;
+
     // Transições de cena.
     if (this.fade.phase === 1) {
       this.fade.alpha = Math.min(1, this.fade.alpha + dt / this.fade.duration);

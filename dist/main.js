@@ -1,7 +1,8 @@
 /** Bootstrap do jogo: valida o canvas, inicia o loop e remove a tela de carregamento. */
-import { Game } from './core/game.js?v=ab11b465bc0a';
-import { canFullscreen, enterFullscreen, toggleFullscreen, watchFullscreen } from './core/fullscreen.js?v=ab11b465bc0a';
-import { toggleAnimeStyle, visualStyle } from './render/style.js?v=ab11b465bc0a';
+import { Game } from './core/game.js?v=c5d0d69737a2';
+import { canFullscreen, enterFullscreen, toggleFullscreen, watchFullscreen } from './core/fullscreen.js?v=c5d0d69737a2';
+import { needsIOSInstallGuide } from './core/platform.js?v=c5d0d69737a2';
+import { toggleAnimeStyle, visualStyle } from './render/style.js?v=c5d0d69737a2';
 function hideLoading() {
     const loading = document.getElementById('loading');
     if (!loading)
@@ -51,15 +52,27 @@ try {
     window.addEventListener('resize', fitCanvas);
     window.visualViewport?.addEventListener('resize', fitCanvas);
     window.addEventListener('orientationchange', () => window.setTimeout(fitCanvas, 180));
+    // No iPhone sem Fullscreen API, o botão ⛶ abre o guia de instalação.
+    const useIOSGuide = !canFullscreen() && needsIOSInstallGuide();
     const fullscreenButton = document.getElementById('fullscreen-toggle');
     if (fullscreenButton instanceof HTMLButtonElement) {
-        if (!canFullscreen()) {
+        if (!canFullscreen() && !useIOSGuide) {
             fullscreenButton.remove();
         }
         else {
+            if (useIOSGuide) {
+                fullscreenButton.dataset.iosGuide = 'true';
+                fullscreenButton.setAttribute('aria-label', 'Tela cheia no iPhone — instalar');
+                fullscreenButton.title = 'Tela cheia no iPhone — instalar';
+            }
             fullscreenButton.addEventListener('click', (event) => {
                 event.preventDefault();
-                void toggleFullscreen();
+                if (useIOSGuide) {
+                    game.openIOSInstallGuide();
+                }
+                else {
+                    void toggleFullscreen();
+                }
             });
         }
     }
@@ -68,6 +81,13 @@ try {
         document
             .querySelectorAll('#fullscreen-toggle, .touch-fullscreen')
             .forEach((button) => {
+            if (button.dataset.iosGuide === 'true' && !on) {
+                button.textContent = '⛶';
+                const label = 'Tela cheia no iPhone — instalar';
+                button.setAttribute('aria-label', label);
+                button.title = label;
+                return;
+            }
             button.textContent = on ? '⤢' : '⛶';
             const label = on ? 'Sair da tela cheia' : 'Tela cheia';
             button.setAttribute('aria-label', label);
@@ -89,6 +109,9 @@ try {
     // Alternância reversível do estilo visual. `?anime=0` força o clássico.
     document.body.classList.toggle('anime-style', visualStyle.anime);
     window.addEventListener('keydown', (event) => {
+        // O guia de instalação captura o teclado; não deixe atalhos do jogo vazarem.
+        if (document.body.classList.contains('ui-overlay-open'))
+            return;
         if (event.code === 'F2') {
             event.preventDefault();
             const on = toggleAnimeStyle();
@@ -97,8 +120,14 @@ try {
             return;
         }
         if (event.code === 'KeyF' && !event.repeat) {
-            event.preventDefault();
-            void toggleFullscreen();
+            if (canFullscreen()) {
+                event.preventDefault();
+                void toggleFullscreen();
+            }
+            else if (needsIOSInstallGuide()) {
+                event.preventDefault();
+                game.openIOSInstallGuide();
+            }
         }
     });
     // Só revela o jogo depois que as fontes estiverem prontas (ou após um curto prazo).

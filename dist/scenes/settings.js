@@ -1,9 +1,10 @@
 /** Configurações: layout dos controles de toque, dock, áudio e tutorial. */
-import { hexToRgba } from '../core/math.js?v=ab11b465bc0a';
-import { drawTitleBackground } from '../render/backgrounds.js?v=ab11b465bc0a';
-import { drawCharacterSilhouette } from '../render/characters.js?v=ab11b465bc0a';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=ab11b465bc0a';
-import { Menu } from '../ui/menu.js?v=ab11b465bc0a';
+import { hexToRgba } from '../core/math.js?v=c5d0d69737a2';
+import { drawTitleBackground } from '../render/backgrounds.js?v=c5d0d69737a2';
+import { drawCharacterSilhouette } from '../render/characters.js?v=c5d0d69737a2';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=c5d0d69737a2';
+import { Menu } from '../ui/menu.js?v=c5d0d69737a2';
+import { needsIOSInstallGuide } from '../core/platform.js?v=c5d0d69737a2';
 export class SettingsScene {
     constructor(game) {
         this.game = game;
@@ -34,7 +35,7 @@ export class SettingsScene {
         return this.game.save.touchDock === 'top' ? 'SUPERIOR' : 'INFERIOR';
     }
     buildMenu(keepIndex = false) {
-        this.menu.setItems([
+        const items = [
             {
                 id: 'side',
                 label: 'LADO DOS CONTROLES',
@@ -65,8 +66,17 @@ export class SettingsScene {
                 detail: 'COMO JOGAR',
                 accent: '#ffd166',
             },
-            { id: 'back', label: 'VOLTAR', detail: 'MENU PRINCIPAL', accent: '#ff6a7a' },
-        ], keepIndex);
+        ];
+        if (needsIOSInstallGuide()) {
+            items.push({
+                id: 'ios-fullscreen',
+                label: 'TELA CHEIA NO IPHONE',
+                detail: 'INSTALAR NA TELA DE INÍCIO',
+                accent: '#ff8a3d',
+            });
+        }
+        items.push({ id: 'back', label: 'VOLTAR', detail: 'MENU PRINCIPAL', accent: '#ff6a7a' });
+        this.menu.setItems(items, keepIndex);
     }
     cycle(id) {
         const save = this.game.save;
@@ -97,6 +107,9 @@ export class SettingsScene {
             }
             case 'tutorial':
                 this.game.gotoTutorial(() => this.game.gotoSettings());
+                return;
+            case 'ios-fullscreen':
+                this.game.openIOSInstallGuide();
                 return;
             case 'back':
                 this.game.gotoTitle();
@@ -200,10 +213,11 @@ export class SettingsScene {
             font: FONTS.mono,
             spacing: 1.1,
         });
+        const hasIOSGuide = needsIOSInstallGuide();
         this.menu.draw(ctx, 90, 198, 520, {
-            itemHeight: 52,
-            gap: 8,
-            size: 17,
+            itemHeight: hasIOSGuide ? 46 : 52,
+            gap: hasIOSGuide ? 7 : 8,
+            size: hasIOSGuide ? 16 : 17,
             accent: '#56e3ff',
         });
         label(ctx, '◀ ▶ ALTERAR   ·   ENTER / TOQUE CONFIRMAR', 90, 616, 10, 'rgba(190,198,220,0.52)', {

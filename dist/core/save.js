@@ -1,7 +1,7 @@
 /** Persistência local de progresso (localStorage) — campanha de 36 capítulos. */
-import { CHARACTER_ORDER } from '../data/characters.js?v=ab11b465bc0a';
-import { CHAPTERS_PER_ARC, MAX_STAGE } from '../data/stages.js?v=ab11b465bc0a';
-import { isRank } from './rank.js?v=ab11b465bc0a';
+import { CHARACTER_ORDER } from '../data/characters.js?v=c5d0d69737a2';
+import { CHAPTERS_PER_ARC, MAX_STAGE } from '../data/stages.js?v=c5d0d69737a2';
+import { isRank } from './rank.js?v=c5d0d69737a2';
 export const TOUCH_BUTTON_IDS = [
     'left',
     'right',

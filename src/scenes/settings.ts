@@ -5,7 +5,8 @@ import { hexToRgba } from '../core/math.js';
 import { drawTitleBackground } from '../render/backgrounds.js';
 import { drawCharacterSilhouette } from '../render/characters.js';
 import { FONTS, label, panel, roundRectPath } from '../render/theme.js';
-import { Menu } from '../ui/menu.js';
+import { Menu, type MenuItem } from '../ui/menu.js';
+import { needsIOSInstallGuide } from '../core/platform.js';
 
 export class SettingsScene implements Scene {
   private menu: Menu;
@@ -43,42 +44,48 @@ export class SettingsScene implements Scene {
   }
 
   private buildMenu(keepIndex = false): void {
-    this.menu.setItems(
-      [
-        {
-          id: 'side',
-          label: 'LADO DOS CONTROLES',
-          detail: this.sideDetail(),
-          accent: '#56e3ff',
-        },
-        {
-          id: 'dock',
-          label: 'DOCK DOS CONTROLES',
-          detail: this.dockDetail(),
-          accent: '#b48bff',
-        },
-        {
-          id: 'customize',
-          label: 'POSIÇÃO DOS BOTÕES',
-          detail: this.game.save.touchPositions ? 'PERSONALIZADA' : 'ARRASTE OS BOTÕES',
-          accent: '#56e3ff',
-        },
-        {
-          id: 'audio',
-          label: 'ÁUDIO',
-          detail: this.game.save.muted ? 'SILENCIADO' : 'LIGADO',
-          accent: '#ff8a3d',
-        },
-        {
-          id: 'tutorial',
-          label: 'VER TUTORIAL',
-          detail: 'COMO JOGAR',
-          accent: '#ffd166',
-        },
-        { id: 'back', label: 'VOLTAR', detail: 'MENU PRINCIPAL', accent: '#ff6a7a' },
-      ],
-      keepIndex,
-    );
+    const items: MenuItem[] = [
+      {
+        id: 'side',
+        label: 'LADO DOS CONTROLES',
+        detail: this.sideDetail(),
+        accent: '#56e3ff',
+      },
+      {
+        id: 'dock',
+        label: 'DOCK DOS CONTROLES',
+        detail: this.dockDetail(),
+        accent: '#b48bff',
+      },
+      {
+        id: 'customize',
+        label: 'POSIÇÃO DOS BOTÕES',
+        detail: this.game.save.touchPositions ? 'PERSONALIZADA' : 'ARRASTE OS BOTÕES',
+        accent: '#56e3ff',
+      },
+      {
+        id: 'audio',
+        label: 'ÁUDIO',
+        detail: this.game.save.muted ? 'SILENCIADO' : 'LIGADO',
+        accent: '#ff8a3d',
+      },
+      {
+        id: 'tutorial',
+        label: 'VER TUTORIAL',
+        detail: 'COMO JOGAR',
+        accent: '#ffd166',
+      },
+    ];
+    if (needsIOSInstallGuide()) {
+      items.push({
+        id: 'ios-fullscreen',
+        label: 'TELA CHEIA NO IPHONE',
+        detail: 'INSTALAR NA TELA DE INÍCIO',
+        accent: '#ff8a3d',
+      });
+    }
+    items.push({ id: 'back', label: 'VOLTAR', detail: 'MENU PRINCIPAL', accent: '#ff6a7a' });
+    this.menu.setItems(items, keepIndex);
   }
 
   private cycle(id: string): void {
@@ -109,6 +116,9 @@ export class SettingsScene implements Scene {
       }
       case 'tutorial':
         this.game.gotoTutorial(() => this.game.gotoSettings());
+        return;
+      case 'ios-fullscreen':
+        this.game.openIOSInstallGuide();
         return;
       case 'back':
         this.game.gotoTitle();
@@ -222,10 +232,11 @@ export class SettingsScene implements Scene {
       spacing: 1.1,
     });
 
+    const hasIOSGuide = needsIOSInstallGuide();
     this.menu.draw(ctx, 90, 198, 520, {
-      itemHeight: 52,
-      gap: 8,
-      size: 17,
+      itemHeight: hasIOSGuide ? 46 : 52,
+      gap: hasIOSGuide ? 7 : 8,
+      size: hasIOSGuide ? 16 : 17,
       accent: '#56e3ff',
     });
 

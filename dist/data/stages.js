@@ -8,7 +8,7 @@
  * As seis fases originais foram preservadas como os capítulos 6, 12, 18, 24,
  * 30 e 36 — os confrontos finais de Ravi, Miriam, Kael, Ozric, Élodie e Thryc.
  */
-import { hexToRgba, mixColor } from '../core/math.js?v=ab11b465bc0a';
+import { hexToRgba, mixColor } from '../core/math.js?v=c5d0d69737a2';
 export const ARC_COUNT = 6;
 export const CHAPTERS_PER_ARC = 6;
 export const MAX_STAGE = ARC_COUNT * CHAPTERS_PER_ARC;
