@@ -1,11 +1,11 @@
 /** Tela de vitória: o Véu se fecha, os seis Despertos respiram. */
-import { CHARACTERS, CHARACTER_ORDER } from '../data/characters.js?v=8f2357506abc';
-import { MAX_STAGE } from '../data/stages.js?v=8f2357506abc';
-import { clamp, hexToRgba, TAU } from '../core/math.js?v=8f2357506abc';
-import { drawTitleBackground } from '../render/backgrounds.js?v=8f2357506abc';
-import { drawCharacterPortrait } from '../render/characters.js?v=8f2357506abc';
-import { FONTS, glow, label, panel } from '../render/theme.js?v=8f2357506abc';
-import { Menu } from '../ui/menu.js?v=8f2357506abc';
+import { CHARACTERS, CHARACTER_ORDER } from '../data/characters.js?v=ab11b465bc0a';
+import { MAX_STAGE } from '../data/stages.js?v=ab11b465bc0a';
+import { clamp, hexToRgba, TAU } from '../core/math.js?v=ab11b465bc0a';
+import { drawTitleBackground } from '../render/backgrounds.js?v=ab11b465bc0a';
+import { drawCharacterPortrait } from '../render/characters.js?v=ab11b465bc0a';
+import { FONTS, glow, label, panel } from '../render/theme.js?v=ab11b465bc0a';
+import { Menu } from '../ui/menu.js?v=ab11b465bc0a';
 export class VictoryScene {
     constructor(game, charId) {
         this.game = game;

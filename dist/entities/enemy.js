@@ -1,7 +1,7 @@
 /** Inimigos comuns com IA própria por arquétipo. */
-import { clamp, rand, rectsOverlap, TAU } from '../core/math.js?v=8f2357506abc';
-import { Combatant } from './combatant.js?v=8f2357506abc';
-import { ENEMY_BASE, ELITE_DAMAGE_MULT, ELITE_HP_MULT } from '../data/enemies.js?v=8f2357506abc';
+import { clamp, rand, rectsOverlap, TAU } from '../core/math.js?v=ab11b465bc0a';
+import { Combatant } from './combatant.js?v=ab11b465bc0a';
+import { ENEMY_BASE, ELITE_DAMAGE_MULT, ELITE_HP_MULT } from '../data/enemies.js?v=ab11b465bc0a';
 export class Enemy extends Combatant {
     constructor(stage, kind, x, elite = false) {
         const base = ENEMY_BASE[kind];

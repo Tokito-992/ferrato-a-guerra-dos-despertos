@@ -386,6 +386,123 @@ body.touch-lefty .touch-cluster-right { order: 1; justify-content: flex-start; }
   opacity: 0.9;
 }
 
+/* Editor de posição: mostra o dock do preset para medir e depois libera os botões. */
+body.touch-edit #touch-controls { display: flex; }
+body.touch-edit #fullscreen-toggle { display: none; }
+
+/* Medição do dock: sem transições nem transforms, para capturar centros exatos. */
+body.touch-measuring #touch-controls .touch-btn {
+  transition: none !important;
+  transform: none !important;
+}
+
+/* Layout livre: os botões saem do dock e ficam absolutos sobre a arena. */
+body.touch-custom #touch-controls {
+  position: absolute;
+  inset: 0;
+  inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  width: auto;
+  height: auto;
+  display: none;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  pointer-events: none;
+  z-index: 6;
+}
+
+body.touch-custom.touch-edit #touch-controls,
+body.touch-device.touch-custom.touch-gameplay #touch-controls {
+  display: block;
+}
+
+body.touch-custom .touch-cluster { display: contents; }
+
+body.touch-custom .touch-btn {
+  position: absolute;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+
+body.touch-custom .touch-btn:active,
+body.touch-custom .touch-btn:focus-visible {
+  transform: translate(-50%, -50%) scale(0.94);
+}
+
+body.touch-custom .touch-btn.touch-dragging {
+  transform: translate(-50%, -50%) scale(1.08);
+  z-index: 12;
+  border-color: rgba(86, 227, 255, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 0 0 3px rgba(86, 227, 255, 0.22),
+    0 0 30px rgba(86, 227, 255, 0.45);
+}
+
+body.touch-edit .touch-btn {
+  cursor: grab;
+  outline: 1px dashed rgba(86, 227, 255, 0.55);
+  outline-offset: 3px;
+}
+
+body.touch-edit .touch-btn.touch-dragging {
+  cursor: grabbing;
+  outline-color: rgba(255, 255, 255, 0.9);
+}
+
+#touch-editor-bar {
+  position: absolute;
+  z-index: 30;
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+body.touch-edit #touch-editor-bar { display: flex; }
+
+.touch-editor-btn {
+  pointer-events: auto;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(5, 8, 16, 0.9);
+  color: #eef2ff;
+  font: 700 10px / 1 "Share Tech Mono", "Consolas", monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.5);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.touch-editor-btn[data-action="done"] {
+  border-color: rgba(86, 227, 255, 0.65);
+  color: #56e3ff;
+  box-shadow: 0 0 18px rgba(86, 227, 255, 0.2);
+}
+
+.touch-editor-btn[data-action="reset"] {
+  border-color: rgba(255, 138, 60, 0.55);
+  color: #ffb07a;
+}
+
+.touch-editor-btn:active,
+.touch-editor-btn:focus-visible {
+  background: rgba(255, 106, 154, 0.24);
+  border-color: rgba(255, 208, 222, 0.8);
+  outline: none;
+}
+
 /* Telas de celular em paisagem são baixas: dock compacto para sobrar mais arena. */
 @media (max-height: 460px) {
   #touch-controls {
@@ -434,6 +551,17 @@ body.touch-lefty .touch-cluster-right { order: 1; justify-content: flex-start; }
 
   .touch-pause .touch-icon { font-size: 15px; }
   .touch-fullscreen { font-size: 16px; }
+
+  #touch-editor-bar {
+    top: 5px;
+    gap: 6px;
+  }
+
+  .touch-editor-btn {
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 9px;
+  }
 }
 
 @media (pointer: coarse) {

@@ -1,9 +1,9 @@
 /** Tutorial ilustrado de abertura: controles, combate, Câmara do Coração e celular. */
-import { clamp, hexToRgba, TAU } from '../core/math.js?v=8f2357506abc';
-import { drawTitleBackground } from '../render/backgrounds.js?v=8f2357506abc';
-import { drawCharacterSilhouette } from '../render/characters.js?v=8f2357506abc';
-import { drawHeart } from '../render/hearts.js?v=8f2357506abc';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=8f2357506abc';
+import { clamp, hexToRgba, TAU } from '../core/math.js?v=ab11b465bc0a';
+import { drawTitleBackground } from '../render/backgrounds.js?v=ab11b465bc0a';
+import { drawCharacterSilhouette } from '../render/characters.js?v=ab11b465bc0a';
+import { drawHeart } from '../render/hearts.js?v=ab11b465bc0a';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=ab11b465bc0a';
 function inside(box, x, y) {
     return x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h;
 }
@@ -49,12 +49,12 @@ const PAGES = [
         subtitle: 'CONTROLES DE TOQUE',
         accent: '#b48bff',
         bullets: [
-            { icon: '◀ ▶', text: 'Mover fica à esquerda; ações à direita no padrão.' },
-            { icon: '⚙', text: 'Em CONFIGURAÇÕES, troque o lado e o dock.' },
-            { icon: '⛶', text: 'Tela cheia e pausa ficam no centro do dock.' },
+            { icon: '◀ ▶', text: 'No padrão, mover fica à esquerda e ações à direita.' },
+            { icon: '⚙', text: 'Em CONFIGURAÇÕES, abra POSIÇÃO DOS BOTÕES.' },
+            { icon: '✥', text: 'Arraste cada botão e solte para salvar seu layout.' },
             { icon: '⌂', text: 'Na pausa, use SAIR PARA O MENU para voltar ao título.' },
         ],
-        tip: 'O dock fica fora da arena. Se preferir, mova-o para cima ou troque as mãos.',
+        tip: 'Lado e dock são presets. Arraste os botões para criar um layout só seu; ele fica salvo neste dispositivo.',
     },
 ];
 export class TutorialScene {

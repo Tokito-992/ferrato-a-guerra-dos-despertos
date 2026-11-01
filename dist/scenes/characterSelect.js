@@ -1,11 +1,11 @@
 /** Seleção de arcos e capítulos: história, lore, dificuldade e chefe de cada fase. */
-import { CHARACTERS, CHARACTER_ORDER } from '../data/characters.js?v=8f2357506abc';
-import { BOSSES } from '../data/bosses.js?v=8f2357506abc';
-import { arcFinaleStage, arcFirstStage, ARC_COUNT, CHAPTERS_PER_ARC, getArcStages, getStage, MAX_STAGE, STAGE_ROMAN, } from '../data/stages.js?v=8f2357506abc';
-import { clamp, hexToRgba } from '../core/math.js?v=8f2357506abc';
-import { drawStageBackground } from '../render/backgrounds.js?v=8f2357506abc';
-import { drawCharacterPortrait, drawCharacterSilhouette } from '../render/characters.js?v=8f2357506abc';
-import { FONTS, bar, glow, label, panel, roundRectPath } from '../render/theme.js?v=8f2357506abc';
+import { CHARACTERS, CHARACTER_ORDER } from '../data/characters.js?v=ab11b465bc0a';
+import { BOSSES } from '../data/bosses.js?v=ab11b465bc0a';
+import { arcFinaleStage, arcFirstStage, ARC_COUNT, CHAPTERS_PER_ARC, getArcStages, getStage, MAX_STAGE, STAGE_ROMAN, } from '../data/stages.js?v=ab11b465bc0a';
+import { clamp, hexToRgba } from '../core/math.js?v=ab11b465bc0a';
+import { drawStageBackground } from '../render/backgrounds.js?v=ab11b465bc0a';
+import { drawCharacterPortrait, drawCharacterSilhouette } from '../render/characters.js?v=ab11b465bc0a';
+import { FONTS, bar, glow, label, panel, roundRectPath } from '../render/theme.js?v=ab11b465bc0a';
 function inside(box, x, y) {
     return x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h;
 }

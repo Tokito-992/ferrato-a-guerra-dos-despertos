@@ -1,22 +1,50 @@
 /** Núcleo do jogo: loop, troca de cenas, transições, hitstop e persistência. */
-import { CHARACTERS } from '../data/characters.js?v=8f2357506abc';
-import { getStage, MAX_STAGE } from '../data/stages.js?v=8f2357506abc';
-import { STORY } from '../data/story.js?v=8f2357506abc';
-import { AudioEngine } from './audio.js?v=8f2357506abc';
-import { Input } from './input.js?v=8f2357506abc';
-import { ParticleSystem } from './particles.js?v=8f2357506abc';
-import { loadSave, writeSave } from './save.js?v=8f2357506abc';
-import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=8f2357506abc';
-import { clamp, hexToRgba } from './math.js?v=8f2357506abc';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=8f2357506abc';
-import { TitleScene } from '../scenes/title.js?v=8f2357506abc';
-import { CharacterSelectScene } from '../scenes/characterSelect.js?v=8f2357506abc';
-import { GameplayScene } from '../scenes/gameplay.js?v=8f2357506abc';
-import { StoryScene } from '../scenes/story.js?v=8f2357506abc';
-import { VictoryScene } from '../scenes/victory.js?v=8f2357506abc';
-import { CreditsScene } from '../scenes/credits.js?v=8f2357506abc';
-import { SettingsScene } from '../scenes/settings.js?v=8f2357506abc';
-import { TutorialScene } from '../scenes/tutorial.js?v=8f2357506abc';
+import { CHARACTERS } from '../data/characters.js?v=ab11b465bc0a';
+import { getStage, MAX_STAGE } from '../data/stages.js?v=ab11b465bc0a';
+import { STORY } from '../data/story.js?v=ab11b465bc0a';
+import { AudioEngine } from './audio.js?v=ab11b465bc0a';
+import { Input } from './input.js?v=ab11b465bc0a';
+import { ParticleSystem } from './particles.js?v=ab11b465bc0a';
+import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=ab11b465bc0a';
+import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=ab11b465bc0a';
+import { clamp, hexToRgba } from './math.js?v=ab11b465bc0a';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=ab11b465bc0a';
+import { TitleScene } from '../scenes/title.js?v=ab11b465bc0a';
+import { CharacterSelectScene } from '../scenes/characterSelect.js?v=ab11b465bc0a';
+import { GameplayScene } from '../scenes/gameplay.js?v=ab11b465bc0a';
+import { StoryScene } from '../scenes/story.js?v=ab11b465bc0a';
+import { VictoryScene } from '../scenes/victory.js?v=ab11b465bc0a';
+import { CreditsScene } from '../scenes/credits.js?v=ab11b465bc0a';
+import { SettingsScene } from '../scenes/settings.js?v=ab11b465bc0a';
+import { TutorialScene } from '../scenes/tutorial.js?v=ab11b465bc0a';
+/** Posições normalizadas usadas quando não há layout livre salvo. */
+function presetTouchPositions(layout, dock) {
+    const y = dock === 'top' ? 0.1 : 0.9;
+    if (layout === 'lefty') {
+        return {
+            left: { x: 0.86, y },
+            right: { x: 0.94, y },
+            jump: { x: 0.06, y },
+            attack: { x: 0.14, y },
+            heavy: { x: 0.22, y },
+            dash: { x: 0.3, y },
+            ability: { x: 0.38, y },
+            pause: { x: 0.48, y },
+            fullscreen: { x: 0.54, y },
+        };
+    }
+    return {
+        left: { x: 0.06, y },
+        right: { x: 0.14, y },
+        jump: { x: 0.62, y },
+        attack: { x: 0.7, y },
+        heavy: { x: 0.78, y },
+        dash: { x: 0.86, y },
+        ability: { x: 0.94, y },
+        pause: { x: 0.48, y },
+        fullscreen: { x: 0.54, y },
+    };
+}
 export class Game {
     constructor(canvas) {
         this.width = 1280;
@@ -41,6 +69,19 @@ export class Game {
         this.started = false;
         this.finishing = false;
         this.touchControls = null;
+        this.touchButtons = new Map();
+        this.touchEditing = false;
+        this.touchEditPositions = {};
+        this.handleTouchEditorDown = (event) => {
+            if (!this.touchEditing)
+                return;
+            const target = event.target instanceof Element ? event.target.closest('.touch-btn') : null;
+            if (!target)
+                return;
+            event.preventDefault();
+            event.stopPropagation();
+            this.dragTouchButton(target, event);
+        };
         // ------------------------------------------------------------- loop
         this.frame = (timestamp) => {
             const raw = clamp((timestamp - this.lastTimestamp) / 1000, 0, 0.05);
@@ -70,17 +111,67 @@ export class Game {
     }
     /** Aplica as preferências de layout dos controles de toque. */
     applyTouchSettings() {
+        const custom = this.save.touchPositions;
         document.body.classList.toggle('touch-lefty', this.save.touchLayout === 'lefty');
         document.body.classList.toggle('touch-dock-top', this.save.touchDock === 'top');
+        document.body.classList.toggle('touch-custom', Boolean(custom));
+        if (custom) {
+            this.applyTouchPositions(custom);
+        }
+        else {
+            this.clearTouchPositions();
+        }
+    }
+    /** Entra no modo de arrastar botões; as posições só são salvas ao soltar um botão. */
+    beginTouchEdit() {
+        if (this.touchEditing)
+            return;
+        this.touchEditing = true;
+        document.body.classList.add('touch-edit');
+        if (this.save.touchPositions) {
+            const fallback = presetTouchPositions(this.save.touchLayout, this.save.touchDock);
+            this.touchEditPositions = { ...fallback, ...this.save.touchPositions };
+            document.body.classList.add('touch-custom');
+            this.applyTouchPositions(this.touchEditPositions);
+            return;
+        }
+        // Sem layout salvo: mostra o dock do preset, mede os centros reais e
+        // converte para coordenadas livres antes de soltar os botões na tela.
+        document.body.classList.remove('touch-custom');
+        this.clearTouchPositions();
+        this.touchEditPositions = this.capturePresetTouchPositions();
+        document.body.classList.add('touch-custom');
+        this.applyTouchPositions(this.touchEditPositions);
+    }
+    /** Sai do modo de edição mantendo o layout livre, se ele foi salvo. */
+    endTouchEdit() {
+        if (!this.touchEditing)
+            return;
+        this.touchEditing = false;
+        document.body.classList.remove('touch-edit');
+        if (this.save.touchPositions) {
+            this.applyTouchSettings();
+        }
+        else {
+            document.body.classList.remove('touch-custom');
+            this.clearTouchPositions();
+        }
+    }
+    /** Volta ao preset de lado/dock e apaga o layout livre. */
+    resetTouchPositions() {
+        this.save.touchPositions = null;
+        this.touchEditPositions = {};
+        this.persist();
+        document.body.classList.remove('touch-custom');
+        this.clearTouchPositions();
     }
     get isTouchDevice() {
         return this.input.touchMode;
     }
-    /** Botões de toque independentes do canvas; aparecem apenas em combate. */
+    /** Botões de toque independentes do canvas; aparecem em combate e no editor. */
     setupTouchControls() {
-        if (!this.input.touchMode)
-            return;
-        document.body.classList.add('touch-device');
+        if (this.input.touchMode)
+            document.body.classList.add('touch-device');
         const wrap = document.createElement('div');
         wrap.id = 'touch-controls';
         wrap.setAttribute('aria-label', 'Controles de toque');
@@ -93,7 +184,9 @@ export class Game {
             button.type = 'button';
             button.className = `touch-btn${extra ? ` ${extra}` : ''}`;
             button.dataset.action = action;
+            button.dataset.touchId = action;
             button.setAttribute('aria-label', ariaLabel || label || action);
+            this.touchButtons.set(action, button);
             const iconEl = document.createElement('span');
             iconEl.className = 'touch-icon';
             iconEl.textContent = icon;
@@ -109,6 +202,8 @@ export class Game {
             const press = (event) => {
                 event.preventDefault();
                 event.stopPropagation();
+                if (this.touchEditing)
+                    return;
                 this.input.setVirtual(action, true);
                 try {
                     button.setPointerCapture(event.pointerId);
@@ -120,6 +215,8 @@ export class Game {
             const release = (event) => {
                 event.preventDefault();
                 event.stopPropagation();
+                if (this.touchEditing)
+                    return;
                 this.input.setVirtual(action, false);
             };
             button.addEventListener('pointerdown', press, { passive: false });
@@ -138,20 +235,140 @@ export class Game {
             const fullscreen = document.createElement('button');
             fullscreen.type = 'button';
             fullscreen.className = 'touch-btn touch-fullscreen';
+            fullscreen.dataset.touchId = 'fullscreen';
             fullscreen.textContent = '⛶';
             fullscreen.setAttribute('aria-label', 'Tela cheia');
             fullscreen.title = 'Tela cheia';
+            this.touchButtons.set('fullscreen', fullscreen);
             fullscreen.addEventListener('pointerdown', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
+                if (this.touchEditing)
+                    return;
                 void toggleFullscreen();
             });
             fullscreen.addEventListener('contextmenu', (event) => event.preventDefault());
             pause.append(fullscreen);
         }
         wrap.append(left, right, pause);
+        wrap.addEventListener('pointerdown', this.handleTouchEditorDown, { capture: true });
         (document.getElementById('frame') ?? document.body).appendChild(wrap);
         this.touchControls = wrap;
+    }
+    dragTouchButton(button, start) {
+        const wrap = this.touchControls;
+        const id = button.dataset.touchId;
+        if (!wrap || !id)
+            return;
+        const overlay = wrap.getBoundingClientRect();
+        if (overlay.width < 2 || overlay.height < 2)
+            return;
+        const rect = button.getBoundingClientRect();
+        const offsetX = start.clientX - (rect.left + rect.width / 2);
+        const offsetY = start.clientY - (rect.top + rect.height / 2);
+        const halfW = button.offsetWidth / 2 / overlay.width;
+        const halfH = button.offsetHeight / 2 / overlay.height;
+        button.classList.add('touch-dragging');
+        try {
+            button.setPointerCapture(start.pointerId);
+        }
+        catch {
+            // Sem captura de pointer, os listeners de window abaixo continuam valendo.
+        }
+        const move = (event) => {
+            if (event.pointerId !== start.pointerId)
+                return;
+            event.preventDefault();
+            const x = clamp((event.clientX - offsetX - overlay.left) / overlay.width, halfW + 0.004, 1 - halfW - 0.004);
+            const y = clamp((event.clientY - offsetY - overlay.top) / overlay.height, halfH + 0.004, 1 - halfH - 0.004);
+            this.touchEditPositions[id] = { x, y };
+            button.style.left = `${x * 100}%`;
+            button.style.top = `${y * 100}%`;
+        };
+        const finish = (event) => {
+            if (event.pointerId !== start.pointerId)
+                return;
+            button.classList.remove('touch-dragging');
+            window.removeEventListener('pointermove', move, true);
+            window.removeEventListener('pointerup', finish, true);
+            window.removeEventListener('pointercancel', finish, true);
+            try {
+                button.releasePointerCapture(start.pointerId);
+            }
+            catch {
+                // Ignora navegadores sem captura.
+            }
+            this.save.touchPositions = { ...this.touchEditPositions };
+            this.persist();
+            this.audio.sfx('ui');
+        };
+        window.addEventListener('pointermove', move, { passive: false, capture: true });
+        window.addEventListener('pointerup', finish, true);
+        window.addEventListener('pointercancel', finish, true);
+    }
+    capturePresetTouchPositions() {
+        const fallback = presetTouchPositions(this.save.touchLayout, this.save.touchDock);
+        const frame = document.getElementById('frame');
+        if (!frame)
+            return fallback;
+        // O dock pode estar voltando de um layout livre: desliga a transição de
+        // transform para medir os centros reais, não um quadro intermediário.
+        document.body.classList.add('touch-measuring');
+        try {
+            void frame.offsetWidth;
+            // Mede a área que o overlay livre ocupará (frame menos safe areas).
+            const probe = document.createElement('div');
+            probe.style.position = 'absolute';
+            probe.style.inset =
+                'env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+            probe.style.visibility = 'hidden';
+            probe.style.pointerEvents = 'none';
+            frame.append(probe);
+            const bounds = probe.getBoundingClientRect();
+            probe.remove();
+            if (bounds.width < 2 || bounds.height < 2)
+                return fallback;
+            const positions = {};
+            for (const id of TOUCH_BUTTON_IDS) {
+                const button = this.touchButtons.get(id);
+                if (!button)
+                    continue;
+                const rect = button.getBoundingClientRect();
+                if (rect.width < 2 || rect.height < 2) {
+                    const point = fallback[id];
+                    if (point)
+                        positions[id] = point;
+                    continue;
+                }
+                positions[id] = {
+                    x: clamp((rect.left + rect.width / 2 - bounds.left) / bounds.width, 0.01, 0.99),
+                    y: clamp((rect.top + rect.height / 2 - bounds.top) / bounds.height, 0.01, 0.99),
+                };
+            }
+            return positions;
+        }
+        finally {
+            document.body.classList.remove('touch-measuring');
+        }
+    }
+    applyTouchPositions(positions) {
+        const fallback = presetTouchPositions(this.save.touchLayout, this.save.touchDock);
+        for (const id of TOUCH_BUTTON_IDS) {
+            const button = this.touchButtons.get(id);
+            if (!button)
+                continue;
+            const point = positions[id] ?? fallback[id];
+            if (!point)
+                continue;
+            button.style.left = `${(point.x * 100).toFixed(3)}%`;
+            button.style.top = `${(point.y * 100).toFixed(3)}%`;
+        }
+    }
+    clearTouchPositions() {
+        for (const button of this.touchButtons.values()) {
+            button.style.left = '';
+            button.style.top = '';
+        }
     }
     setTouchControlsVisible(visible) {
         if (!this.touchControls)

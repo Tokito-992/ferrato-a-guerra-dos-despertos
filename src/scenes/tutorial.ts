@@ -73,12 +73,12 @@ const PAGES: TutorialPage[] = [
     subtitle: 'CONTROLES DE TOQUE',
     accent: '#b48bff',
     bullets: [
-      { icon: '◀ ▶', text: 'Mover fica à esquerda; ações à direita no padrão.' },
-      { icon: '⚙', text: 'Em CONFIGURAÇÕES, troque o lado e o dock.' },
-      { icon: '⛶', text: 'Tela cheia e pausa ficam no centro do dock.' },
+      { icon: '◀ ▶', text: 'No padrão, mover fica à esquerda e ações à direita.' },
+      { icon: '⚙', text: 'Em CONFIGURAÇÕES, abra POSIÇÃO DOS BOTÕES.' },
+      { icon: '✥', text: 'Arraste cada botão e solte para salvar seu layout.' },
       { icon: '⌂', text: 'Na pausa, use SAIR PARA O MENU para voltar ao título.' },
     ],
-    tip: 'O dock fica fora da arena. Se preferir, mova-o para cima ou troque as mãos.',
+    tip: 'Lado e dock são presets. Arraste os botões para criar um layout só seu; ele fica salvo neste dispositivo.',
   },
 ];
 

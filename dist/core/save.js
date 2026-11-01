@@ -1,7 +1,18 @@
 /** Persistência local de progresso (localStorage) — campanha de 36 capítulos. */
-import { CHARACTER_ORDER } from '../data/characters.js?v=8f2357506abc';
-import { CHAPTERS_PER_ARC, MAX_STAGE } from '../data/stages.js?v=8f2357506abc';
-import { isRank } from './rank.js?v=8f2357506abc';
+import { CHARACTER_ORDER } from '../data/characters.js?v=ab11b465bc0a';
+import { CHAPTERS_PER_ARC, MAX_STAGE } from '../data/stages.js?v=ab11b465bc0a';
+import { isRank } from './rank.js?v=ab11b465bc0a';
+export const TOUCH_BUTTON_IDS = [
+    'left',
+    'right',
+    'jump',
+    'attack',
+    'heavy',
+    'dash',
+    'ability',
+    'pause',
+    'fullscreen',
+];
 /** Mantemos a chave v1 para conseguir migrar arquivos antigos sem perder progresso. */
 const KEY = 'ferrato_guerra_dos_despertos_save_v1';
 const LEGACY_MAX_STAGE = 6;
@@ -16,6 +27,30 @@ const heroForStage = (stageId) => {
     return CHARACTER_ORDER[arc - 1];
 };
 const validHero = (value) => typeof value === 'string' && CHARACTER_ORDER.includes(value) ? value : null;
+const clamp01 = (value) => Math.max(0, Math.min(1, value));
+const validTouchPoint = (value) => {
+    if (!value || typeof value !== 'object')
+        return null;
+    const point = value;
+    if (typeof point.x !== 'number' || !Number.isFinite(point.x))
+        return null;
+    if (typeof point.y !== 'number' || !Number.isFinite(point.y))
+        return null;
+    return { x: clamp01(point.x), y: clamp01(point.y) };
+};
+/** Mantém apenas botões conhecidos e coordenadas válidas; saves antigos ficam sem layout livre. */
+export function sanitizeTouchPositions(value) {
+    if (!value || typeof value !== 'object')
+        return null;
+    const source = value;
+    const positions = {};
+    for (const id of TOUCH_BUTTON_IDS) {
+        const point = validTouchPoint(source[id]);
+        if (point)
+            positions[id] = point;
+    }
+    return Object.keys(positions).length > 0 ? positions : null;
+}
 function sanitize(data) {
     const cleared = Array.from(new Set((Array.isArray(data.cleared) ? data.cleared : [])
         .map((id) => Math.round(Number(id)))
@@ -49,6 +84,7 @@ function sanitize(data) {
         muted: Boolean(data.muted),
         touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
         touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
+        touchPositions: sanitizeTouchPositions(data.touchPositions),
     };
 }
 /**
@@ -105,6 +141,7 @@ function migrateLegacy(data) {
         muted: Boolean(data.muted),
         touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
         touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
+        touchPositions: sanitizeTouchPositions(data.touchPositions),
     };
 }
 export function defaultSave() {
@@ -122,6 +159,7 @@ export function defaultSave() {
         muted: false,
         touchLayout: 'standard',
         touchDock: 'bottom',
+        touchPositions: null,
     };
 }
 export function loadSave() {

@@ -51,7 +51,7 @@ O jogo funciona em navegadores móveis e ocupa a tela inteira no modo horizontal
 | `Ⅱ` | Pausar |
 | `⛶` | Entrar/sair da tela cheia |
 
-Os menus respondem a toque diretamente no canvas. Em retrato, uma tela de aviso pede para girar o dispositivo, pois a arena foi desenhada em 16:9 horizontal. Os controles ficam em um **dock fora da área de combate**, então não cobrem inimigos nem personagens. O dock pode ficar na parte inferior (padrão) ou superior. O jogo tenta entrar em tela cheia no primeiro toque e também oferece o botão `⛶`; a orientação é travada em paisagem quando o navegador permite. As áreas seguras (notch) são respeitadas.
+Os menus respondem a toque diretamente no canvas. Em retrato, uma tela de aviso pede para girar o dispositivo, pois a arena foi desenhada em 16:9 horizontal. Os controles ficam em um **dock fora da área de combate** por padrão, então não cobrem inimigos nem personagens. O dock pode ficar na parte inferior (padrão) ou superior. Se preferir, use **CONFIGURAÇÕES → POSIÇÃO DOS BOTÕES** para arrastar cada botão livremente para qualquer ponto da tela; nesse modo eles flutuam sobre a arena e a posição fica salva. O jogo tenta entrar em tela cheia no primeiro toque e também oferece o botão `⛶`; a orientação é travada em paisagem quando o navegador permite. As áreas seguras (notch) são respeitadas.
 
 Para voltar ao título no celular, abra a pausa e toque em **⌂ MENU** (ou em **SAIR PARA O MENU**). O game over e a seleção de capítulos também têm atalhos de toque para o menu principal.
 
@@ -61,10 +61,11 @@ A tela **CONFIGURAÇÕES** do menu principal permite:
 
 - alternar o lado dos controles entre **padrão** (mover à esquerda, ações à direita) e **canhoto** (mover à direita, ações à esquerda);
 - colocar o dock de toque na parte **inferior** ou **superior**;
+- abrir **POSIÇÃO DOS BOTÕES** e arrastar cada botão individualmente para onde for mais confortável; **CONCLUIR** salva e **RESTAURAR PADRÃO** volta ao preset de lado/dock;
 - ligar/desligar o áudio;
 - rever o tutorial a qualquer momento.
 
-As escolhas são salvas automaticamente no `localStorage` e uma prévia mostra o layout antes de voltar ao combate.
+As escolhas são salvas automaticamente no `localStorage` e uma prévia mostra o layout antes de voltar ao combate. Lado e dock funcionam como presets: alterar um deles descarta o layout livre e aplica o preset escolhido.
 
 Ao escolher **NOVO JOGO**, o jogo abre um tutorial ilustrado de quatro páginas: movimento e ataques, dash e especial, Câmara do Coração e controles de celular. É possível avançar tocando/clicando, voltar página ou pular o tutorial; ao terminar, a seleção de Despertos e capítulos abre normalmente.
 
@@ -125,7 +126,7 @@ Cada herói tem atributos, golpes, alcance, hitboxes, passiva, efeitos e som de 
 - **Modo anime-inspired**: contornos cel-shading, aura, linhas de velocidade, impactos radiais e color grade. Pressione **F2** para alternar ou use `?anime=0` para forçar o estilo clássico.
 - Menu principal (Novo Jogo, Continuar, Despertos & Arcos, Configurações, Créditos), pausa (continuar, trocar Desperto, reiniciar, sair), game over (tentar novamente, trocar, menu) e vitória.
 - Seleção por arcos e capítulos, com sinopse, motivo do herói, lore, guardião/chefe, dificuldade e progresso.
-- Progressão em `localStorage` (chave `ferrato_guerra_dos_despertos_save_v1`, esquema **v2**): capítulos concluídos, capítulo máximo, heróis desbloqueados, herói selecionado, abates, quedas, melhor combo, melhor pontuação (`bestScore`), melhor rank (`bestRank`), áudio, lado dos controles (`touchLayout`) e posição do dock (`touchDock`). Saves antigos recebem os novos campos com valores padrão.
+- Progressão em `localStorage` (chave `ferrato_guerra_dos_despertos_save_v1`, esquema **v2**): capítulos concluídos, capítulo máximo, heróis desbloqueados, herói selecionado, abates, quedas, melhor combo, melhor pontuação (`bestScore`), melhor rank (`bestRank`), áudio, lado dos controles (`touchLayout`), posição do dock (`touchDock`) e posições livres dos botões (`touchPositions`). Saves antigos recebem os novos campos com valores padrão.
 - Áudio procedural via WebAudio: 36 temas de fase, 6 temas de chefe, 6 ambientes e efeitos sintetizados.
 - Dificuldade progressiva por arco e capítulo; o HP dos chefes acompanha o arco.
 - Sem dependências de runtime; arte e som são desenhados/sintetizados no navegador.

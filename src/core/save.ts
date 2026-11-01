@@ -8,6 +8,37 @@ import type { Rank } from './rank.js';
 
 export type TouchLayout = 'standard' | 'lefty';
 export type TouchDock = 'bottom' | 'top';
+export type TouchButtonId =
+  | 'left'
+  | 'right'
+  | 'jump'
+  | 'attack'
+  | 'heavy'
+  | 'dash'
+  | 'ability'
+  | 'pause'
+  | 'fullscreen';
+
+export interface TouchPoint {
+  /** Posição horizontal normalizada (0..1) dentro da área de toque. */
+  x: number;
+  /** Posição vertical normalizada (0..1) dentro da área de toque. */
+  y: number;
+}
+
+export type TouchPositions = Partial<Record<TouchButtonId, TouchPoint>>;
+
+export const TOUCH_BUTTON_IDS: readonly TouchButtonId[] = [
+  'left',
+  'right',
+  'jump',
+  'attack',
+  'heavy',
+  'dash',
+  'ability',
+  'pause',
+  'fullscreen',
+];
 
 export interface SaveData {
   version: number;
@@ -28,6 +59,8 @@ export interface SaveData {
   touchLayout: TouchLayout;
   /** Posição do dock de controles de toque. */
   touchDock: TouchDock;
+  /** Posições livres dos botões; ausente = usa o preset de lado/dock. */
+  touchPositions: TouchPositions | null;
 }
 
 interface LegacySave {
@@ -44,6 +77,7 @@ interface LegacySave {
   muted?: boolean;
   touchLayout?: string;
   touchDock?: string;
+  touchPositions?: Record<string, unknown> | null;
 }
 
 /** Mantemos a chave v1 para conseguir migrar arquivos antigos sem perder progresso. */
@@ -63,6 +97,28 @@ const heroForStage = (stageId: number): CharacterId => {
 
 const validHero = (value: unknown): CharacterId | null =>
   typeof value === 'string' && (CHARACTER_ORDER as string[]).includes(value) ? (value as CharacterId) : null;
+
+const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
+
+const validTouchPoint = (value: unknown): TouchPoint | null => {
+  if (!value || typeof value !== 'object') return null;
+  const point = value as { x?: unknown; y?: unknown };
+  if (typeof point.x !== 'number' || !Number.isFinite(point.x)) return null;
+  if (typeof point.y !== 'number' || !Number.isFinite(point.y)) return null;
+  return { x: clamp01(point.x), y: clamp01(point.y) };
+};
+
+/** Mantém apenas botões conhecidos e coordenadas válidas; saves antigos ficam sem layout livre. */
+export function sanitizeTouchPositions(value: unknown): TouchPositions | null {
+  if (!value || typeof value !== 'object') return null;
+  const source = value as Record<string, unknown>;
+  const positions: TouchPositions = {};
+  for (const id of TOUCH_BUTTON_IDS) {
+    const point = validTouchPoint(source[id]);
+    if (point) positions[id] = point;
+  }
+  return Object.keys(positions).length > 0 ? positions : null;
+}
 
 function sanitize(data: LegacySave): SaveData {
   const cleared = Array.from(
@@ -105,6 +161,7 @@ function sanitize(data: LegacySave): SaveData {
     muted: Boolean(data.muted),
     touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
     touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
+    touchPositions: sanitizeTouchPositions(data.touchPositions),
   };
 }
 
@@ -167,6 +224,7 @@ function migrateLegacy(data: LegacySave): SaveData {
     muted: Boolean(data.muted),
     touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
     touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
+    touchPositions: sanitizeTouchPositions(data.touchPositions),
   };
 }
 
@@ -185,6 +243,7 @@ export function defaultSave(): SaveData {
     muted: false,
     touchLayout: 'standard',
     touchDock: 'bottom',
+    touchPositions: null,
   };
 }
 

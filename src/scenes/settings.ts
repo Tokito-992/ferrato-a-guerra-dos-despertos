@@ -10,6 +10,8 @@ import { Menu } from '../ui/menu.js';
 export class SettingsScene implements Scene {
   private menu: Menu;
   private t = 0;
+  private editing = false;
+  private editorBar: HTMLElement | null = null;
 
   constructor(private readonly game: Game) {
     this.menu = new Menu([]);
@@ -20,6 +22,14 @@ export class SettingsScene implements Scene {
     this.game.audio.playMusic(35);
     this.game.audio.playAmbience('cosmic');
     this.buildMenu();
+  }
+
+  exit(): void {
+    this.removeEditorBar();
+    if (this.editing) {
+      this.editing = false;
+      this.game.endTouchEdit();
+    }
   }
 
   private sideDetail(): string {
@@ -48,6 +58,12 @@ export class SettingsScene implements Scene {
           accent: '#b48bff',
         },
         {
+          id: 'customize',
+          label: 'POSIÇÃO DOS BOTÕES',
+          detail: this.game.save.touchPositions ? 'PERSONALIZADA' : 'ARRASTE OS BOTÕES',
+          accent: '#56e3ff',
+        },
+        {
           id: 'audio',
           label: 'ÁUDIO',
           detail: this.game.save.muted ? 'SILENCIADO' : 'LIGADO',
@@ -69,13 +85,23 @@ export class SettingsScene implements Scene {
     const save = this.game.save;
     switch (id) {
       case 'side':
-        save.touchLayout = save.touchLayout === 'lefty' ? 'standard' : 'lefty';
+      case 'dock': {
+        // Os presets são pontos de partida: escolher um deles descarta o layout livre.
+        if (save.touchPositions) {
+          save.touchPositions = null;
+          this.game.setNotice('PRESET APLICADO — POSIÇÕES LIVRES REDEFINIDAS', '#ffd166');
+        }
+        if (id === 'side') {
+          save.touchLayout = save.touchLayout === 'lefty' ? 'standard' : 'lefty';
+        } else {
+          save.touchDock = save.touchDock === 'top' ? 'bottom' : 'top';
+        }
         this.game.applyTouchSettings();
         break;
-      case 'dock':
-        save.touchDock = save.touchDock === 'top' ? 'bottom' : 'top';
-        this.game.applyTouchSettings();
-        break;
+      }
+      case 'customize':
+        this.startEditing();
+        return;
       case 'audio': {
         const muted = this.game.audio.toggleMuted();
         save.muted = muted;
@@ -95,9 +121,61 @@ export class SettingsScene implements Scene {
     this.game.audio.sfx('select');
   }
 
+  private startEditing(): void {
+    if (this.editing) return;
+    this.editing = true;
+    this.game.beginTouchEdit();
+
+    const bar = document.createElement('div');
+    bar.id = 'touch-editor-bar';
+    bar.append(
+      this.makeEditorButton('CONCLUIR', 'done', () => this.finishEditing()),
+      this.makeEditorButton('RESTAURAR PADRÃO', 'reset', () => this.resetEditing()),
+    );
+    (document.getElementById('frame') ?? document.body).append(bar);
+    this.editorBar = bar;
+    this.game.audio.sfx('confirm');
+  }
+
+  private makeEditorButton(label: string, action: string, onClick: () => void): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'touch-editor-btn';
+    button.dataset.action = action;
+    button.textContent = label;
+    button.addEventListener('click', onClick);
+    button.addEventListener('pointerdown', (event) => event.stopPropagation());
+    return button;
+  }
+
+  private removeEditorBar(): void {
+    this.editorBar?.remove();
+    this.editorBar = null;
+  }
+
+  private finishEditing(): void {
+    if (!this.editing) return;
+    this.editing = false;
+    this.game.endTouchEdit();
+    this.removeEditorBar();
+    this.buildMenu(true);
+    this.game.audio.sfx('ui');
+  }
+
+  private resetEditing(): void {
+    if (!this.editing) return;
+    this.game.resetTouchPositions();
+    this.finishEditing();
+    this.game.setNotice('CONTROLES RESTAURADOS AO PADRÃO', '#56e3ff');
+  }
+
   update(dt: number): void {
     this.t += dt;
     const input = this.game.input;
+    if (this.editing) {
+      if (input.pressed('back') || input.pressed('pause')) this.finishEditing();
+      return;
+    }
     if (input.pressed('back') || input.pressed('pause')) {
       this.game.audio.sfx('ui');
       this.game.gotoTitle();
@@ -115,6 +193,10 @@ export class SettingsScene implements Scene {
   }
 
   draw(ctx: CanvasRenderingContext2D): void {
+    if (this.editing) {
+      this.drawEditor(ctx);
+      return;
+    }
     const { width, height } = this.game;
     drawTitleBackground(ctx, this.t);
 
@@ -159,6 +241,95 @@ export class SettingsScene implements Scene {
     this.drawPreview(ctx, 686, 190, 504, 388);
   }
 
+  private drawEditor(ctx: CanvasRenderingContext2D): void {
+    const { width, height } = this.game;
+    drawTitleBackground(ctx, this.t);
+
+    const shade = ctx.createLinearGradient(0, 0, 0, height);
+    shade.addColorStop(0, 'rgba(4,5,10,0.9)');
+    shade.addColorStop(0.55, 'rgba(4,5,10,0.72)');
+    shade.addColorStop(1, 'rgba(4,5,10,0.92)');
+    ctx.fillStyle = shade;
+    ctx.fillRect(0, 0, width, height);
+
+    // Grade sutil para perceber a área livre de posicionamento.
+    ctx.save();
+    ctx.strokeStyle = 'rgba(86,227,255,0.08)';
+    ctx.lineWidth = 1;
+    for (let gx = 80; gx < width; gx += 80) {
+      ctx.beginPath();
+      ctx.moveTo(gx, 150);
+      ctx.lineTo(gx, height - 60);
+      ctx.stroke();
+    }
+    for (let gy = 160; gy < height - 60; gy += 80) {
+      ctx.beginPath();
+      ctx.moveTo(70, gy);
+      ctx.lineTo(width - 70, gy);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    const ax = 80;
+    const ay = 224;
+    const aw = width - 160;
+    const ah = 350;
+    const arena = ctx.createLinearGradient(ax, ay, ax, ay + ah);
+    arena.addColorStop(0, 'rgba(72,26,38,0.42)');
+    arena.addColorStop(1, 'rgba(8,8,18,0.78)');
+    ctx.fillStyle = arena;
+    ctx.fillRect(ax, ay, aw, ah);
+
+    ctx.save();
+    ctx.setLineDash([8, 8]);
+    ctx.strokeStyle = 'rgba(86,227,255,0.35)';
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(ax, ay, aw, ah);
+    ctx.restore();
+
+    ctx.strokeStyle = 'rgba(255,138,60,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(ax + 18, ay + ah - 30);
+    ctx.lineTo(ax + aw - 18, ay + ah - 30);
+    ctx.stroke();
+    ctx.save();
+    ctx.globalAlpha = 0.72;
+    drawCharacterSilhouette(ctx, 'ravi', ax + aw * 0.42, ay + ah - 36, 0.82, '#ff8a3d');
+    ctx.globalAlpha = 0.36;
+    drawCharacterSilhouette(ctx, 'ozric', ax + aw * 0.68, ay + ah - 36, 0.76, '#b48bff');
+    ctx.restore();
+
+    label(ctx, 'PERSONALIZAR CONTROLES', 80, 98, 38, '#f4f7ff', {
+      weight: 800,
+      spacing: 5,
+      glow: 'rgba(86,227,255,0.42)',
+    });
+    label(ctx, 'ARRASTE CADA BOTÃO PARA ONDE FOR MAIS CONFORTÁVEL', 82, 126, 10.5, 'rgba(86,227,255,0.78)', {
+      font: FONTS.mono,
+      spacing: 1.7,
+    });
+    label(ctx, 'SALVO NESTE DISPOSITIVO', width - 80, 126, 9.5, 'rgba(190,198,220,0.5)', {
+      align: 'right',
+      font: FONTS.mono,
+      spacing: 1.1,
+    });
+    label(ctx, 'TOQUE E ARRASTE · SOLTE PARA SALVAR', 82, 168, 10, 'rgba(255,209,102,0.72)', {
+      font: FONTS.mono,
+      spacing: 1.2,
+    });
+    label(ctx, 'USE CONCLUIR OU RESTAURAR PADRÃO NO TOPO', width - 80, 168, 9.5, 'rgba(190,198,220,0.46)', {
+      align: 'right',
+      font: FONTS.mono,
+      spacing: 1.1,
+    });
+    label(ctx, 'ÁREA DE JOGO', ax + aw / 2, ay + 20, 9, 'rgba(255,255,255,0.32)', {
+      align: 'center',
+      font: FONTS.mono,
+      spacing: 1.8,
+    });
+  }
+
   private drawPreview(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
     panel(ctx, x, y, w, h, {
       fill: 'rgba(5,8,16,0.82)',
@@ -170,7 +341,12 @@ export class SettingsScene implements Scene {
       font: FONTS.mono,
       spacing: 1.6,
     });
-    label(ctx, this.game.save.touchLayout === 'lefty' ? 'CANHOTO' : 'PADRÃO', x + w - 22, y + 28, 9, 'rgba(255,255,255,0.55)', {
+    const modeLabel = this.game.save.touchPositions
+      ? 'PERSONALIZADO'
+      : this.game.save.touchLayout === 'lefty'
+        ? 'CANHOTO'
+        : 'PADRÃO';
+    label(ctx, modeLabel, x + w - 22, y + 28, 9, 'rgba(255,255,255,0.55)', {
       align: 'right',
       font: FONTS.mono,
       spacing: 1.2,
@@ -192,6 +368,11 @@ export class SettingsScene implements Scene {
     ctx.lineWidth = 1.5;
     ctx.stroke();
     ctx.restore();
+
+    if (this.game.save.touchPositions) {
+      this.drawCustomPreview(ctx, x, y, w, h, fx, fy, fw, fh);
+      return;
+    }
 
     const arenaY = dockTop ? fy + dockH : fy;
     const arenaH = fh - dockH;
@@ -270,11 +451,81 @@ export class SettingsScene implements Scene {
       font: FONTS.mono,
       spacing: 1.4,
     });
-    label(ctx, 'A prévia acompanha o layout salvo neste dispositivo.', x + w / 2, y + 326, 10, 'rgba(190,198,220,0.45)', {
+    label(ctx, 'Lado e dock são presets de partida.', x + w / 2, y + 326, 10, 'rgba(190,198,220,0.45)', {
       align: 'center',
       font: FONTS.ui,
     });
-    label(ctx, 'Use “LADO DOS CONTROLES” para trocar as mãos.', x + w / 2, y + 350, 9.5, 'rgba(255,209,102,0.6)', {
+    label(ctx, 'Use “POSIÇÃO DOS BOTÕES” para arrastar cada um.', x + w / 2, y + 350, 9.5, 'rgba(255,209,102,0.6)', {
+      align: 'center',
+      font: FONTS.mono,
+      spacing: 0.8,
+    });
+  }
+
+  private drawCustomPreview(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    fx: number,
+    fy: number,
+    fw: number,
+    fh: number,
+  ): void {
+    const arena = ctx.createLinearGradient(fx, fy, fx, fy + fh);
+    arena.addColorStop(0, 'rgba(72,26,38,0.9)');
+    arena.addColorStop(1, 'rgba(8,8,18,0.96)');
+    ctx.fillStyle = arena;
+    ctx.fillRect(fx + 2, fy + 2, fw - 4, fh - 4);
+
+    ctx.save();
+    ctx.setLineDash([5, 5]);
+    ctx.strokeStyle = 'rgba(86,227,255,0.34)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(fx + 2, fy + 2, fw - 4, fh - 4);
+    ctx.restore();
+
+    ctx.strokeStyle = 'rgba(255,138,60,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(fx + 10, fy + fh - 24);
+    ctx.lineTo(fx + fw - 10, fy + fh - 24);
+    ctx.stroke();
+    ctx.save();
+    ctx.globalAlpha = 0.8;
+    drawCharacterSilhouette(ctx, 'ravi', fx + fw * 0.42, fy + fh - 30, 0.62, '#ff8a3d');
+    ctx.globalAlpha = 0.42;
+    drawCharacterSilhouette(ctx, 'ozric', fx + fw * 0.7, fy + fh - 30, 0.58, '#b48bff');
+    ctx.restore();
+
+    const icons: Record<string, [string, string, number]> = {
+      left: ['◀', '#56e3ff', 8],
+      right: ['▶', '#56e3ff', 8],
+      jump: ['⤒', '#ffd166', 7],
+      attack: ['⚔', '#ff7a3c', 7],
+      heavy: ['✹', '#ff7a3c', 7],
+      dash: ['»', '#ff7a3c', 7],
+      ability: ['✦', '#56e3ff', 8],
+      pause: ['Ⅱ', 'rgba(255,255,255,0.55)', 6],
+      fullscreen: ['⛶', 'rgba(255,255,255,0.55)', 6],
+    };
+    for (const [id, point] of Object.entries(this.game.save.touchPositions ?? {})) {
+      const spec = icons[id];
+      if (!spec) continue;
+      this.circle(ctx, fx + point.x * fw, fy + point.y * fh, spec[2], spec[0], spec[1]);
+    }
+
+    label(ctx, 'POSIÇÕES PERSONALIZADAS', x + w / 2, y + 300, 9, 'rgba(86,227,255,0.75)', {
+      align: 'center',
+      font: FONTS.mono,
+      spacing: 1.4,
+    });
+    label(ctx, 'Arraste em “POSIÇÃO DOS BOTÕES”.', x + w / 2, y + 326, 10, 'rgba(190,198,220,0.5)', {
+      align: 'center',
+      font: FONTS.ui,
+    });
+    label(ctx, 'Alterar lado/dock restaura o preset.', x + w / 2, y + 350, 9.5, 'rgba(255,209,102,0.6)', {
       align: 'center',
       font: FONTS.mono,
       spacing: 0.8,
