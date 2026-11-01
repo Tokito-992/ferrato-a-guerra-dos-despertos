@@ -1,7 +1,7 @@
 /** Persistência local de progresso (localStorage) — campanha de 36 capítulos. */
-import { CHARACTER_ORDER } from '../data/characters.js';
-import { CHAPTERS_PER_ARC, MAX_STAGE } from '../data/stages.js';
-import { isRank } from './rank.js';
+import { CHARACTER_ORDER } from '../data/characters.js?v=8f2357506abc';
+import { CHAPTERS_PER_ARC, MAX_STAGE } from '../data/stages.js?v=8f2357506abc';
+import { isRank } from './rank.js?v=8f2357506abc';
 /** Mantemos a chave v1 para conseguir migrar arquivos antigos sem perder progresso. */
 const KEY = 'ferrato_guerra_dos_despertos_save_v1';
 const LEGACY_MAX_STAGE = 6;

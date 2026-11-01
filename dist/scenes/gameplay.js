@@ -1,22 +1,22 @@
 /** Cena principal: arena lateral, ondas, chefe, pausa, troca de herói e game over. */
-import { Camera } from '../core/camera.js';
-import { ParticleSystem } from '../core/particles.js';
-import { clamp, hexToRgba } from '../core/math.js';
-import { rankColor, rankFromPressure, rankValue } from '../core/rank.js';
-import { MAX_STAGE } from '../data/stages.js';
-import { Player } from '../entities/player.js';
-import { Enemy } from '../entities/enemy.js';
-import { Boss } from '../entities/boss.js';
-import { Hazard, Projectile } from '../entities/projectiles.js';
-import { StageObstacle, buildStageObstacles } from '../entities/obstacles.js';
-import { drawStageBackground } from '../render/backgrounds.js';
-import { drawCharacterPortrait, drawPlayer } from '../render/characters.js';
-import { drawBoss, drawEnemy } from '../render/enemies.js';
-import { drawHeart } from '../render/hearts.js';
-import { visualStyle } from '../render/style.js';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js';
-import { drawHud } from '../ui/hud.js';
-import { Menu } from '../ui/menu.js';
+import { Camera } from '../core/camera.js?v=8f2357506abc';
+import { ParticleSystem } from '../core/particles.js?v=8f2357506abc';
+import { clamp, hexToRgba } from '../core/math.js?v=8f2357506abc';
+import { rankColor, rankFromPressure, rankValue } from '../core/rank.js?v=8f2357506abc';
+import { MAX_STAGE } from '../data/stages.js?v=8f2357506abc';
+import { Player } from '../entities/player.js?v=8f2357506abc';
+import { Enemy } from '../entities/enemy.js?v=8f2357506abc';
+import { Boss } from '../entities/boss.js?v=8f2357506abc';
+import { Hazard, Projectile } from '../entities/projectiles.js?v=8f2357506abc';
+import { StageObstacle, buildStageObstacles } from '../entities/obstacles.js?v=8f2357506abc';
+import { drawStageBackground } from '../render/backgrounds.js?v=8f2357506abc';
+import { drawCharacterPortrait, drawPlayer } from '../render/characters.js?v=8f2357506abc';
+import { drawBoss, drawEnemy } from '../render/enemies.js?v=8f2357506abc';
+import { drawHeart } from '../render/hearts.js?v=8f2357506abc';
+import { visualStyle } from '../render/style.js?v=8f2357506abc';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=8f2357506abc';
+import { drawHud } from '../ui/hud.js?v=8f2357506abc';
+import { Menu } from '../ui/menu.js?v=8f2357506abc';
 function insideRect(rect, x, y) {
     return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
 }

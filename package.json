@@ -5,7 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/cache-bust.mjs",
     "typecheck": "tsc --noEmit",
     "serve": "node serve.mjs",
     "start": "node serve.mjs"

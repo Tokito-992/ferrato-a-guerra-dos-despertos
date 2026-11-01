@@ -1,22 +1,22 @@
 /** Núcleo do jogo: loop, troca de cenas, transições, hitstop e persistência. */
-import { CHARACTERS } from '../data/characters.js';
-import { getStage, MAX_STAGE } from '../data/stages.js';
-import { STORY } from '../data/story.js';
-import { AudioEngine } from './audio.js';
-import { Input } from './input.js';
-import { ParticleSystem } from './particles.js';
-import { loadSave, writeSave } from './save.js';
-import { canFullscreen, toggleFullscreen } from './fullscreen.js';
-import { clamp, hexToRgba } from './math.js';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js';
-import { TitleScene } from '../scenes/title.js';
-import { CharacterSelectScene } from '../scenes/characterSelect.js';
-import { GameplayScene } from '../scenes/gameplay.js';
-import { StoryScene } from '../scenes/story.js';
-import { VictoryScene } from '../scenes/victory.js';
-import { CreditsScene } from '../scenes/credits.js';
-import { SettingsScene } from '../scenes/settings.js';
-import { TutorialScene } from '../scenes/tutorial.js';
+import { CHARACTERS } from '../data/characters.js?v=8f2357506abc';
+import { getStage, MAX_STAGE } from '../data/stages.js?v=8f2357506abc';
+import { STORY } from '../data/story.js?v=8f2357506abc';
+import { AudioEngine } from './audio.js?v=8f2357506abc';
+import { Input } from './input.js?v=8f2357506abc';
+import { ParticleSystem } from './particles.js?v=8f2357506abc';
+import { loadSave, writeSave } from './save.js?v=8f2357506abc';
+import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=8f2357506abc';
+import { clamp, hexToRgba } from './math.js?v=8f2357506abc';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=8f2357506abc';
+import { TitleScene } from '../scenes/title.js?v=8f2357506abc';
+import { CharacterSelectScene } from '../scenes/characterSelect.js?v=8f2357506abc';
+import { GameplayScene } from '../scenes/gameplay.js?v=8f2357506abc';
+import { StoryScene } from '../scenes/story.js?v=8f2357506abc';
+import { VictoryScene } from '../scenes/victory.js?v=8f2357506abc';
+import { CreditsScene } from '../scenes/credits.js?v=8f2357506abc';
+import { SettingsScene } from '../scenes/settings.js?v=8f2357506abc';
+import { TutorialScene } from '../scenes/tutorial.js?v=8f2357506abc';
 export class Game {
     constructor(canvas) {
         this.width = 1280;

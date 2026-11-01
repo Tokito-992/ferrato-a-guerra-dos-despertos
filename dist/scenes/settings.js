@@ -1,9 +1,9 @@
 /** Configurações: layout dos controles de toque, dock, áudio e tutorial. */
-import { hexToRgba } from '../core/math.js';
-import { drawTitleBackground } from '../render/backgrounds.js';
-import { drawCharacterSilhouette } from '../render/characters.js';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js';
-import { Menu } from '../ui/menu.js';
+import { hexToRgba } from '../core/math.js?v=8f2357506abc';
+import { drawTitleBackground } from '../render/backgrounds.js?v=8f2357506abc';
+import { drawCharacterSilhouette } from '../render/characters.js?v=8f2357506abc';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=8f2357506abc';
+import { Menu } from '../ui/menu.js?v=8f2357506abc';
 export class SettingsScene {
     constructor(game) {
         this.game = game;

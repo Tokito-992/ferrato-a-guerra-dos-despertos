@@ -15,7 +15,7 @@ npm run serve
 
 > O jogo usa módulos ES. Abrir `index.html` direto por `file://` não funciona; sirva a pasta por HTTP.
 
-No GitHub Pages, publique a raiz do repositório (mantendo `index.html`, `styles/` e `dist/`). Não há backend, WebSocket, conta ou requisição de rede em tempo de execução; apenas as fontes do Google Fonts são opcionais (há fallbacks no CSS).
+No GitHub Pages, publique a raiz do repositório (mantendo `index.html`, `styles/` e `dist/`). O `npm run build` versiona automaticamente os módulos e o CSS com `?v=<hash>` para que atualizações não fiquem presas no cache do navegador. Não há backend, WebSocket, conta ou requisição de rede em tempo de execução; apenas as fontes do Google Fonts são opcionais (há fallbacks no CSS).
 
 ## Controles
 

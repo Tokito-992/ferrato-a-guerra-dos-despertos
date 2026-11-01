@@ -1,7 +1,7 @@
 /** Bootstrap do jogo: valida o canvas, inicia o loop e remove a tela de carregamento. */
-import { Game } from './core/game.js';
-import { canFullscreen, enterFullscreen, toggleFullscreen, watchFullscreen } from './core/fullscreen.js';
-import { toggleAnimeStyle, visualStyle } from './render/style.js';
+import { Game } from './core/game.js?v=8f2357506abc';
+import { canFullscreen, enterFullscreen, toggleFullscreen, watchFullscreen } from './core/fullscreen.js?v=8f2357506abc';
+import { toggleAnimeStyle, visualStyle } from './render/style.js?v=8f2357506abc';
 function hideLoading() {
     const loading = document.getElementById('loading');
     if (!loading)
