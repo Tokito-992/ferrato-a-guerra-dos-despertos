@@ -1,12 +1,12 @@
 /** Tela-título: o Nexus observa enquanto o jogador escolhe o caminho. */
-import { CHARACTER_ORDER, CHARACTERS } from '../data/characters.js?v=704597bf28d2';
-import { ARC_COUNT, getArcStages, getStage, MAX_STAGE } from '../data/stages.js?v=704597bf28d2';
-import { TITLE_QUOTE } from '../data/story.js?v=704597bf28d2';
-import { hexToRgba } from '../core/math.js?v=704597bf28d2';
-import { drawTitleBackground } from '../render/backgrounds.js?v=704597bf28d2';
-import { drawCharacterSilhouette } from '../render/characters.js?v=704597bf28d2';
-import { FONTS, glow, label, panel } from '../render/theme.js?v=704597bf28d2';
-import { Menu } from '../ui/menu.js?v=704597bf28d2';
+import { CHARACTER_ORDER, CHARACTERS } from '../data/characters.js?v=89d06180c01f';
+import { ARC_COUNT, getArcStages, getStage, MAX_STAGE } from '../data/stages.js?v=89d06180c01f';
+import { TITLE_QUOTE } from '../data/story.js?v=89d06180c01f';
+import { hexToRgba } from '../core/math.js?v=89d06180c01f';
+import { drawTitleBackground } from '../render/backgrounds.js?v=89d06180c01f';
+import { drawCharacterSilhouette } from '../render/characters.js?v=89d06180c01f';
+import { FONTS, glow, label, panel } from '../render/theme.js?v=89d06180c01f';
+import { Menu } from '../ui/menu.js?v=89d06180c01f';
 export class TitleScene {
     constructor(game) {
         this.game = game;

@@ -1,8 +1,8 @@
 /** Ilustração procedural dos seis Despertos (corpo inteiro, retratos e poses). */
-import { clamp, easeInCubic, easeOutCubic, hexToRgba, lerp, mixColor, TAU } from '../core/math.js?v=704597bf28d2';
-import { CHARACTERS } from '../data/characters.js?v=704597bf28d2';
-import { visualStyle } from './style.js?v=704597bf28d2';
-import { glow, joint, limb, roundRectPath } from './theme.js?v=704597bf28d2';
+import { clamp, easeInCubic, easeOutCubic, hexToRgba, lerp, mixColor, TAU } from '../core/math.js?v=89d06180c01f';
+import { CHARACTERS } from '../data/characters.js?v=89d06180c01f';
+import { visualStyle } from './style.js?v=89d06180c01f';
+import { glow, joint, limb, roundRectPath } from './theme.js?v=89d06180c01f';
 export const BASE = {
     bob: 0,
     lean: 0.04,

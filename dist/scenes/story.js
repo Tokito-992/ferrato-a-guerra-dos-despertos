@@ -1,10 +1,10 @@
 /** Cutscenes de abertura e encerramento, com retratos e efeito de máquina de escrever. */
-import { STORY } from '../data/story.js?v=704597bf28d2';
-import { CHARACTERS } from '../data/characters.js?v=704597bf28d2';
-import { hexToRgba, TAU } from '../core/math.js?v=704597bf28d2';
-import { drawStageBackground } from '../render/backgrounds.js?v=704597bf28d2';
-import { drawCharacterPortrait } from '../render/characters.js?v=704597bf28d2';
-import { FONTS, glow, label, panel } from '../render/theme.js?v=704597bf28d2';
+import { STORY } from '../data/story.js?v=89d06180c01f';
+import { CHARACTERS } from '../data/characters.js?v=89d06180c01f';
+import { hexToRgba, TAU } from '../core/math.js?v=89d06180c01f';
+import { drawStageBackground } from '../render/backgrounds.js?v=89d06180c01f';
+import { drawCharacterPortrait } from '../render/characters.js?v=89d06180c01f';
+import { FONTS, glow, label, panel } from '../render/theme.js?v=89d06180c01f';
 const SPEAKER_META = {
     narrator: { name: 'NARRADOR', color: '#ffe6a3', role: 'A VOZ DO VÉU' },
     ferrato: { name: 'FERRATO', color: '#ff8ae2', role: 'CONSCIÊNCIA DO VÉU' },

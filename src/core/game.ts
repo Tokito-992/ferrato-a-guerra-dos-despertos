@@ -21,8 +21,7 @@ import { FONTS, label, panel, roundRectPath } from '../render/theme.js';
 import { TitleScene } from '../scenes/title.js';
 import { CharacterSelectScene } from '../scenes/characterSelect.js';
 import { GameplayScene } from '../scenes/gameplay.js';
-import { StoryScene } from '../scenes/story.js';
-import { ComicScene, COMIC_INTRO_STAGES } from '../scenes/comic.js';
+import { ComicScene } from '../scenes/comic.js';
 import { VictoryScene } from '../scenes/victory.js';
 import { CreditsScene } from '../scenes/credits.js';
 import { SettingsScene } from '../scenes/settings.js';
@@ -556,13 +555,9 @@ export class Game {
       const go = () => this.showGameplay(stage.id, id);
       const intro = STORY[stage.id]?.intro;
       if (!skipStory && intro && intro.length > 0) {
-        // As aberturas de arco usam quadrinhos com o despertar do herói; os
-        // demais capítulos seguem na cutscene cinematográfica.
-        if (COMIC_INTRO_STAGES.has(stage.id)) {
-          this.setScene(new ComicScene(this, stage, 'intro', go));
-        } else {
-          this.setScene(new StoryScene(this, stage, 'intro', go));
-        }
+        // Toda a campanha é contada em quadrinhos; as aberturas de arco ainda
+        // ganham uma página inteira de despertar.
+        this.setScene(new ComicScene(this, stage, 'intro', go));
       } else {
         go();
       }
@@ -610,7 +605,7 @@ export class Game {
 
     this.transitionTo(() => {
       if (outro && outro.length > 0) {
-        this.setScene(new StoryScene(this, stage, 'outro', finish));
+        this.setScene(new ComicScene(this, stage, 'outro', finish));
       } else {
         finish();
       }

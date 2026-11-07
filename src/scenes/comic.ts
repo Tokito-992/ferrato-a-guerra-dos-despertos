@@ -1,12 +1,13 @@
 /**
- * Protótipo de cutscene em quadrinhos.
+ * Cutscene em quadrinhos de toda a campanha.
  *
  * Cada página exibe até três painéis desenhados proceduralmente (fundo da fase,
  * personagens, retratos e efeitos). A narração usa caixas de legenda; as falas
  * usam balões com rabicho. ENTER/clique avança; ESC pula a cena.
  *
- * O protótipo reaproveita os mesmos `StoryBeat[]` da cutscene normal, então
- * nenhum texto precisou ser reescrito.
+ * A cena reaproveita os mesmos `StoryBeat[]` da cutscene normal, então nenhum
+ * texto precisou ser reescrito. Os capítulos de abertura de arco recebem arte
+ * extra e uma página inteira de despertar.
  */
 
 import type { Game, Scene } from '../core/game.js';
@@ -52,11 +53,8 @@ const SPEAKER_COLOR: Record<SpeakerId, string> = {
   thryc: CHARACTERS.thryc.colors.accent,
 };
 
-/**
- * Aberturas em quadrinhos: o primeiro capítulo de cada arco mostra o herói
- * despertando. Os demais capítulos continuam na cutscene cinematográfica.
- */
-export const COMIC_INTRO_STAGES = new Set([1, 7, 13, 19, 25, 31]);
+/** Capítulos de abertura de arco, que mostram o herói despertando. */
+export const AWAKENING_STAGES = new Set([1, 7, 13, 19, 25, 31]);
 
 const AWAKENING_SFX: Record<CharacterId, SfxName> = {
   ravi: 'abilityRavi',
@@ -181,7 +179,7 @@ export class ComicScene implements Scene {
 
   /** Quadro de página inteira em que o herói acorda com o Ferrato. */
   private isAwakeningPanel(globalIndex: number): boolean {
-    return this.phase === 'intro' && COMIC_INTRO_STAGES.has(this.stage.id) && globalIndex === 3;
+    return this.phase === 'intro' && AWAKENING_STAGES.has(this.stage.id) && globalIndex === 3;
   }
 
   private advance(): void {
@@ -2195,7 +2193,7 @@ export class ComicScene implements Scene {
 
       // Antes do despertar, o herói aparece em silhueta. O quadro seguinte
       // é quem revela a forma desperta em cores.
-      if (this.phase === 'intro' && COMIC_INTRO_STAGES.has(this.stage.id) && this.page === 0) {
+      if (this.phase === 'intro' && AWAKENING_STAGES.has(this.stage.id) && this.page === 0) {
         ctx.save();
         ctx.fillStyle = 'rgba(3,5,12,0.68)';
         ctx.fillRect(rect.x, rect.y, rect.w, rect.h);

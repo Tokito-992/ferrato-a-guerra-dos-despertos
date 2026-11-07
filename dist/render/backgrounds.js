@@ -2,8 +2,8 @@
  * Cenários procedurais com parallax para as seis fases e para o menu.
  * Nenhuma imagem externa é usada: tudo é desenhado no Canvas.
  */
-import { clamp, hexToRgba, TAU } from '../core/math.js?v=704597bf28d2';
-import { roundRectPath } from './theme.js?v=704597bf28d2';
+import { clamp, hexToRgba, TAU } from '../core/math.js?v=89d06180c01f';
+import { roundRectPath } from './theme.js?v=89d06180c01f';
 const W = 1280;
 const H = 720;
 /** Ruído determinístico para que o cenário não "trema" entre frames. */

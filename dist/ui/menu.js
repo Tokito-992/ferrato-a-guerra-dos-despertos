@@ -1,6 +1,6 @@
 /** Menu navegável por teclado e mouse, usado em todas as telas. */
-import { hexToRgba } from '../core/math.js?v=704597bf28d2';
-import { FONTS, label, roundRectPath } from '../render/theme.js?v=704597bf28d2';
+import { hexToRgba } from '../core/math.js?v=89d06180c01f';
+import { FONTS, label, roundRectPath } from '../render/theme.js?v=89d06180c01f';
 export class Menu {
     constructor(items) {
         this.index = 0;
