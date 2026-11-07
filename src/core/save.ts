@@ -82,6 +82,7 @@ interface LegacySave {
 
 /** Mantemos a chave v1 para conseguir migrar arquivos antigos sem perder progresso. */
 const KEY = 'ferrato_guerra_dos_despertos_save_v1';
+const UPDATED_KEY = 'ferrato_guerra_dos_despertos_save_updated_v1';
 const LEGACY_MAX_STAGE = 6;
 const VERSION = 2;
 
@@ -247,23 +248,52 @@ export function defaultSave(): SaveData {
   };
 }
 
+/** Valida e normaliza um save vindo do localStorage ou da nuvem. */
+export function sanitizeSave(value: unknown): SaveData {
+  if (!value || typeof value !== 'object') return defaultSave();
+  const parsed = value as LegacySave;
+  const isCurrent = parsed.version === VERSION;
+  return isCurrent ? sanitize(parsed) : migrateLegacy(parsed);
+}
+
+/** Timestamp local do último save; 0 quando o arquivo é anterior a este recurso. */
+export function localSaveUpdatedAt(): number {
+  try {
+    const raw = localStorage.getItem(UPDATED_KEY);
+    const value = Number(raw);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function markLocalSaveUpdated(at = Date.now()): void {
+  try {
+    localStorage.setItem(UPDATED_KEY, String(at));
+  } catch {
+    // Armazenamento indisponível: a sincronização usa o relógio do servidor.
+  }
+}
+
 export function loadSave(): SaveData {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return defaultSave();
-    const parsed = JSON.parse(raw) as LegacySave;
-    if (!parsed || typeof parsed !== 'object') return defaultSave();
-    const isCurrent = parsed.version === VERSION;
-    return isCurrent ? sanitize(parsed) : migrateLegacy(parsed);
+    return sanitizeSave(JSON.parse(raw));
   } catch {
     return defaultSave();
   }
 }
 
-export function writeSave(data: SaveData): void {
+/**
+ * Grava o save local. `updatedAt` permite preservar o timestamp de um save
+ * baixado da nuvem em vez de marcá-lo como recém-jogado.
+ */
+export function writeSave(data: SaveData, updatedAt = Date.now()): void {
   try {
     data.version = VERSION;
     localStorage.setItem(KEY, JSON.stringify(data));
+    markLocalSaveUpdated(updatedAt);
   } catch {
     // Armazenamento indisponível (modo privado): o jogo segue sem persistir.
   }

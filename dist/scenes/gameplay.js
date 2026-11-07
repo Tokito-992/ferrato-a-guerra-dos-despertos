@@ -1,22 +1,22 @@
 /** Cena principal: arena lateral, ondas, chefe, pausa, troca de herói e game over. */
-import { Camera } from '../core/camera.js?v=c5d0d69737a2';
-import { ParticleSystem } from '../core/particles.js?v=c5d0d69737a2';
-import { clamp, hexToRgba } from '../core/math.js?v=c5d0d69737a2';
-import { rankColor, rankFromPressure, rankValue } from '../core/rank.js?v=c5d0d69737a2';
-import { MAX_STAGE } from '../data/stages.js?v=c5d0d69737a2';
-import { Player } from '../entities/player.js?v=c5d0d69737a2';
-import { Enemy } from '../entities/enemy.js?v=c5d0d69737a2';
-import { Boss } from '../entities/boss.js?v=c5d0d69737a2';
-import { Hazard, Projectile } from '../entities/projectiles.js?v=c5d0d69737a2';
-import { StageObstacle, buildStageObstacles } from '../entities/obstacles.js?v=c5d0d69737a2';
-import { drawStageBackground } from '../render/backgrounds.js?v=c5d0d69737a2';
-import { drawCharacterPortrait, drawPlayer } from '../render/characters.js?v=c5d0d69737a2';
-import { drawBoss, drawEnemy } from '../render/enemies.js?v=c5d0d69737a2';
-import { drawHeart } from '../render/hearts.js?v=c5d0d69737a2';
-import { visualStyle } from '../render/style.js?v=c5d0d69737a2';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=c5d0d69737a2';
-import { drawHud } from '../ui/hud.js?v=c5d0d69737a2';
-import { Menu } from '../ui/menu.js?v=c5d0d69737a2';
+import { Camera } from '../core/camera.js?v=3fef0c0bc335';
+import { ParticleSystem } from '../core/particles.js?v=3fef0c0bc335';
+import { clamp, hexToRgba } from '../core/math.js?v=3fef0c0bc335';
+import { rankColor, rankFromPressure, rankValue } from '../core/rank.js?v=3fef0c0bc335';
+import { MAX_STAGE } from '../data/stages.js?v=3fef0c0bc335';
+import { Player } from '../entities/player.js?v=3fef0c0bc335';
+import { Enemy } from '../entities/enemy.js?v=3fef0c0bc335';
+import { Boss } from '../entities/boss.js?v=3fef0c0bc335';
+import { Hazard, Projectile } from '../entities/projectiles.js?v=3fef0c0bc335';
+import { StageObstacle, buildStageObstacles } from '../entities/obstacles.js?v=3fef0c0bc335';
+import { drawStageBackground } from '../render/backgrounds.js?v=3fef0c0bc335';
+import { drawCharacterPortrait, drawPlayer } from '../render/characters.js?v=3fef0c0bc335';
+import { drawBoss, drawEnemy } from '../render/enemies.js?v=3fef0c0bc335';
+import { drawHeart } from '../render/hearts.js?v=3fef0c0bc335';
+import { visualStyle } from '../render/style.js?v=3fef0c0bc335';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=3fef0c0bc335';
+import { drawHud } from '../ui/hud.js?v=3fef0c0bc335';
+import { Menu } from '../ui/menu.js?v=3fef0c0bc335';
 function insideRect(rect, x, y) {
     return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
 }

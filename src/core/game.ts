@@ -12,7 +12,10 @@ import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js';
 import type { SaveData, TouchButtonId, TouchDock, TouchLayout, TouchPositions } from './save.js';
 import { canFullscreen, toggleFullscreen } from './fullscreen.js';
 import { needsIOSInstallGuide } from './platform.js';
+import { cloudSync } from './cloud-sync.js';
+import type { CloudSnapshot } from './cloud-sync.js';
 import { showInstallGuide } from '../ui/install-guide.js';
+import { showAccountPanel } from '../ui/account-panel.js';
 import { clamp, hexToRgba } from './math.js';
 import { FONTS, label, panel, roundRectPath } from '../render/theme.js';
 import { TitleScene } from '../scenes/title.js';
@@ -131,6 +134,11 @@ export class Game {
       this.audio.init();
       this.audio.setMuted(this.save.muted);
     };
+    cloudSync.attach({
+      getSave: () => this.save,
+      applyCloudSave: (save, clientUpdatedAt) => this.applyCloudSave(save, clientUpdatedAt),
+      onCloudStateChange: () => this.onCloudStateChange(),
+    });
     this.setupTouchControls();
     this.applyTouchSettings();
   }
@@ -452,7 +460,7 @@ export class Game {
 
   /** Abre o guia de instalação no iPhone e congela a cena enquanto ele estiver aberto. */
   openIOSInstallGuide(): void {
-    if (!needsIOSInstallGuide()) return;
+    if (!needsIOSInstallGuide() || document.body.classList.contains('ui-overlay-open')) return;
     showInstallGuide({
       onOpen: () => {
         this.overlayPause = true;
@@ -463,6 +471,49 @@ export class Game {
         this.overlayPause = false;
       },
     });
+  }
+
+  /** Abre o painel de conta e congela a cena enquanto ele estiver aberto. */
+  openAccountPanel(): void {
+    if (!cloudSync.configured) {
+      this.setNotice('NUVEM NÃO CONFIGURADA NESTE BUILD', '#ff6a7a');
+      return;
+    }
+    if (document.body.classList.contains('ui-overlay-open')) return;
+    showAccountPanel({
+      onOpen: () => {
+        this.overlayPause = true;
+        this.input.releaseAllVirtual();
+        this.audio.sfx('ui');
+      },
+      onClose: () => {
+        this.overlayPause = false;
+      },
+    });
+  }
+
+  get cloudSnapshot(): CloudSnapshot {
+    return cloudSync.snapshot;
+  }
+
+  /** Aplica um save baixado da nuvem e atualiza menu, áudio e controles. */
+  private applyCloudSave(save: SaveData, clientUpdatedAt: number): void {
+    this.save = save;
+    writeSave(this.save, clientUpdatedAt);
+    this.audio.setMuted(this.save.muted);
+    this.applyTouchSettings();
+    if (this.scene instanceof SettingsScene) {
+      this.setScene(new SettingsScene(this));
+    } else if (this.scene instanceof TitleScene) {
+      this.scene.refreshMenu();
+    } else {
+      this.showTitle();
+    }
+    this.setNotice('SAVE DA NUVEM CARREGADO', '#56e3ff');
+  }
+
+  private onCloudStateChange(): void {
+    if (this.scene instanceof TitleScene) this.scene.refreshMenu();
   }
 
   start(): void {
@@ -539,7 +590,7 @@ export class Game {
       this.save.maxStage = Math.max(this.save.maxStage, Math.min(MAX_STAGE, stageId + 1));
       this.save.selected = nextChar;
     }
-    writeSave(this.save);
+    this.persist();
 
     const outro = STORY[stageId]?.outro;
     const finish = () => {
@@ -608,6 +659,7 @@ export class Game {
 
   persist(): void {
     writeSave(this.save);
+    cloudSync.scheduleUpload(this.save);
   }
 
   recordDeath(): void {

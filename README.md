@@ -15,7 +15,7 @@ npm run serve
 
 > O jogo usa módulos ES. Abrir `index.html` direto por `file://` não funciona; sirva a pasta por HTTP.
 
-No GitHub Pages, publique a raiz do repositório (mantendo `index.html`, `styles/` e `dist/`). O `npm run build` versiona automaticamente os módulos e o CSS com `?v=<hash>` para que atualizações não fiquem presas no cache do navegador. Não há backend, WebSocket, conta ou requisição de rede em tempo de execução; apenas as fontes do Google Fonts são opcionais (há fallbacks no CSS).
+No GitHub Pages, publique a raiz do repositório (mantendo `index.html`, `styles/` e `dist/`). O `npm run build` versiona automaticamente os módulos e o CSS com `?v=<hash>` para que atualizações não fiquem presas no cache do navegador. O jogo continua funcionando 100% offline com save local; quando o jogador entra em uma conta, o save também é sincronizado com o Supabase (veja **Conta e save na nuvem**). As fontes do Google Fonts são opcionais (há fallbacks no CSS).
 
 ## Controles
 
@@ -83,6 +83,38 @@ As escolhas são salvas automaticamente no `localStorage` e uma prévia mostra o
 
 Ao escolher **NOVO JOGO**, o jogo abre um tutorial ilustrado de quatro páginas: movimento e ataques, dash e especial, Câmara do Coração e controles de celular. A página móvel inclui a dica de instalação na Tela de Início para iPhone. É possível avançar tocando/clicando, voltar página ou pular o tutorial; ao terminar, a seleção de Despertos e capítulos abre normalmente.
 
+## Conta e save na nuvem
+
+O item **CONTA** do menu principal permite criar uma conta com e-mail e senha ou entrar em uma conta existente. A autenticação e o save remoto usam o **Supabase** (Auth + PostgREST), sem SDK adicional:
+
+- O save local continua sendo a fonte principal durante o jogo. Sem internet ou sem conta, tudo funciona como antes.
+- Depois de entrar, cada gravação local é enviada automaticamente para a nuvem (com um pequeno atraso para agrupar alterações). Ao fechar ou ocultar a aba, o jogo tenta enviar o último save pendente.
+- **Entrar em uma conta que já tem save na nuvem nunca substitui o progresso local automaticamente.** O painel mostra os dois saves (capítulo, capítulos concluídos, recorde, rank e data) e o jogador escolhe explicitamente **USAR ESTE APARELHO** ou **USAR A NUVEM**.
+- Se a nuvem estiver mais recente, o envio automático fica bloqueado até o jogador baixar o save remoto. Isso evita sobrescrever o progresso de outro aparelho.
+- **SAIR DA CONTA** não apaga o save local. Também há **ENVIAR AGORA**, **BAIXAR DA NUVEM** (com confirmação) e recuperação de senha por e-mail.
+- A senha nunca é armazenada pelo jogo. A sessão fica em `localStorage` na chave `ferrato_cloud_session_v1`; o timestamp do save local fica em `ferrato_guerra_dos_despertos_save_updated_v1`.
+
+### Configurar o Supabase
+
+1. Crie um projeto em [supabase.com](https://supabase.com) e rode o SQL de `supabase/schema.sql` no **SQL Editor**. Ele cria `public.game_saves`, ativa RLS e libera apenas o próprio registro para cada usuário autenticado.
+2. Em **Authentication → Providers → Email**, mantenha e-mail/senha habilitados. Com **Confirm email** ligado, o jogador precisa confirmar o e-mail antes do primeiro login.
+3. Em **Authentication → URL Configuration**, defina o **Site URL** como `https://tokito-992.github.io/ferrato-a-guerra-dos-despertos/` e adicione `https://tokito-992.github.io/ferrato-a-guerra-dos-despertos/` e `http://localhost:4173/` em **Redirect URLs**. Sem isso, links de confirmação e recuperação podem cair na URL errada.
+4. Preencha `src/core/cloud-config.ts` com a URL do projeto e a chave **publishable/anon**. Essa chave é pública por design; **nunca** coloque a `service_role` no cliente. A proteção dos dados vem das políticas RLS.
+5. O SMTP padrão do Supabase tem limite baixo de e-mails por hora. Para produção, configure um provedor SMTP próprio em **Authentication → SMTP Settings**; para testes rápidos, você pode desligar **Confirm email** temporariamente.
+
+A tabela usada é:
+
+```sql
+public.game_saves (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  save_data jsonb not null,
+  client_updated_at bigint not null default 0,
+  updated_at timestamptz not null default now()
+)
+```
+
+O upsert usa `on_conflict=user_id`. O campo `client_updated_at` guarda o relógio do aparelho e permite comparar saves entre iPhone e PC; `updated_at` é apenas informativo. O SQL também pode ser executado novamente sem erro (usa `if not exists` e recria a política).
+
 ## Conteúdo
 
 ### Campanha em seis arcos
@@ -138,9 +170,9 @@ Cada herói tem atributos, golpes, alcance, hitboxes, passiva, efeitos e som de 
 - Câmera lateral com limites por arena, parallax em camadas, clima e paleta próprios para cada capítulo.
 - Assinaturas visuais exclusivas: cada Desperto tem silhueta, ombreiras, botas, manoplas/armas detalhadas, aura, rastro de golpe e motivo de retrato próprios; cada capítulo tem céu, marco de cenário, atmosfera e placa de local próprios.
 - **Modo anime-inspired**: contornos cel-shading, aura, linhas de velocidade, impactos radiais e color grade. Pressione **F2** para alternar ou use `?anime=0` para forçar o estilo clássico.
-- Menu principal (Novo Jogo, Continuar, Despertos & Arcos, Configurações, Créditos), pausa (continuar, trocar Desperto, reiniciar, sair), game over (tentar novamente, trocar, menu) e vitória.
+- Menu principal (Novo Jogo, Continuar, Despertos & Arcos, Configurações, Conta, Créditos), pausa (continuar, trocar Desperto, reiniciar, sair), game over (tentar novamente, trocar, menu) e vitória.
 - Seleção por arcos e capítulos, com sinopse, motivo do herói, lore, guardião/chefe, dificuldade e progresso.
-- Progressão em `localStorage` (chave `ferrato_guerra_dos_despertos_save_v1`, esquema **v2**): capítulos concluídos, capítulo máximo, heróis desbloqueados, herói selecionado, abates, quedas, melhor combo, melhor pontuação (`bestScore`), melhor rank (`bestRank`), áudio, lado dos controles (`touchLayout`), posição do dock (`touchDock`) e posições livres dos botões (`touchPositions`). Saves antigos recebem os novos campos com valores padrão.
+- Progressão em `localStorage` (chave `ferrato_guerra_dos_despertos_save_v1`, esquema **v2**): capítulos concluídos, capítulo máximo, heróis desbloqueados, herói selecionado, abates, quedas, melhor combo, melhor pontuação (`bestScore`), melhor rank (`bestRank`), áudio, lado dos controles (`touchLayout`), posição do dock (`touchDock`) e posições livres dos botões (`touchPositions`). Saves antigos recebem os novos campos com valores padrão. Com uma conta conectada, o mesmo save também é enviado para `public.game_saves` no Supabase.
 - Áudio procedural via WebAudio: 36 temas de fase, 6 temas de chefe, 6 ambientes e efeitos sintetizados.
 - Dificuldade progressiva por arco e capítulo; o HP dos chefes acompanha o arco.
 - Sem dependências de runtime; arte e som são desenhados/sintetizados no navegador.
@@ -175,15 +207,17 @@ location.reload();
 src/
   main.ts              bootstrap do canvas e do loop
   core/                Game (loop, cenas, transições), input (teclado, mouse e toque),
-                       áudio, save v2, câmera, partículas, rank, matemática, tipos
-                       e detecção de plataforma (iOS/standalone)
+                       áudio, save v2, câmera, partículas, rank, matemática, tipos,
+                       detecção de plataforma (iOS/standalone), cliente Supabase
+                       (cloud-config, supabase, cloud-sync) e sincronização do save
   data/                heróis, 36 capítulos, chefes, inimigos, história e créditos
   entities/            Combatant, Player, Enemy, Boss, projéteis, hazards e obstáculos
   render/              tema, personagens, retratos, inimigos, chefes, corações e cenários
   scenes/              título, tutorial, configurações, seleção por arcos, história, gameplay, vitória e créditos
-  ui/                  HUD (vida, corações, rank, pressão, bônus), menus (teclado + mouse + toque)
-                       e guia de instalação no iPhone
-styles/main.css        moldura, letterbox, tipografia e guia de instalação
+  ui/                  HUD (vida, corações, rank, pressão, bônus), menus (teclado + mouse + toque),
+                       guia de instalação no iPhone e painel de conta
+styles/main.css        moldura, letterbox, tipografia, guia de instalação e painel de conta
+supabase/schema.sql    tabela de saves e políticas RLS
 index.html             entrada estática
 manifest.webmanifest   manifest PWA (standalone, landscape e ícones)
 icons/                 ícones 180/192/512 px e versões maskable

@@ -26,11 +26,16 @@ export class TitleScene implements Scene {
     this.buildMenu();
   }
 
-  private buildMenu(): void {
+  /** Atualiza o menu sem perder o item selecionado (usado pela sincronização). */
+  refreshMenu(): void {
+    this.buildMenu(true);
+  }
+
+  private buildMenu(keepIndex = false): void {
     const save = this.game.save;
     const stage = getStage(save.maxStage);
     const hasProgress = save.cleared.length > 0;
-    this.menu.setItems([
+    const items = [
       { id: 'new', label: 'NOVO JOGO', detail: 'ARCO I · CAP. 1', accent: '#ff8a3d' },
       {
         id: 'continue',
@@ -41,8 +46,24 @@ export class TitleScene implements Scene {
       },
       { id: 'select', label: 'DESPERTOS & ARCOS', detail: '36 CAPÍTULOS', accent: '#b48bff' },
       { id: 'settings', label: 'CONFIGURAÇÕES', detail: 'CONTROLES & TELA', accent: '#56e3ff' },
-      { id: 'credits', label: 'CRÉDITOS', detail: 'O VÉU', accent: '#ffe6a3' },
-    ]);
+    ];
+
+    const cloud = this.game.cloudSnapshot;
+    if (cloud.configured) {
+      const detail = !cloud.signedIn
+        ? 'ENTRAR OU CRIAR CONTA'
+        : cloud.conflict
+          ? 'ESCOLHA O SAVE'
+          : cloud.cloudNewer
+            ? 'NUVEM MAIS RECENTE'
+            : cloud.lastError
+              ? 'VER CONTA'
+              : 'NUVEM CONECTADA';
+      items.push({ id: 'account', label: 'CONTA', detail, accent: '#ffd166' });
+    }
+
+    items.push({ id: 'credits', label: 'CRÉDITOS', detail: 'O VÉU', accent: '#ffe6a3' });
+    this.menu.setItems(items, keepIndex);
   }
 
   update(dt: number): void {
@@ -64,6 +85,9 @@ export class TitleScene implements Scene {
         break;
       case 'settings':
         this.game.gotoSettings();
+        break;
+      case 'account':
+        this.game.openAccountPanel();
         break;
       case 'credits':
         this.game.gotoCredits();
@@ -133,10 +157,10 @@ export class TitleScene implements Scene {
     });
 
     // Menu.
-    this.menu.draw(ctx, 90, 400, 414, {
-      itemHeight: 46,
-      gap: 6,
-      size: 17.5,
+    this.menu.draw(ctx, 90, 398, 414, {
+      itemHeight: 42,
+      gap: 4,
+      size: 16.5,
       accent: '#ff8a3d',
     });
 

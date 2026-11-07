@@ -1,24 +1,26 @@
 /** Núcleo do jogo: loop, troca de cenas, transições, hitstop e persistência. */
-import { CHARACTERS } from '../data/characters.js?v=c5d0d69737a2';
-import { getStage, MAX_STAGE } from '../data/stages.js?v=c5d0d69737a2';
-import { STORY } from '../data/story.js?v=c5d0d69737a2';
-import { AudioEngine } from './audio.js?v=c5d0d69737a2';
-import { Input } from './input.js?v=c5d0d69737a2';
-import { ParticleSystem } from './particles.js?v=c5d0d69737a2';
-import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=c5d0d69737a2';
-import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=c5d0d69737a2';
-import { needsIOSInstallGuide } from './platform.js?v=c5d0d69737a2';
-import { showInstallGuide } from '../ui/install-guide.js?v=c5d0d69737a2';
-import { clamp, hexToRgba } from './math.js?v=c5d0d69737a2';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=c5d0d69737a2';
-import { TitleScene } from '../scenes/title.js?v=c5d0d69737a2';
-import { CharacterSelectScene } from '../scenes/characterSelect.js?v=c5d0d69737a2';
-import { GameplayScene } from '../scenes/gameplay.js?v=c5d0d69737a2';
-import { StoryScene } from '../scenes/story.js?v=c5d0d69737a2';
-import { VictoryScene } from '../scenes/victory.js?v=c5d0d69737a2';
-import { CreditsScene } from '../scenes/credits.js?v=c5d0d69737a2';
-import { SettingsScene } from '../scenes/settings.js?v=c5d0d69737a2';
-import { TutorialScene } from '../scenes/tutorial.js?v=c5d0d69737a2';
+import { CHARACTERS } from '../data/characters.js?v=3fef0c0bc335';
+import { getStage, MAX_STAGE } from '../data/stages.js?v=3fef0c0bc335';
+import { STORY } from '../data/story.js?v=3fef0c0bc335';
+import { AudioEngine } from './audio.js?v=3fef0c0bc335';
+import { Input } from './input.js?v=3fef0c0bc335';
+import { ParticleSystem } from './particles.js?v=3fef0c0bc335';
+import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=3fef0c0bc335';
+import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=3fef0c0bc335';
+import { needsIOSInstallGuide } from './platform.js?v=3fef0c0bc335';
+import { cloudSync } from './cloud-sync.js?v=3fef0c0bc335';
+import { showInstallGuide } from '../ui/install-guide.js?v=3fef0c0bc335';
+import { showAccountPanel } from '../ui/account-panel.js?v=3fef0c0bc335';
+import { clamp, hexToRgba } from './math.js?v=3fef0c0bc335';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=3fef0c0bc335';
+import { TitleScene } from '../scenes/title.js?v=3fef0c0bc335';
+import { CharacterSelectScene } from '../scenes/characterSelect.js?v=3fef0c0bc335';
+import { GameplayScene } from '../scenes/gameplay.js?v=3fef0c0bc335';
+import { StoryScene } from '../scenes/story.js?v=3fef0c0bc335';
+import { VictoryScene } from '../scenes/victory.js?v=3fef0c0bc335';
+import { CreditsScene } from '../scenes/credits.js?v=3fef0c0bc335';
+import { SettingsScene } from '../scenes/settings.js?v=3fef0c0bc335';
+import { TutorialScene } from '../scenes/tutorial.js?v=3fef0c0bc335';
 /** Posições normalizadas usadas quando não há layout livre salvo. */
 function presetTouchPositions(layout, dock) {
     const y = dock === 'top' ? 0.1 : 0.9;
@@ -109,6 +111,11 @@ export class Game {
             this.audio.init();
             this.audio.setMuted(this.save.muted);
         };
+        cloudSync.attach({
+            getSave: () => this.save,
+            applyCloudSave: (save, clientUpdatedAt) => this.applyCloudSave(save, clientUpdatedAt),
+            onCloudStateChange: () => this.onCloudStateChange(),
+        });
         this.setupTouchControls();
         this.applyTouchSettings();
     }
@@ -392,7 +399,7 @@ export class Game {
     }
     /** Abre o guia de instalação no iPhone e congela a cena enquanto ele estiver aberto. */
     openIOSInstallGuide() {
-        if (!needsIOSInstallGuide())
+        if (!needsIOSInstallGuide() || document.body.classList.contains('ui-overlay-open'))
             return;
         showInstallGuide({
             onOpen: () => {
@@ -404,6 +411,49 @@ export class Game {
                 this.overlayPause = false;
             },
         });
+    }
+    /** Abre o painel de conta e congela a cena enquanto ele estiver aberto. */
+    openAccountPanel() {
+        if (!cloudSync.configured) {
+            this.setNotice('NUVEM NÃO CONFIGURADA NESTE BUILD', '#ff6a7a');
+            return;
+        }
+        if (document.body.classList.contains('ui-overlay-open'))
+            return;
+        showAccountPanel({
+            onOpen: () => {
+                this.overlayPause = true;
+                this.input.releaseAllVirtual();
+                this.audio.sfx('ui');
+            },
+            onClose: () => {
+                this.overlayPause = false;
+            },
+        });
+    }
+    get cloudSnapshot() {
+        return cloudSync.snapshot;
+    }
+    /** Aplica um save baixado da nuvem e atualiza menu, áudio e controles. */
+    applyCloudSave(save, clientUpdatedAt) {
+        this.save = save;
+        writeSave(this.save, clientUpdatedAt);
+        this.audio.setMuted(this.save.muted);
+        this.applyTouchSettings();
+        if (this.scene instanceof SettingsScene) {
+            this.setScene(new SettingsScene(this));
+        }
+        else if (this.scene instanceof TitleScene) {
+            this.scene.refreshMenu();
+        }
+        else {
+            this.showTitle();
+        }
+        this.setNotice('SAVE DA NUVEM CARREGADO', '#56e3ff');
+    }
+    onCloudStateChange() {
+        if (this.scene instanceof TitleScene)
+            this.scene.refreshMenu();
     }
     start() {
         if (this.started)
@@ -474,7 +524,7 @@ export class Game {
             this.save.maxStage = Math.max(this.save.maxStage, Math.min(MAX_STAGE, stageId + 1));
             this.save.selected = nextChar;
         }
-        writeSave(this.save);
+        this.persist();
         const outro = STORY[stageId]?.outro;
         const finish = () => {
             if (stageId >= MAX_STAGE) {
@@ -534,6 +584,7 @@ export class Game {
     }
     persist() {
         writeSave(this.save);
+        cloudSync.scheduleUpload(this.save);
     }
     recordDeath() {
         this.save.deaths++;

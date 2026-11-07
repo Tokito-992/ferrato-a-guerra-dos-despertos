@@ -1007,3 +1007,651 @@ body.install-guide-open #touch-editor-bar {
 }
 
 ::selection { background: rgba(255, 122, 60, 0.35); }
+
+/* Painel de conta: login, cadastro e sincronização do save na nuvem. */
+#account-panel,
+.account-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding:
+    max(14px, env(safe-area-inset-top))
+    max(14px, env(safe-area-inset-right))
+    max(14px, env(safe-area-inset-bottom))
+    max(14px, env(safe-area-inset-left));
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  background:
+    radial-gradient(900px 560px at 50% 6%, rgba(154, 123, 255, 0.2), transparent 66%),
+    radial-gradient(760px 500px at 50% 106%, rgba(255, 51, 87, 0.14), transparent 64%),
+    rgba(3, 4, 10, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: account-fade 180ms ease-out;
+}
+
+body.account-open #fullscreen-toggle,
+body.account-open #touch-controls,
+body.account-open #touch-editor-bar,
+body.account-open #rotate-hint {
+  visibility: hidden;
+}
+
+.account-card {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: clamp(18px, 3.4vw, 30px);
+  border: 1px solid rgba(255, 209, 102, 0.3);
+  border-radius: 14px;
+  background:
+    linear-gradient(160deg, rgba(16, 14, 32, 0.985), rgba(5, 7, 14, 0.995)),
+    #05070e;
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.72),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 0 60px rgba(255, 122, 60, 0.08);
+  animation: account-rise 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.account-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: #cfd6e6;
+  font: 400 22px / 1 system-ui, sans-serif;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.account-close:hover,
+.account-close:active,
+.account-close:focus-visible {
+  border-color: rgba(255, 209, 102, 0.7);
+  background: rgba(255, 209, 102, 0.12);
+  color: #fff3d4;
+  outline: none;
+}
+
+.account-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-right: 34px;
+}
+
+.account-icon {
+  flex: 0 0 auto;
+  width: clamp(44px, 8vw, 58px);
+  height: auto;
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px rgba(255, 209, 102, 0.25),
+    0 8px 26px rgba(0, 0, 0, 0.55),
+    0 0 26px rgba(255, 122, 60, 0.16);
+}
+
+.account-kicker {
+  margin: 0 0 4px;
+  font-family: "Share Tech Mono", "Consolas", monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: #ffd166;
+}
+
+.account-header h2 {
+  margin: 0;
+  font-family: "Cinzel", "Times New Roman", serif;
+  font-size: clamp(20px, 3.4vw, 28px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: 0.05em;
+  color: #f4f7ff;
+  text-shadow: 0 0 24px rgba(255, 122, 60, 0.22);
+}
+
+.account-body { margin-top: 16px; }
+
+.account-subtitle {
+  margin: 0 0 8px;
+  font-family: "Cinzel", "Times New Roman", serif;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  color: #ffe6a3;
+}
+
+.account-desc {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #b8c0d4;
+}
+
+.account-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.account-tabs button {
+  min-height: 36px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #8f99ae;
+  font: 700 10.5px / 1 "Share Tech Mono", "Consolas", monospace;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.account-tabs button:hover { color: #d9dfec; }
+
+.account-tabs button.active {
+  border-color: rgba(255, 209, 102, 0.42);
+  background: linear-gradient(180deg, rgba(255, 138, 60, 0.2), rgba(255, 51, 87, 0.1));
+  color: #fff3d4;
+  box-shadow: 0 0 18px rgba(255, 122, 60, 0.12);
+}
+
+.account-tabs button:focus-visible {
+  outline: 2px solid rgba(86, 227, 255, 0.65);
+  outline-offset: 1px;
+}
+
+.account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.account-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.account-field span {
+  font-family: "Share Tech Mono", "Consolas", monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  color: #8f99ae;
+}
+
+.account-field input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 7px;
+  background: rgba(2, 4, 10, 0.7);
+  color: #f4f7ff;
+  font: 500 15px / 1.2 "Rajdhani", "Segoe UI", system-ui, sans-serif;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.account-field input::placeholder { color: #5f687d; }
+
+.account-field input:focus {
+  border-color: rgba(86, 227, 255, 0.65);
+  box-shadow: 0 0 0 2px rgba(86, 227, 255, 0.12);
+}
+
+.account-field input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.account-primary,
+.account-secondary,
+.account-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 8px;
+  font: 700 11px / 1 "Share Tech Mono", "Consolas", monospace;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 120ms ease, background 120ms ease, opacity 120ms ease;
+}
+
+.account-primary {
+  border: 1px solid rgba(255, 209, 102, 0.65);
+  background: linear-gradient(180deg, rgba(255, 138, 60, 0.28), rgba(255, 51, 87, 0.16));
+  color: #fff3d4;
+  box-shadow: 0 0 22px rgba(255, 122, 60, 0.16);
+}
+
+.account-secondary {
+  border: 1px solid rgba(86, 227, 255, 0.45);
+  background: rgba(86, 227, 255, 0.07);
+  color: #bdefff;
+}
+
+.account-danger {
+  border: 1px solid rgba(255, 51, 87, 0.45);
+  background: rgba(255, 51, 87, 0.07);
+  color: #ffb8c4;
+}
+
+.account-primary:hover:not(:disabled),
+.account-primary:focus-visible,
+.account-secondary:hover:not(:disabled),
+.account-secondary:focus-visible,
+.account-danger:hover:not(:disabled),
+.account-danger:focus-visible {
+  outline: none;
+  filter: brightness(1.16);
+  border-color: rgba(255, 243, 212, 0.85);
+}
+
+.account-primary:disabled,
+.account-secondary:disabled,
+.account-danger:disabled,
+.account-link:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: none;
+}
+
+.account-links {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.account-links span {
+  font-family: "Share Tech Mono", "Consolas", monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-align: right;
+  color: #6f788d;
+}
+
+.account-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #56e3ff;
+  font: 700 10px / 1.4 "Share Tech Mono", "Consolas", monospace;
+  letter-spacing: 0.1em;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.account-link:hover,
+.account-link:focus-visible {
+  color: #bdefff;
+  outline: none;
+}
+
+.account-note {
+  margin: 13px 0 0;
+  padding: 9px 11px;
+  border-left: 2px solid rgba(255, 209, 102, 0.5);
+  border-radius: 0 6px 6px 0;
+  background: rgba(255, 209, 102, 0.05);
+  font-size: 11px;
+  line-height: 1.45;
+  color: #c8b88e;
+}
+
+.account-error,
+.account-success,
+.account-warning {
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.account-error {
+  border: 1px solid rgba(255, 51, 87, 0.38);
+  background: rgba(255, 51, 87, 0.1);
+  color: #ffc3cd;
+}
+
+.account-success {
+  border: 1px solid rgba(86, 227, 255, 0.32);
+  background: rgba(86, 227, 255, 0.07);
+  color: #bdefff;
+}
+
+.account-warning {
+  border: 1px solid rgba(255, 209, 102, 0.35);
+  background: rgba(255, 209, 102, 0.07);
+  color: #ffe6a3;
+}
+
+.account-user {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 14px;
+  padding: 10px 11px;
+  border: 1px solid rgba(86, 227, 255, 0.2);
+  border-radius: 9px;
+  background: rgba(86, 227, 255, 0.045);
+}
+
+.account-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(86, 227, 255, 0.4);
+  background: rgba(86, 227, 255, 0.12);
+  color: #bdefff;
+  font-size: 17px;
+  box-shadow: 0 0 18px rgba(86, 227, 255, 0.16);
+}
+
+.account-user-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.account-user-text strong {
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.2;
+  color: #f4f7ff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-user-text span {
+  font-family: "Share Tech Mono", "Consolas", monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  color: #6f9caf;
+}
+
+.account-badge {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border: 1px solid rgba(86, 227, 255, 0.32);
+  border-radius: 5px;
+  background: rgba(86, 227, 255, 0.08);
+  color: #bdefff;
+  font-family: "Share Tech Mono", "Consolas", monospace;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+}
+
+.account-badge.warn {
+  border-color: rgba(255, 209, 102, 0.42);
+  background: rgba(255, 209, 102, 0.09);
+  color: #ffe6a3;
+}
+
+.account-saves {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-bottom: 13px;
+}
+
+.account-save {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.account-save.cloud {
+  border-color: rgba(86, 227, 255, 0.22);
+  background: rgba(86, 227, 255, 0.035);
+}
+
+.account-save.empty { justify-content: center; min-height: 92px; }
+
+.account-save-kicker {
+  margin: 0 0 2px;
+  font-family: "Share Tech Mono", "Consolas", monospace;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  color: #8f99ae;
+}
+
+.account-save.cloud .account-save-kicker { color: #6f9caf; }
+
+.account-save strong {
+  font-size: 13px;
+  line-height: 1.2;
+  color: #f4f7ff;
+}
+
+.account-save span {
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: #98a2b8;
+}
+
+.account-save time {
+  margin-top: 3px;
+  font-family: "Share Tech Mono", "Consolas", monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.06em;
+  color: #6f788d;
+}
+
+.account-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.account-actions .account-primary,
+.account-actions .account-secondary,
+.account-actions .account-danger {
+  min-height: 40px;
+  padding: 0 8px;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.account-status {
+  margin: 10px 0 0;
+  font-family: "Share Tech Mono", "Consolas", monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.06em;
+  text-align: center;
+  color: #6f788d;
+}
+
+.account-compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 13px;
+}
+
+.account-compare-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.account-compare-card.cloud {
+  border-color: rgba(86, 227, 255, 0.28);
+  background: rgba(86, 227, 255, 0.045);
+}
+
+.account-compare-card h4 {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.2;
+  color: #f4f7ff;
+}
+
+.account-compare-card p {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: #98a2b8;
+}
+
+.account-compare-card time {
+  font-family: "Share Tech Mono", "Consolas", monospace;
+  font-size: 8.5px;
+  color: #6f788d;
+}
+
+.account-compare-card .account-primary {
+  margin-top: auto;
+  min-height: 38px;
+  padding: 0 8px;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+
+.account-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+@keyframes account-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes account-rise {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 520px) {
+  .account-saves,
+  .account-compare {
+    grid-template-columns: 1fr;
+  }
+
+  .account-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .account-actions .account-primary,
+  .account-actions .account-secondary,
+  .account-actions .account-danger {
+    min-height: 38px;
+    font-size: 10px;
+  }
+
+  .account-links {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .account-links span { text-align: left; }
+}
+
+@media (max-height: 540px) and (orientation: landscape) {
+  .account-card {
+    width: min(720px, 100%);
+    padding: 12px 16px;
+  }
+
+  .account-header { gap: 11px; }
+
+  .account-icon { width: 38px; }
+
+  .account-header h2 { font-size: 19px; }
+
+  .account-body { margin-top: 9px; }
+
+  .account-desc {
+    margin-bottom: 9px;
+    font-size: 11.5px;
+    line-height: 1.35;
+  }
+
+  .account-tabs { margin-bottom: 9px; }
+
+  .account-tabs button { min-height: 30px; }
+
+  .account-form { gap: 7px; }
+
+  .account-field { gap: 3px; }
+
+  .account-field input {
+    min-height: 34px;
+    font-size: 13px;
+  }
+
+  .account-primary,
+  .account-secondary,
+  .account-danger {
+    min-height: 34px;
+  }
+
+  .account-note,
+  .account-links { margin-top: 8px; padding-top: 8px; }
+
+  .account-user { margin-bottom: 9px; padding: 7px 9px; }
+
+  .account-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+  }
+
+  .account-saves,
+  .account-compare { margin-bottom: 8px; }
+
+  .account-save { padding: 8px; }
+
+  .account-compare-card { padding: 9px; }
+
+  .account-compare-card .account-primary { min-height: 32px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-panel,
+  .account-card { animation: none; }
+}

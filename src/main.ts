@@ -1,6 +1,7 @@
 /** Bootstrap do jogo: valida o canvas, inicia o loop e remove a tela de carregamento. */
 
 import { Game } from './core/game.js';
+import { cloudSync } from './core/cloud-sync.js';
 import { canFullscreen, enterFullscreen, toggleFullscreen, watchFullscreen } from './core/fullscreen.js';
 import { needsIOSInstallGuide } from './core/platform.js';
 import { toggleAnimeStyle, visualStyle } from './render/style.js';
@@ -37,6 +38,24 @@ try {
 
   const game = new Game(canvas);
   game.start();
+
+  // Restaura a sessão da conta e consome links de confirmação/recuperação.
+  void cloudSync.init().then(({ recovery, confirmed }) => {
+    if (recovery) {
+      game.openAccountPanel();
+      game.setNotice('LINK DE RECUPERAÇÃO RECEBIDO', '#ffd166');
+    } else if (confirmed) {
+      game.setNotice('E-MAIL CONFIRMADO — CONTA CONECTADA', '#56e3ff');
+    }
+  });
+
+  // Tenta enviar o último save pendente ao sair/ocultar a aba.
+  window.addEventListener('pagehide', () => {
+    void cloudSync.flush();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') void cloudSync.flush();
+  });
 
   const stage = document.getElementById('stage') ?? canvas.parentElement;
   const fitCanvas = (): void => {

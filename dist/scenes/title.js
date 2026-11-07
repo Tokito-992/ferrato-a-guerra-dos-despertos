@@ -1,12 +1,12 @@
 /** Tela-título: o Nexus observa enquanto o jogador escolhe o caminho. */
-import { CHARACTER_ORDER, CHARACTERS } from '../data/characters.js?v=c5d0d69737a2';
-import { ARC_COUNT, getArcStages, getStage, MAX_STAGE } from '../data/stages.js?v=c5d0d69737a2';
-import { TITLE_QUOTE } from '../data/story.js?v=c5d0d69737a2';
-import { hexToRgba } from '../core/math.js?v=c5d0d69737a2';
-import { drawTitleBackground } from '../render/backgrounds.js?v=c5d0d69737a2';
-import { drawCharacterSilhouette } from '../render/characters.js?v=c5d0d69737a2';
-import { FONTS, glow, label, panel } from '../render/theme.js?v=c5d0d69737a2';
-import { Menu } from '../ui/menu.js?v=c5d0d69737a2';
+import { CHARACTER_ORDER, CHARACTERS } from '../data/characters.js?v=3fef0c0bc335';
+import { ARC_COUNT, getArcStages, getStage, MAX_STAGE } from '../data/stages.js?v=3fef0c0bc335';
+import { TITLE_QUOTE } from '../data/story.js?v=3fef0c0bc335';
+import { hexToRgba } from '../core/math.js?v=3fef0c0bc335';
+import { drawTitleBackground } from '../render/backgrounds.js?v=3fef0c0bc335';
+import { drawCharacterSilhouette } from '../render/characters.js?v=3fef0c0bc335';
+import { FONTS, glow, label, panel } from '../render/theme.js?v=3fef0c0bc335';
+import { Menu } from '../ui/menu.js?v=3fef0c0bc335';
 export class TitleScene {
     constructor(game) {
         this.game = game;
@@ -20,11 +20,15 @@ export class TitleScene {
         this.game.audio.playAmbience('cosmic');
         this.buildMenu();
     }
-    buildMenu() {
+    /** Atualiza o menu sem perder o item selecionado (usado pela sincronização). */
+    refreshMenu() {
+        this.buildMenu(true);
+    }
+    buildMenu(keepIndex = false) {
         const save = this.game.save;
         const stage = getStage(save.maxStage);
         const hasProgress = save.cleared.length > 0;
-        this.menu.setItems([
+        const items = [
             { id: 'new', label: 'NOVO JOGO', detail: 'ARCO I · CAP. 1', accent: '#ff8a3d' },
             {
                 id: 'continue',
@@ -35,8 +39,22 @@ export class TitleScene {
             },
             { id: 'select', label: 'DESPERTOS & ARCOS', detail: '36 CAPÍTULOS', accent: '#b48bff' },
             { id: 'settings', label: 'CONFIGURAÇÕES', detail: 'CONTROLES & TELA', accent: '#56e3ff' },
-            { id: 'credits', label: 'CRÉDITOS', detail: 'O VÉU', accent: '#ffe6a3' },
-        ]);
+        ];
+        const cloud = this.game.cloudSnapshot;
+        if (cloud.configured) {
+            const detail = !cloud.signedIn
+                ? 'ENTRAR OU CRIAR CONTA'
+                : cloud.conflict
+                    ? 'ESCOLHA O SAVE'
+                    : cloud.cloudNewer
+                        ? 'NUVEM MAIS RECENTE'
+                        : cloud.lastError
+                            ? 'VER CONTA'
+                            : 'NUVEM CONECTADA';
+            items.push({ id: 'account', label: 'CONTA', detail, accent: '#ffd166' });
+        }
+        items.push({ id: 'credits', label: 'CRÉDITOS', detail: 'O VÉU', accent: '#ffe6a3' });
+        this.menu.setItems(items, keepIndex);
     }
     update(dt) {
         this.t += dt;
@@ -56,6 +74,9 @@ export class TitleScene {
                 break;
             case 'settings':
                 this.game.gotoSettings();
+                break;
+            case 'account':
+                this.game.openAccountPanel();
                 break;
             case 'credits':
                 this.game.gotoCredits();
@@ -116,10 +137,10 @@ export class TitleScene {
             font: FONTS.ui,
         });
         // Menu.
-        this.menu.draw(ctx, 90, 400, 414, {
-            itemHeight: 46,
-            gap: 6,
-            size: 17.5,
+        this.menu.draw(ctx, 90, 398, 414, {
+            itemHeight: 42,
+            gap: 4,
+            size: 16.5,
             accent: '#ff8a3d',
         });
         // Estatísticas do arquivo.
