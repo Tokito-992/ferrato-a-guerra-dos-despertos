@@ -1,27 +1,27 @@
 /** Núcleo do jogo: loop, troca de cenas, transições, hitstop e persistência. */
-import { CHARACTERS } from '../data/characters.js?v=7697375bbbf2';
-import { getStage, MAX_STAGE } from '../data/stages.js?v=7697375bbbf2';
-import { STORY } from '../data/story.js?v=7697375bbbf2';
-import { AudioEngine } from './audio.js?v=7697375bbbf2';
-import { Input } from './input.js?v=7697375bbbf2';
-import { ParticleSystem } from './particles.js?v=7697375bbbf2';
-import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=7697375bbbf2';
-import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=7697375bbbf2';
-import { needsIOSInstallGuide } from './platform.js?v=7697375bbbf2';
-import { cloudSync } from './cloud-sync.js?v=7697375bbbf2';
-import { showInstallGuide } from '../ui/install-guide.js?v=7697375bbbf2';
-import { showAccountPanel } from '../ui/account-panel.js?v=7697375bbbf2';
-import { clamp, hexToRgba } from './math.js?v=7697375bbbf2';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=7697375bbbf2';
-import { TitleScene } from '../scenes/title.js?v=7697375bbbf2';
-import { CharacterSelectScene } from '../scenes/characterSelect.js?v=7697375bbbf2';
-import { GameplayScene } from '../scenes/gameplay.js?v=7697375bbbf2';
-import { StoryScene } from '../scenes/story.js?v=7697375bbbf2';
-import { ComicScene } from '../scenes/comic.js?v=7697375bbbf2';
-import { VictoryScene } from '../scenes/victory.js?v=7697375bbbf2';
-import { CreditsScene } from '../scenes/credits.js?v=7697375bbbf2';
-import { SettingsScene } from '../scenes/settings.js?v=7697375bbbf2';
-import { TutorialScene } from '../scenes/tutorial.js?v=7697375bbbf2';
+import { CHARACTERS } from '../data/characters.js?v=704597bf28d2';
+import { getStage, MAX_STAGE } from '../data/stages.js?v=704597bf28d2';
+import { STORY } from '../data/story.js?v=704597bf28d2';
+import { AudioEngine } from './audio.js?v=704597bf28d2';
+import { Input } from './input.js?v=704597bf28d2';
+import { ParticleSystem } from './particles.js?v=704597bf28d2';
+import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=704597bf28d2';
+import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=704597bf28d2';
+import { needsIOSInstallGuide } from './platform.js?v=704597bf28d2';
+import { cloudSync } from './cloud-sync.js?v=704597bf28d2';
+import { showInstallGuide } from '../ui/install-guide.js?v=704597bf28d2';
+import { showAccountPanel } from '../ui/account-panel.js?v=704597bf28d2';
+import { clamp, hexToRgba } from './math.js?v=704597bf28d2';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=704597bf28d2';
+import { TitleScene } from '../scenes/title.js?v=704597bf28d2';
+import { CharacterSelectScene } from '../scenes/characterSelect.js?v=704597bf28d2';
+import { GameplayScene } from '../scenes/gameplay.js?v=704597bf28d2';
+import { StoryScene } from '../scenes/story.js?v=704597bf28d2';
+import { ComicScene, COMIC_INTRO_STAGES } from '../scenes/comic.js?v=704597bf28d2';
+import { VictoryScene } from '../scenes/victory.js?v=704597bf28d2';
+import { CreditsScene } from '../scenes/credits.js?v=704597bf28d2';
+import { SettingsScene } from '../scenes/settings.js?v=704597bf28d2';
+import { TutorialScene } from '../scenes/tutorial.js?v=704597bf28d2';
 /** Posições normalizadas usadas quando não há layout livre salvo. */
 function presetTouchPositions(layout, dock) {
     const y = dock === 'top' ? 0.1 : 0.9;
@@ -490,9 +490,9 @@ export class Game {
             const go = () => this.showGameplay(stage.id, id);
             const intro = STORY[stage.id]?.intro;
             if (!skipStory && intro && intro.length > 0) {
-                // O Capítulo 1 usa a abertura em quadrinhos; os demais seguem na
-                // cutscene cinematográfica até receberem arte própria.
-                if (stage.id === 1) {
+                // As aberturas de arco usam quadrinhos com o despertar do herói; os
+                // demais capítulos seguem na cutscene cinematográfica.
+                if (COMIC_INTRO_STAGES.has(stage.id)) {
                     this.setScene(new ComicScene(this, stage, 'intro', go));
                 }
                 else {

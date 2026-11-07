@@ -8,12 +8,12 @@
  * O protótipo reaproveita os mesmos `StoryBeat[]` da cutscene normal, então
  * nenhum texto precisou ser reescrito.
  */
-import { STORY } from '../data/story.js?v=7697375bbbf2';
-import { CHARACTERS } from '../data/characters.js?v=7697375bbbf2';
-import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js?v=7697375bbbf2';
-import { drawStageBackground } from '../render/backgrounds.js?v=7697375bbbf2';
-import { BASE, drawCharacterFigure, drawCharacterPortrait } from '../render/characters.js?v=7697375bbbf2';
-import { FONTS, label, roundRectPath } from '../render/theme.js?v=7697375bbbf2';
+import { STORY } from '../data/story.js?v=704597bf28d2';
+import { CHARACTERS } from '../data/characters.js?v=704597bf28d2';
+import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js?v=704597bf28d2';
+import { drawStageBackground } from '../render/backgrounds.js?v=704597bf28d2';
+import { BASE, drawCharacterFigure, drawCharacterPortrait } from '../render/characters.js?v=704597bf28d2';
+import { FONTS, label, roundRectPath } from '../render/theme.js?v=704597bf28d2';
 const PAGE_SIZE = 3;
 const GAP = 16;
 const MARGIN_X = 40;
@@ -32,6 +32,19 @@ const SPEAKER_COLOR = {
     ozric: CHARACTERS.ozric.colors.accent,
     elodie: CHARACTERS.elodie.colors.accent,
     thryc: CHARACTERS.thryc.colors.accent,
+};
+/**
+ * Aberturas em quadrinhos: o primeiro capítulo de cada arco mostra o herói
+ * despertando. Os demais capítulos continuam na cutscene cinematográfica.
+ */
+export const COMIC_INTRO_STAGES = new Set([1, 7, 13, 19, 25, 31]);
+const AWAKENING_SFX = {
+    ravi: 'abilityRavi',
+    miriam: 'abilityMiriam',
+    kael: 'abilityKael',
+    ozric: 'abilityOzric',
+    elodie: 'abilityElodie',
+    thryc: 'abilityThryc',
 };
 const halftoneCache = new Map();
 /** Padrão de retícula para sombras e texturas de quadrinhos. */
@@ -119,7 +132,7 @@ export class ComicScene {
     }
     /** Quadro de página inteira em que o herói acorda com o Ferrato. */
     isAwakeningPanel(globalIndex) {
-        return this.stage.id === 1 && this.phase === 'intro' && globalIndex === 3;
+        return this.phase === 'intro' && COMIC_INTRO_STAGES.has(this.stage.id) && globalIndex === 3;
     }
     advance() {
         if (this.finished)
@@ -142,8 +155,9 @@ export class ComicScene {
             }
             this.game.audio.sfx('select');
             // O despertar merece som próprio, disparado uma única vez.
-            if (this.isAwakeningPanel(this.active))
-                this.game.audio.sfx('abilityRavi');
+            if (this.isAwakeningPanel(this.active)) {
+                this.game.audio.sfx(AWAKENING_SFX[this.stage.character]);
+            }
             return;
         }
         this.finish();
@@ -321,23 +335,21 @@ export class ComicScene {
         ctx.restore();
     }
     drawPanelArt(ctx, rect, beat, index, globalIndex) {
-        if (this.stage.id === 1 && this.phase === 'intro') {
-            if (this.page === 0) {
-                if (index === 0) {
-                    this.drawCityPanel(ctx, rect);
-                    return;
-                }
-                if (index === 1) {
-                    this.drawCloseupPanel(ctx, rect);
-                    return;
-                }
-                if (index === 2) {
-                    this.drawImpactPanel(ctx, rect, index);
-                    return;
-                }
+        if (this.isAwakeningPanel(globalIndex)) {
+            this.drawAwakeningPanel(ctx, rect, index);
+            return;
+        }
+        if (this.stage.id === 1 && this.phase === 'intro' && this.page === 0) {
+            if (index === 0) {
+                this.drawCityPanel(ctx, rect);
+                return;
             }
-            if (this.isAwakeningPanel(globalIndex)) {
-                this.drawAwakeningPanel(ctx, rect, index);
+            if (index === 1) {
+                this.drawCloseupPanel(ctx, rect);
+                return;
+            }
+            if (index === 2) {
+                this.drawImpactPanel(ctx, rect, index);
                 return;
             }
         }
@@ -615,34 +627,47 @@ export class ComicScene {
         this.drawCrawler(ctx, rect.x + 1020, groundY + 4, 1.9, '#07070c', true);
         this.drawCrawler(ctx, rect.x + 1128, groundY + 8, 1.22, '#0b0a12', false);
     }
-    /** Página inteira: o instante em que o Ferrato acorda em Ravi. */
+    /** Página inteira: o instante em que o Ferrato acorda em cada Desperto. */
     drawAwakeningPanel(ctx, rect, index) {
-        const def = CHARACTERS.ravi;
+        const def = CHARACTERS[this.stage.character];
+        const c = def.colors;
         const groundY = rect.y + rect.h - 52;
         const cx = rect.x + rect.w * 0.54;
         const coreY = groundY - 210;
-        // Cenário frio e escuro, como se a rua tivesse perdido a cor.
+        // Kael desperta flutuando; os demais fincam os pés no chão.
+        const heroY = groundY - (def.id === 'kael' ? 26 : 0);
+        // Cores muito claras (Élodie) precisam de um meio mais escuro no clarão.
+        const light = this.isLightAccent(c.accent);
+        const mid = light ? c.secondary : c.accent;
+        // Cenário frio e escuro, como se o mundo tivesse perdido a cor.
         this.drawBackgroundIn(ctx, rect, (this.stage.width - this.game.width) * 0.52, 1.08);
-        ctx.fillStyle = 'rgba(3,5,12,0.72)';
+        ctx.fillStyle = 'rgba(3,5,12,0.74)';
         ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
         const wash = ctx.createLinearGradient(rect.x, rect.y, rect.x, rect.y + rect.h);
-        wash.addColorStop(0, 'rgba(24,92,150,0.34)');
+        wash.addColorStop(0, hexToRgba(c.aura, 0.3));
         wash.addColorStop(0.55, 'rgba(4,10,26,0.24)');
-        wash.addColorStop(1, 'rgba(2,3,8,0.74)');
+        wash.addColorStop(1, 'rgba(2,3,8,0.76)');
         ctx.fillStyle = wash;
         ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
-        // Explosão de bioeletricidade atrás do herói.
+        // Sombra no chão.
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.beginPath();
+        ctx.ellipse(cx, groundY + 8, 132, 18, 0, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+        // Explosão de energia atrás do herói.
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
         const burst = ctx.createRadialGradient(cx, coreY, 6, cx, coreY, 330);
-        burst.addColorStop(0, 'rgba(220,255,255,0.92)');
-        burst.addColorStop(0.12, 'rgba(120,240,255,0.58)');
-        burst.addColorStop(0.42, 'rgba(56,216,255,0.22)');
-        burst.addColorStop(1, 'rgba(56,216,255,0)');
+        burst.addColorStop(0, `rgba(255,255,255,${light ? 0.78 : 0.92})`);
+        burst.addColorStop(0.12, hexToRgba(mid, light ? 0.5 : 0.62));
+        burst.addColorStop(0.42, hexToRgba(c.aura, light ? 0.18 : 0.24));
+        burst.addColorStop(1, hexToRgba(c.aura, 0));
         ctx.fillStyle = burst;
         ctx.fillRect(cx - 340, coreY - 340, 680, 680);
-        this.drawSpeedLines(ctx, cx, coreY, rect, 'rgba(141,244,255,0.16)', 40);
-        // Anéis elétricos irregulares.
+        this.drawSpeedLines(ctx, cx, coreY, rect, hexToRgba(c.accent, light ? 0.12 : 0.16), 40);
+        // Anéis de choque irregulares.
         for (let ring = 0; ring < 3; ring++) {
             const radius = 118 + ring * 64 + Math.sin(this.t * 2.2 + ring * 1.7) * 7;
             ctx.beginPath();
@@ -657,19 +682,19 @@ export class ComicScene {
                     ctx.lineTo(px, py);
             }
             ctx.closePath();
-            ctx.strokeStyle = `rgba(141,244,255,${0.3 - ring * 0.07})`;
+            ctx.strokeStyle = hexToRgba(c.accent, 0.32 - ring * 0.08);
             ctx.lineWidth = ring === 0 ? 3 : 2;
             ctx.stroke();
         }
-        // Raios saindo do peito.
+        // Raios saindo do núcleo.
         for (let i = 0; i < 12; i++) {
             const a = (i / 12) * TAU + 0.18;
             const inner = 46 + (i % 3) * 12;
             const outer = 210 + (i % 4) * 42;
-            this.drawLightning(ctx, cx + Math.cos(a) * inner, coreY + Math.sin(a) * inner, cx + Math.cos(a) * outer, coreY + Math.sin(a) * outer, i + 1, 'rgba(141,244,255,0.75)');
+            this.drawLightning(ctx, cx + Math.cos(a) * inner, coreY + Math.sin(a) * inner, cx + Math.cos(a) * outer, coreY + Math.sin(a) * outer, i + 1, hexToRgba(c.accent, light ? 0.6 : 0.78));
         }
         ctx.restore();
-        // Rachaduras no asfalto.
+        // Rachaduras no chão.
         ctx.save();
         ctx.lineCap = 'round';
         for (let i = 0; i < 8; i++) {
@@ -682,31 +707,39 @@ export class ComicScene {
                 const py = groundY + 2 + Math.sin(i * 2.1 + s * 1.7) * (4 + (i % 3) * 3);
                 ctx.lineTo(px, py);
             }
-            ctx.strokeStyle = 'rgba(141,244,255,0.18)';
+            ctx.strokeStyle = hexToRgba(c.accent, 0.2);
             ctx.lineWidth = 7;
             ctx.stroke();
-            ctx.strokeStyle = 'rgba(190,250,255,0.72)';
+            ctx.strokeStyle = hexToRgba(c.glow, 0.78);
             ctx.lineWidth = 2;
             ctx.stroke();
         }
         ctx.restore();
-        // Rastejantes recuando da explosão.
-        this.drawRecoilingCrawler(ctx, rect.x + 182, groundY + 10, 1.7, -0.34);
-        this.drawRecoilingCrawler(ctx, rect.x + rect.w - 172, groundY + 12, 1.82, 0.3);
-        // Itens civis arrancados pelo despertar.
-        this.drawFlyingCap(ctx, rect.x + rect.w * 0.79, rect.y + 220, -0.55 + Math.sin(this.t * 2.6) * 0.05, 1.35);
-        this.drawFlyingBag(ctx, rect.x + rect.w * 0.17, rect.y + 250, 0.62 + Math.sin(this.t * 2.2) * 0.05, 1.2);
-        this.drawFlyingBox(ctx, rect.x + rect.w * 0.25, rect.y + 128, -0.35, 0.95);
-        this.drawFlyingBox(ctx, rect.x + rect.w * 0.69, rect.y + 344, 0.28, 0.78);
+        // Inimigos recuando da explosão.
+        this.drawRecoilingFoe(ctx, def.id, rect.x + 182, groundY + 10, 1.7, -0.34, c.accent);
+        this.drawRecoilingFoe(ctx, def.id, rect.x + rect.w - 172, groundY + 12, 1.82, 0.3, c.accent);
+        // Objetos civis arrancados pelo despertar.
+        this.drawAwakeningProps(ctx, rect, def);
+        // Detalhes próprios de cada elemento.
+        this.drawAwakeningExtras(ctx, rect, def, cx, coreY, groundY);
         // Aura de energia ao redor do corpo.
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
-        const aura = ctx.createRadialGradient(cx, groundY - 150, 20, cx, groundY - 150, 260);
-        aura.addColorStop(0, 'rgba(141,244,255,0.3)');
-        aura.addColorStop(0.55, 'rgba(56,216,255,0.1)');
-        aura.addColorStop(1, 'rgba(56,216,255,0)');
+        const aura = ctx.createRadialGradient(cx, heroY - 150, 20, cx, heroY - 150, 260);
+        aura.addColorStop(0, hexToRgba(c.accent, light ? 0.2 : 0.3));
+        aura.addColorStop(0.55, hexToRgba(c.aura, light ? 0.08 : 0.12));
+        aura.addColorStop(1, hexToRgba(c.aura, 0));
         ctx.fillStyle = aura;
-        ctx.fillRect(cx - 270, groundY - 420, 540, 500);
+        ctx.fillRect(cx - 270, heroY - 420, 540, 500);
+        ctx.restore();
+        // Contraste atrás do herói: silhuetas claras não somem no clarão.
+        ctx.save();
+        const sep = ctx.createRadialGradient(cx, heroY - 150, 30, cx, heroY - 150, 210);
+        sep.addColorStop(0, 'rgba(4,5,12,0.38)');
+        sep.addColorStop(0.65, 'rgba(4,5,12,0.2)');
+        sep.addColorStop(1, 'rgba(4,5,12,0)');
+        ctx.fillStyle = sep;
+        ctx.fillRect(cx - 230, heroY - 380, 460, 440);
         ctx.restore();
         const build = {
             ...BASE,
@@ -723,57 +756,452 @@ export class ComicScene {
             legBackKnee: -0.06,
             headTilt: -0.18,
             bodyRot: -0.03,
+            weaponA: this.awakeningWeaponAngle(def),
+            airborne: def.id === 'kael',
         };
-        drawCharacterFigure(ctx, def, cx, groundY, 1, 2.7, this.t, build, 0.05 + Math.sin(this.t * 9) * 0.03);
+        drawCharacterFigure(ctx, def, cx, heroY, 1, 2.7, this.t, build, 0.05 + Math.sin(this.t * 9) * 0.03);
         // Núcleo aceso no peito.
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
         const core = ctx.createRadialGradient(cx, coreY, 2, cx, coreY, 54);
         core.addColorStop(0, 'rgba(255,255,255,0.95)');
-        core.addColorStop(0.25, 'rgba(141,244,255,0.7)');
-        core.addColorStop(1, 'rgba(56,216,255,0)');
+        core.addColorStop(0.25, hexToRgba(c.accent, light ? 0.6 : 0.72));
+        core.addColorStop(1, hexToRgba(c.aura, 0));
         ctx.fillStyle = core;
         ctx.fillRect(cx - 62, coreY - 62, 124, 124);
         ctx.restore();
-        // Arcos elétricos nas mãos erguidas.
+        // Arcos de energia nas mãos erguidas.
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
         for (const dir of [-1, 1]) {
             const hx = cx + dir * 79;
-            const hy = groundY - 272;
-            this.drawLightning(ctx, hx, hy, hx + dir * 44, hy - 58, dir === 1 ? 31 : 32, 'rgba(220,255,255,0.9)');
+            const hy = heroY - 272;
+            this.drawLightning(ctx, hx, hy, hx + dir * 44, hy - 58, dir === 1 ? 31 : 32, hexToRgba(c.accent, 0.9));
         }
         ctx.restore();
-        // Onomatopeia do despertar.
+        // Onomatopeias do despertar.
+        for (const sfx of this.awakeningSfx(def)) {
+            this.drawAwakeningSfx(ctx, rect, sfx, index);
+        }
+    }
+    isLightAccent(hex) {
+        const n = parseInt(hex.replace('#', ''), 16);
+        const r = (n >> 16) & 255;
+        const g = (n >> 8) & 255;
+        const b = n & 255;
+        return r * 0.299 + g * 0.587 + b * 0.114 > 220;
+    }
+    awakeningWeaponAngle(def) {
+        switch (def.weapon) {
+            case 'scythe':
+                return -2.25;
+            case 'sword':
+                return -2.1;
+            case 'blades':
+                return -1.85;
+            case 'gravity':
+                return -0.85;
+            default:
+                return -0.35;
+        }
+    }
+    awakeningSfx(def) {
+        const table = {
+            ravi: ['FZZZAP!', '#8df4ff', 'KRAAK!'],
+            miriam: ['FWOOM!', '#ffb066', 'KRUMP!'],
+            kael: ['VRRRM!', '#9df6ff', 'WUMP!'],
+            ozric: ['SHRRK!', '#ff7a8c', 'CLANG!'],
+            elodie: ['SHING!', '#fff4cd', 'FWOOM!'],
+            thryc: ['VWOOM!', '#b48bff', 'ECHO!'],
+        };
+        const [main, color, secondary] = table[def.id];
+        return [
+            { text: main, color, x: 0.78, y: 0.2, size: 76, rotation: -0.1 },
+            {
+                text: secondary,
+                color: def.id === 'thryc' ? '#6ff2ff' : '#ffd166',
+                x: 0.34,
+                y: 0.885,
+                size: 34,
+                rotation: 0.12,
+            },
+        ];
+    }
+    drawAwakeningSfx(ctx, rect, sfx, index) {
         const age = this.t - this.panelStart[index];
         const punch = age < 0.35 ? 1.45 - clamp(age / 0.35, 0, 1) * 0.45 : 1;
         ctx.save();
-        ctx.translate(rect.x + rect.w * 0.78, rect.y + 128);
-        ctx.rotate(-0.1);
+        ctx.translate(rect.x + rect.w * sfx.x, rect.y + rect.h * sfx.y);
+        ctx.rotate(sfx.rotation);
         ctx.scale(punch, punch);
-        ctx.font = `900 76px ${FONTS.ui}`;
+        ctx.font = `900 ${sfx.size}px ${FONTS.ui}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.lineWidth = 13;
+        ctx.lineWidth = sfx.size > 50 ? 13 : 8;
         ctx.strokeStyle = '#07121c';
-        ctx.strokeText('FZZZAP!', 0, 0);
-        ctx.fillStyle = '#8df4ff';
-        ctx.fillText('FZZZAP!', 0, 0);
-        ctx.fillStyle = 'rgba(255,255,255,0.6)';
-        ctx.fillText('FZZZAP!', -2, -3);
+        ctx.strokeText(sfx.text, 0, 0);
+        ctx.fillStyle = sfx.color;
+        ctx.fillText(sfx.text, 0, 0);
+        if (sfx.size > 50) {
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.fillText(sfx.text, -2, -3);
+        }
         ctx.restore();
-        // Impacto secundário no chão.
+    }
+    /** Detalhes de energia que diferenciam o despertar de cada herói. */
+    drawAwakeningExtras(ctx, rect, def, cx, coreY, groundY) {
+        const c = def.colors;
+        switch (def.id) {
+            case 'miriam': {
+                // Brasas subindo e poças de magma.
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                for (let i = 0; i < 28; i++) {
+                    const t = (this.t * 0.4 + i * 0.37) % 1;
+                    const x = rect.x + rect.w * 0.16 + ((i * 97) % Math.max(1, Math.round(rect.w * 0.68)));
+                    const y = groundY - t * 320;
+                    const r = 1.4 + (i % 3) * 0.8;
+                    ctx.fillStyle = hexToRgba(i % 2 === 0 ? c.accent : c.glow, 0.5 * (1 - t));
+                    ctx.beginPath();
+                    ctx.arc(x + Math.sin(this.t + i) * 8, y, r, 0, TAU);
+                    ctx.fill();
+                }
+                for (const side of [-1, 1]) {
+                    const px = cx + side * (126 + (side === 1 ? 18 : 0));
+                    const g = ctx.createRadialGradient(px, groundY + 2, 2, px, groundY + 2, 90);
+                    g.addColorStop(0, hexToRgba(c.accent, 0.5));
+                    g.addColorStop(1, hexToRgba(c.aura, 0));
+                    ctx.fillStyle = g;
+                    ctx.beginPath();
+                    ctx.ellipse(px, groundY + 2, 90, 18, 0, 0, TAU);
+                    ctx.fill();
+                }
+                ctx.restore();
+                break;
+            }
+            case 'kael': {
+                // Detritos flutuando em órbita.
+                ctx.save();
+                for (let i = 0; i < 14; i++) {
+                    const a = (i / 14) * TAU + this.t * 0.25;
+                    const r = 150 + (i % 4) * 40;
+                    const x = cx + Math.cos(a) * r;
+                    const y = coreY + Math.sin(a) * r * 0.55;
+                    ctx.fillStyle = i % 3 === 0 ? hexToRgba(c.accent, 0.55) : 'rgba(20,24,40,0.85)';
+                    ctx.strokeStyle = hexToRgba(c.accent, 0.4);
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(x - 8, y);
+                    ctx.lineTo(x + 4, y - 6);
+                    ctx.lineTo(x + 10, y + 3);
+                    ctx.lineTo(x - 2, y + 8);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                }
+                ctx.restore();
+                break;
+            }
+            case 'ozric': {
+                // Chamas negras subindo do chão.
+                this.drawBlackFlames(ctx, cx, groundY, c.accent);
+                break;
+            }
+            case 'elodie': {
+                // Halo e penas de luz.
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                const hy = groundY - 352;
+                ctx.strokeStyle = hexToRgba(c.accent, 0.8);
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.ellipse(cx, hy, 62, 14, 0, 0, TAU);
+                ctx.stroke();
+                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.ellipse(cx, hy, 68, 17, 0, 0, TAU);
+                ctx.stroke();
+                for (let i = 0; i < 12; i++) {
+                    const a = (i / 12) * TAU + this.t * 0.3;
+                    const r = 120 + (i % 4) * 30;
+                    const x = cx + Math.cos(a) * r;
+                    const y = coreY + Math.sin(a) * r * 0.7;
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate(a + Math.PI / 2);
+                    ctx.fillStyle = hexToRgba(c.accent, 0.45);
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, 4, 14, 0, 0, TAU);
+                    ctx.fill();
+                    ctx.restore();
+                }
+                ctx.restore();
+                break;
+            }
+            case 'thryc': {
+                // Fragmentos de memória girando.
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                for (let i = 0; i < 18; i++) {
+                    const a = (i / 18) * TAU + this.t * 0.2;
+                    const r = 110 + (i % 5) * 34;
+                    const x = cx + Math.cos(a) * r;
+                    const y = coreY + Math.sin(a) * r * 0.6;
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate(a + this.t * 0.5);
+                    ctx.fillStyle = hexToRgba(i % 2 === 0 ? c.accent : c.glow, 0.35);
+                    ctx.beginPath();
+                    ctx.moveTo(0, -10);
+                    ctx.lineTo(6, 0);
+                    ctx.lineTo(0, 12);
+                    ctx.lineTo(-5, 2);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                }
+                ctx.restore();
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    drawBlackFlames(ctx, cx, groundY, accent) {
         ctx.save();
-        ctx.translate(rect.x + rect.w * 0.34, groundY - 18);
-        ctx.rotate(0.12);
-        ctx.font = `900 34px ${FONTS.ui}`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.lineWidth = 8;
-        ctx.strokeStyle = '#160c18';
-        ctx.strokeText('KRAAK!', 0, 0);
-        ctx.fillStyle = '#ffd166';
-        ctx.fillText('KRAAK!', 0, 0);
+        for (let i = 0; i < 10; i++) {
+            const x = cx - 180 + i * 40 + Math.sin(this.t * 2 + i) * 10;
+            const h = 90 + (i % 4) * 34 + Math.sin(this.t * 3 + i * 1.7) * 12;
+            ctx.beginPath();
+            ctx.moveTo(x - 18, groundY + 4);
+            ctx.quadraticCurveTo(x - 10, groundY - h * 0.55, x + Math.sin(this.t + i) * 12, groundY - h);
+            ctx.quadraticCurveTo(x + 12, groundY - h * 0.5, x + 18, groundY + 4);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(6,3,10,0.88)';
+            ctx.fill();
+            ctx.strokeStyle = hexToRgba(accent, 0.5);
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+    drawRecoilingFoe(ctx, kind, x, y, scale, rotation, accent) {
+        if (kind === 'ravi') {
+            this.drawRecoilingCrawler(ctx, x, y, scale, rotation);
+            return;
+        }
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.beginPath();
+        ctx.ellipse(x, y, 46 * scale, 9 * scale, 0, 0, TAU);
+        ctx.fill();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+        // Halo colorido nas bordas para a silhueta não sumir no escuro.
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = hexToRgba(accent, 0.24);
+        this.drawFoeSilhouette(ctx, kind, scale * 1.07);
+        ctx.restore();
+        ctx.fillStyle = '#12121d';
+        this.drawFoeSilhouette(ctx, kind, scale);
+        // Detalhes luminosos próprios de cada criatura.
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = hexToRgba(accent, 0.75);
+        ctx.fillStyle = hexToRgba(accent, 0.75);
+        ctx.lineWidth = 2;
+        if (kind === 'miriam') {
+            ctx.beginPath();
+            ctx.moveTo(-18 * scale, -70 * scale);
+            ctx.lineTo(-4 * scale, -54 * scale);
+            ctx.lineTo(-12 * scale, -38 * scale);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(16 * scale, -82 * scale);
+            ctx.lineTo(6 * scale, -62 * scale);
+            ctx.lineTo(18 * scale, -46 * scale);
+            ctx.stroke();
+        }
+        else if (kind === 'kael') {
+            ctx.beginPath();
+            ctx.arc(0, -86 * scale, 4 * scale, 0, TAU);
+            ctx.fill();
+        }
+        else if (kind === 'ozric') {
+            ctx.beginPath();
+            ctx.ellipse(-7 * scale, -106 * scale, 3 * scale, 2 * scale, 0, 0, TAU);
+            ctx.ellipse(7 * scale, -106 * scale, 3 * scale, 2 * scale, 0, 0, TAU);
+            ctx.fill();
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.arc((i - 1) * 16 * scale, -24 * scale, 5 * scale, 0, TAU);
+                ctx.stroke();
+            }
+        }
+        else if (kind === 'elodie') {
+            ctx.beginPath();
+            ctx.moveTo(-10 * scale, -104 * scale);
+            ctx.quadraticCurveTo(-70 * scale, -140 * scale, -64 * scale, -58 * scale);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(10 * scale, -104 * scale);
+            ctx.quadraticCurveTo(70 * scale, -140 * scale, 64 * scale, -58 * scale);
+            ctx.stroke();
+        }
+        else if (kind === 'thryc') {
+            ctx.beginPath();
+            ctx.arc(0, -76 * scale, 6 * scale, 0, TAU);
+            ctx.fill();
+        }
+        ctx.restore();
+        ctx.restore();
+        // Linhas de choque ao redor da criatura.
+        ctx.save();
+        ctx.strokeStyle = hexToRgba(accent, 0.4);
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        const dir = rotation < 0 ? -1 : 1;
+        for (let i = 0; i < 4; i++) {
+            const yy = y - 100 - i * 26;
+            ctx.beginPath();
+            ctx.moveTo(x + dir * (52 + i * 6), yy);
+            ctx.lineTo(x + dir * (86 + i * 10), yy - 14);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+    /** Silhueta da criatura que recua diante do despertar. */
+    drawFoeSilhouette(ctx, kind, scale) {
+        ctx.save();
+        ctx.scale(scale, scale);
+        switch (kind) {
+            case 'miriam': {
+                // Saqueador carbonizado: humanoide largo e quebrado.
+                ctx.fillRect(-24, -34, 16, 34);
+                ctx.fillRect(8, -34, 16, 34);
+                ctx.beginPath();
+                ctx.moveTo(-30, -90);
+                ctx.quadraticCurveTo(0, -106, 30, -90);
+                ctx.lineTo(24, -32);
+                ctx.lineTo(-24, -32);
+                ctx.closePath();
+                ctx.fill();
+                ctx.save();
+                ctx.translate(-28, -84);
+                ctx.rotate(-0.55);
+                ctx.fillRect(-8, -6, 14, 58);
+                ctx.restore();
+                ctx.save();
+                ctx.translate(28, -84);
+                ctx.rotate(0.55);
+                ctx.fillRect(-6, -6, 14, 58);
+                ctx.restore();
+                ctx.beginPath();
+                ctx.arc(0, -108, 16, 0, TAU);
+                ctx.fill();
+                break;
+            }
+            case 'kael': {
+                // Drone assimilado com anel e tentáculos.
+                ctx.beginPath();
+                ctx.ellipse(0, -84, 30, 24, 0, 0, TAU);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(0, -84, 54, 12, 0.18, 0, TAU);
+                ctx.fill();
+                for (let i = 0; i < 3; i++) {
+                    const ox = (i - 1) * 22;
+                    ctx.beginPath();
+                    ctx.moveTo(ox - 6, -64);
+                    ctx.quadraticCurveTo(ox - 12, -34, ox + 2, -12);
+                    ctx.lineTo(ox + 10, -14);
+                    ctx.quadraticCurveTo(ox - 2, -36, ox + 4, -64);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                break;
+            }
+            case 'ozric': {
+                // Coletor encapuzado com foice.
+                ctx.beginPath();
+                ctx.moveTo(0, -132);
+                ctx.quadraticCurveTo(38, -106, 44, -18);
+                ctx.lineTo(26, 0);
+                ctx.lineTo(-26, 0);
+                ctx.lineTo(-44, -18);
+                ctx.quadraticCurveTo(-38, -106, 0, -132);
+                ctx.closePath();
+                ctx.fill();
+                ctx.save();
+                ctx.translate(30, -78);
+                ctx.rotate(-0.5);
+                ctx.fillRect(-3, -54, 6, 108);
+                ctx.beginPath();
+                ctx.moveTo(0, -54);
+                ctx.quadraticCurveTo(34, -66, 46, -38);
+                ctx.quadraticCurveTo(24, -48, 0, -42);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+                break;
+            }
+            case 'elodie': {
+                // Serafim caído com asas partidas.
+                ctx.beginPath();
+                ctx.ellipse(0, -76, 17, 44, 0, 0, TAU);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(0, -124, 13, 0, TAU);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(-10, -104);
+                ctx.quadraticCurveTo(-72, -142, -64, -56);
+                ctx.quadraticCurveTo(-38, -86, -8, -72);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(10, -104);
+                ctx.quadraticCurveTo(72, -142, 64, -56);
+                ctx.quadraticCurveTo(38, -86, 8, -72);
+                ctx.closePath();
+                ctx.fill();
+                ctx.save();
+                ctx.translate(24, -70);
+                ctx.rotate(-0.7);
+                ctx.fillRect(-2, -56, 4, 112);
+                ctx.fillRect(-12, -56, 24, 5);
+                ctx.restore();
+                break;
+            }
+            case 'thryc': {
+                // Eco fragmentado: cacos ao redor de um núcleo.
+                for (let i = 0; i < 9; i++) {
+                    const a = (i / 9) * TAU;
+                    const r = 28 + (i % 3) * 14;
+                    const px = Math.cos(a) * r;
+                    const py = -76 + Math.sin(a) * r;
+                    ctx.save();
+                    ctx.translate(px, py);
+                    ctx.rotate(a);
+                    ctx.beginPath();
+                    ctx.moveTo(0, -14);
+                    ctx.lineTo(9, 0);
+                    ctx.lineTo(0, 14);
+                    ctx.lineTo(-7, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                }
+                ctx.beginPath();
+                ctx.arc(0, -76, 12, 0, TAU);
+                ctx.fill();
+                break;
+            }
+            default:
+                break;
+        }
         ctx.restore();
     }
     drawRecoilingCrawler(ctx, x, y, scale, rotation) {
@@ -918,6 +1346,366 @@ export class ComicScene {
         ctx.stroke();
         ctx.restore();
     }
+    /** Objetos civis que cada herói deixa para trás ao despertar. */
+    drawAwakeningProps(ctx, rect, def) {
+        const t = this.t;
+        switch (def.id) {
+            case 'ravi':
+                this.drawFlyingCap(ctx, rect.x + rect.w * 0.79, rect.y + 220, -0.55 + Math.sin(t * 2.6) * 0.05, 1.35);
+                this.drawFlyingBag(ctx, rect.x + rect.w * 0.17, rect.y + 250, 0.62 + Math.sin(t * 2.2) * 0.05, 1.2);
+                this.drawFlyingBox(ctx, rect.x + rect.w * 0.25, rect.y + 128, -0.35, 0.95);
+                this.drawFlyingBox(ctx, rect.x + rect.w * 0.69, rect.y + 344, 0.28, 0.78);
+                break;
+            case 'miriam':
+                this.drawFlyingHelmet(ctx, rect.x + rect.w * 0.8, rect.y + 220, -0.5 + Math.sin(t * 2.4) * 0.05, 1.25);
+                this.drawFlyingAxe(ctx, rect.x + rect.w * 0.16, rect.y + 300, 0.6 + Math.sin(t * 2) * 0.05, 1.05);
+                break;
+            case 'kael':
+                this.drawFlyingWrench(ctx, rect.x + rect.w * 0.8, rect.y + 220, -0.7 + Math.sin(t * 2.1) * 0.06, 1.2);
+                this.drawFlyingRadio(ctx, rect.x + rect.w * 0.17, rect.y + 290, 0.55 + Math.sin(t * 2.5) * 0.05, 1);
+                this.drawFlyingBolt(ctx, rect.x + rect.w * 0.26, rect.y + 150, 0.3, 0.9);
+                this.drawFlyingBolt(ctx, rect.x + rect.w * 0.71, rect.y + 380, -0.4, 0.7);
+                break;
+            case 'ozric':
+                this.drawFlyingChain(ctx, rect.x + rect.w * 0.17, rect.y + 260, 0.6 + Math.sin(t * 2.3) * 0.05, 1.1);
+                this.drawFlyingChain(ctx, rect.x + rect.w * 0.82, rect.y + 330, -0.45 + Math.sin(t * 2) * 0.05, 0.9);
+                this.drawFlyingFeather(ctx, rect.x + rect.w * 0.72, rect.y + 160, -0.4, 1, '#2a1620', '#ff3357');
+                break;
+            case 'elodie':
+                this.drawFlyingPage(ctx, rect.x + rect.w * 0.19, rect.y + 240, 0.5 + Math.sin(t * 2.2) * 0.05, 1.05);
+                this.drawFlyingPage(ctx, rect.x + rect.w * 0.81, rect.y + 320, -0.6 + Math.sin(t * 2.5) * 0.05, 0.9);
+                this.drawFlyingFeather(ctx, rect.x + rect.w * 0.72, rect.y + 150, -0.3, 1.1, '#fff4cd', '#ffe08a');
+                this.drawFlyingFeather(ctx, rect.x + rect.w * 0.28, rect.y + 380, 0.5, 0.8, '#fff4cd', '#ffe08a');
+                break;
+            case 'thryc':
+                this.drawFlyingShard(ctx, rect.x + rect.w * 0.18, rect.y + 240, 0.4 + Math.sin(t * 2.2) * 0.05, 1.1);
+                this.drawFlyingShard(ctx, rect.x + rect.w * 0.8, rect.y + 300, -0.5 + Math.sin(t * 2.5) * 0.05, 1.25);
+                this.drawFlyingShard(ctx, rect.x + rect.w * 0.72, rect.y + 150, 0.2, 0.8);
+                this.drawFlyingShard(ctx, rect.x + rect.w * 0.27, rect.y + 390, -0.3, 0.7);
+                break;
+        }
+    }
+    drawFlyingHelmet(ctx, x, y, rotation, scale) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+        ctx.scale(scale, scale);
+        ctx.strokeStyle = 'rgba(255,209,102,0.25)';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.moveTo(-34 - i * 8, 8 + i * 7);
+            ctx.lineTo(-60 - i * 12, 20 + i * 10);
+            ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.moveTo(-26, 6);
+        ctx.quadraticCurveTo(-24, -28, 0, -30);
+        ctx.quadraticCurveTo(24, -28, 26, 6);
+        ctx.closePath();
+        ctx.fillStyle = '#c9412f';
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 3;
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-28, 4);
+        ctx.quadraticCurveTo(0, 18, 32, 4);
+        ctx.lineTo(28, -4);
+        ctx.quadraticCurveTo(0, 8, -26, -2);
+        ctx.closePath();
+        ctx.fillStyle = '#8f2b22';
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-4, -30);
+        ctx.quadraticCurveTo(0, -48, 6, -30);
+        ctx.closePath();
+        ctx.fillStyle = '#f2e7c9';
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-24, -8);
+        ctx.quadraticCurveTo(0, -16, 24, -8);
+        ctx.strokeStyle = '#f2e7c9';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.restore();
+    }
+    drawFlyingAxe(ctx, x, y, rotation, scale) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+        ctx.scale(scale, scale);
+        ctx.strokeStyle = 'rgba(255,155,60,0.25)';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 2; i++) {
+            ctx.beginPath();
+            ctx.moveTo(-24 - i * 8, 30 + i * 8);
+            ctx.lineTo(-48 - i * 12, 44 + i * 12);
+            ctx.stroke();
+        }
+        ctx.strokeStyle = '#3a2a22';
+        ctx.lineWidth = 7;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-8, 34);
+        ctx.lineTo(8, -30);
+        ctx.stroke();
+        ctx.strokeStyle = '#6b4a35';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(-8, 34);
+        ctx.lineTo(8, -30);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(6, -26);
+        ctx.quadraticCurveTo(34, -36, 38, -8);
+        ctx.quadraticCurveTo(20, -12, 10, -8);
+        ctx.closePath();
+        ctx.fillStyle = '#d8dde8';
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 2.5;
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+    }
+    drawFlyingWrench(ctx, x, y, rotation, scale) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+        ctx.scale(scale, scale);
+        ctx.strokeStyle = 'rgba(111,242,255,0.25)';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 2; i++) {
+            ctx.beginPath();
+            ctx.moveTo(-22 - i * 8, 26 + i * 8);
+            ctx.lineTo(-46 - i * 12, 40 + i * 12);
+            ctx.stroke();
+        }
+        ctx.strokeStyle = '#b9c2d6';
+        ctx.lineWidth = 7;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-18, 26);
+        ctx.lineTo(12, -20);
+        ctx.stroke();
+        ctx.strokeStyle = '#6f7890';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-18, 26);
+        ctx.lineTo(12, -20);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(16, -26, 12, 0.5, TAU - 0.5);
+        ctx.strokeStyle = '#b9c2d6';
+        ctx.lineWidth = 7;
+        ctx.stroke();
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+    }
+    drawFlyingRadio(ctx, x, y, rotation, scale) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+        ctx.scale(scale, scale);
+        ctx.strokeStyle = 'rgba(111,242,255,0.22)';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 2; i++) {
+            ctx.beginPath();
+            ctx.moveTo(-22 - i * 8, 24 + i * 8);
+            ctx.lineTo(-46 - i * 12, 36 + i * 12);
+            ctx.stroke();
+        }
+        roundRectPath(ctx, -18, -26, 36, 52, 6);
+        ctx.fillStyle = '#26304b';
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 3;
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#6ff2ff';
+        ctx.fillRect(-12, -18, 24, 14);
+        ctx.fillStyle = '#111827';
+        for (let i = 0; i < 3; i++)
+            ctx.fillRect(-12, 2 + i * 6, 24, 3);
+        ctx.strokeStyle = '#b9c2d6';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(12, -26);
+        ctx.lineTo(24, -50);
+        ctx.stroke();
+        ctx.restore();
+    }
+    drawFlyingBolt(ctx, x, y, rotation, scale) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+        ctx.scale(scale, scale);
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const a = (i / 6) * TAU;
+            const px = Math.cos(a) * 9;
+            const py = Math.sin(a) * 9;
+            if (i === 0)
+                ctx.moveTo(px, py);
+            else
+                ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fillStyle = '#9aa3b8';
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 2;
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, 0, 3.5, 0, TAU);
+        ctx.fillStyle = '#26304b';
+        ctx.fill();
+        ctx.restore();
+    }
+    drawFlyingChain(ctx, x, y, rotation, scale) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+        ctx.scale(scale, scale);
+        ctx.strokeStyle = 'rgba(255,51,87,0.25)';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 2; i++) {
+            ctx.beginPath();
+            ctx.moveTo(-24 - i * 8, 22 + i * 8);
+            ctx.lineTo(-48 - i * 12, 34 + i * 12);
+            ctx.stroke();
+        }
+        for (let i = 0; i < 4; i++) {
+            const px = i * 14 - 20;
+            const py = Math.sin(i * 1.3) * 8;
+            ctx.save();
+            ctx.translate(px, py);
+            ctx.rotate(i % 2 === 0 ? 0.3 : -0.3);
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 5, 9, 0, 0, TAU);
+            ctx.strokeStyle = '#8a8f9e';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.strokeStyle = INK;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+        }
+        ctx.restore();
+    }
+    drawFlyingFeather(ctx, x, y, rotation, scale, fill, edge) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+        ctx.scale(scale, scale);
+        ctx.strokeStyle = hexToRgba(edge, 0.25);
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 2; i++) {
+            ctx.beginPath();
+            ctx.moveTo(-18 - i * 6, 10 + i * 6);
+            ctx.lineTo(-42 - i * 10, 22 + i * 10);
+            ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.moveTo(0, -26);
+        ctx.quadraticCurveTo(18, -6, 8, 26);
+        ctx.quadraticCurveTo(-2, 8, 0, -26);
+        ctx.closePath();
+        ctx.fillStyle = fill;
+        ctx.strokeStyle = edge;
+        ctx.lineWidth = 2;
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, -24);
+        ctx.quadraticCurveTo(6, 0, 8, 24);
+        ctx.strokeStyle = edge;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+    }
+    drawFlyingPage(ctx, x, y, rotation, scale) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+        ctx.scale(scale, scale);
+        ctx.strokeStyle = 'rgba(255,224,138,0.25)';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 2; i++) {
+            ctx.beginPath();
+            ctx.moveTo(-24 - i * 8, 24 + i * 8);
+            ctx.lineTo(-48 - i * 12, 38 + i * 12);
+            ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.moveTo(-18, -24);
+        ctx.lineTo(18, -20);
+        ctx.lineTo(14, 26);
+        ctx.lineTo(-22, 22);
+        ctx.closePath();
+        ctx.fillStyle = '#f8f4ea';
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 2.5;
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(23,18,28,0.35)';
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(-12, -12 + i * 9);
+            ctx.lineTo(10, -10 + i * 9);
+            ctx.stroke();
+        }
+        ctx.strokeStyle = '#ffe08a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 6, 6, 0, TAU);
+        ctx.stroke();
+        ctx.restore();
+    }
+    drawFlyingShard(ctx, x, y, rotation, scale) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+        ctx.scale(scale, scale);
+        ctx.strokeStyle = 'rgba(180,139,255,0.25)';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 2; i++) {
+            ctx.beginPath();
+            ctx.moveTo(-20 - i * 7, 22 + i * 7);
+            ctx.lineTo(-44 - i * 11, 36 + i * 11);
+            ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.moveTo(0, -28);
+        ctx.lineTo(12, -4);
+        ctx.lineTo(4, 28);
+        ctx.lineTo(-8, 2);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(111,242,255,0.32)';
+        ctx.strokeStyle = '#b48bff';
+        ctx.lineWidth = 2;
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, -22);
+        ctx.lineTo(6, -4);
+        ctx.stroke();
+        ctx.restore();
+    }
     /** Raio irregular usado nos efeitos elétricos. */
     drawLightning(ctx, x1, y1, x2, y2, seed, color) {
         const steps = 6;
@@ -1007,6 +1795,21 @@ export class ComicScene {
         if (def) {
             const size = Math.min(rect.w * 0.64, rect.h * 0.92);
             drawCharacterPortrait(ctx, def, cx, cy + 8, size, this.t, false);
+            // Antes do despertar, o herói aparece em silhueta. O quadro seguinte
+            // é quem revela a forma desperta em cores.
+            if (this.phase === 'intro' && COMIC_INTRO_STAGES.has(this.stage.id) && this.page === 0) {
+                ctx.save();
+                ctx.fillStyle = 'rgba(3,5,12,0.68)';
+                ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+                const rim = ctx.createRadialGradient(cx, cy + 8, size * 0.18, cx, cy + 8, size * 0.62);
+                rim.addColorStop(0, 'rgba(0,0,0,0)');
+                rim.addColorStop(0.62, 'rgba(0,0,0,0)');
+                rim.addColorStop(0.82, hexToRgba(color, 0.28));
+                rim.addColorStop(1, hexToRgba(color, 0));
+                ctx.fillStyle = rim;
+                ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+                ctx.restore();
+            }
         }
     }
     // -------------------------------------------------------- textos e balões

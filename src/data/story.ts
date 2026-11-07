@@ -112,6 +112,7 @@ export const STORY: Record<number, StoryChapter> = {
       n('Rodovia dos Imortais, 06h10. O sol nascia cor de ferrugem. Miriam liderava um comboio de ônibus e carros com quarenta e três sobreviventes.'),
       miriam('Manter distância. Faróis apagados. Quem não consegue dirigir, vai no meio. Ninguém fica para trás.'),
       n('Uma explosão levantou asfalto à frente. O primeiro saqueador carbonizado saiu do fogo como se tivesse nascido dele.'),
+      n('O saqueador avançou. Miriam ergueu o braço marcado pelas chamas — e o magma sob a pele respondeu. Não era fogo. Era uma promessa que ela ainda não tinha desaprendido.'),
     ],
     [
       n('O comboio parou no acostamento. Miriam contou as cabeças duas vezes. Quarenta e três. Ninguém a menos.'),
@@ -190,6 +191,7 @@ export const STORY: Record<number, StoryChapter> = {
       n('Plataforma Amanhecer, 04h00. O lugar onde Kael cresceu cheirava a combustível e infância. O orfanato ficava a duzentos metros da doca.'),
       kael('Eu consertava rádios aqui. A Dra. Sora dizia que eu tinha mãos de relojoeiro e cabeça de foguete. Ela não estava errada.'),
       n('A antena da plataforma estava morta. No chão, marcas de algo que arrastou corpos para dentro da doca.'),
+      n('Kael encostou a mão no console morto. A gravidade ao redor dobrou, e a plataforma inteira pareceu esquecer para onde caía. O Ferrato não consertava nada. Mas, pela primeira vez, Kael teve o que precisava para tentar.'),
     ],
     [
       n('A sentinela de doca caiu. Kael recuperou um chip com a voz da Dra. Sora: "Se você ouvir isso, não venha. Conserte o mundo de outro jeito."'),
@@ -269,6 +271,7 @@ export const STORY: Record<number, StoryChapter> = {
       n('Tribunal de Ossos, tempo incerto. Ozric era o carrasco do Abismo. A fila de almas não tinha fim, e o trono do Barão exigia sentenças.'),
       ozric('A próxima alma era uma criança. Ela protegeu o irmão do fogo. O crime dela era ter sido amada.'),
       n('O Barão ordenou a corrupção. Ozric baixou a foice e, pela primeira vez, não obedeceu.'),
+      n('A foice parou no ar. No peito de Ozric, uma faísca negra nasceu — pequena, teimosa, sua. O Barão chamou aquilo de traição. A criança chamou de outra coisa.'),
     ],
     [
       n('A criança foi poupada. O Barão chamou aquilo de traição. Ozric chamou de justiça.'),
@@ -349,6 +352,7 @@ export const STORY: Record<number, StoryChapter> = {
       n('Noviciado da Aurora, tempo incerto. Élodie era aprendiz da Ordem. Seu voto era catalogar e selar, nunca lutar.'),
       elodie('Eu decorava os nomes dos anjos enquanto o céu caía. A Mestra Aurélia dizia que a fé era um lugar seguro.'),
       n('O primeiro vitral se partiu durante a cerimônia. O primeiro irmão caiu antes do amém.'),
+      n('O vitral desabou sobre o coro. Élodie ergueu a lâmina que jurara nunca usar — e a luz da Aurora respondeu, não para purificar, mas para proteger.'),
     ],
     [
       n('Élodie salvou os noviços. Pela primeira vez, usou a lâmina para cortar o que ameaçava, não para selar o que doía.'),
@@ -429,6 +433,7 @@ export const STORY: Record<number, StoryChapter> = {
       n('Mar de Ecos, tempo nenhum. Thryc abriu os olhos dentro de um mundo que já não existia. Havia vozes em cada grão de poeira.'),
       thryc('Eu sou o que restou de uma canção. Alguém cantou isso antes de o mundo acabar.'),
       n('Um eco antigo tentou devorar a memória. Thryc estendeu a mão e, pela primeira vez, escolheu lembrar.'),
+      n('O eco tentou devorar a lembrança. Thryc abriu a mão — e a memória virou luz. Pela primeira vez, o Nexus escolheu lembrar em vez de esquecer.'),
     ],
     [
       n('O eco se desfez. A canção continuou, agora com duas vozes. Thryc não sabia o que era saudade. Aprendeu ali.'),

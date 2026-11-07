@@ -1,6 +1,6 @@
 /** Painel de conta: login, cadastro, recuperação e sincronização do save. */
-import { cloudSync } from '../core/cloud-sync.js?v=7697375bbbf2';
-import { MAX_STAGE } from '../data/stages.js?v=7697375bbbf2';
+import { cloudSync } from '../core/cloud-sync.js?v=704597bf28d2';
+import { MAX_STAGE } from '../data/stages.js?v=704597bf28d2';
 let activePanel = null;
 function escapeHtml(value) {
     return value
