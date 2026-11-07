@@ -1,9 +1,9 @@
 /** Bootstrap do jogo: valida o canvas, inicia o loop e remove a tela de carregamento. */
-import { Game } from './core/game.js?v=3fef0c0bc335';
-import { cloudSync } from './core/cloud-sync.js?v=3fef0c0bc335';
-import { canFullscreen, enterFullscreen, toggleFullscreen, watchFullscreen } from './core/fullscreen.js?v=3fef0c0bc335';
-import { needsIOSInstallGuide } from './core/platform.js?v=3fef0c0bc335';
-import { toggleAnimeStyle, visualStyle } from './render/style.js?v=3fef0c0bc335';
+import { Game } from './core/game.js?v=c86de9ab91eb';
+import { cloudSync } from './core/cloud-sync.js?v=c86de9ab91eb';
+import { canFullscreen, enterFullscreen, toggleFullscreen, watchFullscreen } from './core/fullscreen.js?v=c86de9ab91eb';
+import { needsIOSInstallGuide } from './core/platform.js?v=c86de9ab91eb';
+import { toggleAnimeStyle, visualStyle } from './render/style.js?v=c86de9ab91eb';
 function hideLoading() {
     const loading = document.getElementById('loading');
     if (!loading)
@@ -35,6 +35,10 @@ try {
     }
     const game = new Game(canvas);
     game.start();
+    // Protótipo de cutscene em quadrinhos: abra o jogo com ?comic=1.
+    if (new URLSearchParams(window.location.search).get('comic') === '1') {
+        game.startComicPreview();
+    }
     // Restaura a sessão da conta e consome links de confirmação/recuperação.
     void cloudSync.init().then(({ recovery, confirmed }) => {
         if (recovery) {

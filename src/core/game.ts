@@ -22,6 +22,7 @@ import { TitleScene } from '../scenes/title.js';
 import { CharacterSelectScene } from '../scenes/characterSelect.js';
 import { GameplayScene } from '../scenes/gameplay.js';
 import { StoryScene } from '../scenes/story.js';
+import { ComicScene } from '../scenes/comic.js';
 import { VictoryScene } from '../scenes/victory.js';
 import { CreditsScene } from '../scenes/credits.js';
 import { SettingsScene } from '../scenes/settings.js';
@@ -628,6 +629,11 @@ export class Game {
 
   gotoTutorial(onDone: () => void): void {
     this.transitionTo(() => this.setScene(new TutorialScene(this, onDone)));
+  }
+
+  /** Protótipo: abre a abertura do Capítulo 1 em estilo quadrinhos. */
+  startComicPreview(): void {
+    this.setScene(new ComicScene(this, getStage(1), 'intro', () => this.showTitle()));
   }
 
   // ------------------------------------------------------------- cenas

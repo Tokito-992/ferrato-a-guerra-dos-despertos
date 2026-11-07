@@ -1,26 +1,27 @@
 /** Núcleo do jogo: loop, troca de cenas, transições, hitstop e persistência. */
-import { CHARACTERS } from '../data/characters.js?v=3fef0c0bc335';
-import { getStage, MAX_STAGE } from '../data/stages.js?v=3fef0c0bc335';
-import { STORY } from '../data/story.js?v=3fef0c0bc335';
-import { AudioEngine } from './audio.js?v=3fef0c0bc335';
-import { Input } from './input.js?v=3fef0c0bc335';
-import { ParticleSystem } from './particles.js?v=3fef0c0bc335';
-import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=3fef0c0bc335';
-import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=3fef0c0bc335';
-import { needsIOSInstallGuide } from './platform.js?v=3fef0c0bc335';
-import { cloudSync } from './cloud-sync.js?v=3fef0c0bc335';
-import { showInstallGuide } from '../ui/install-guide.js?v=3fef0c0bc335';
-import { showAccountPanel } from '../ui/account-panel.js?v=3fef0c0bc335';
-import { clamp, hexToRgba } from './math.js?v=3fef0c0bc335';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=3fef0c0bc335';
-import { TitleScene } from '../scenes/title.js?v=3fef0c0bc335';
-import { CharacterSelectScene } from '../scenes/characterSelect.js?v=3fef0c0bc335';
-import { GameplayScene } from '../scenes/gameplay.js?v=3fef0c0bc335';
-import { StoryScene } from '../scenes/story.js?v=3fef0c0bc335';
-import { VictoryScene } from '../scenes/victory.js?v=3fef0c0bc335';
-import { CreditsScene } from '../scenes/credits.js?v=3fef0c0bc335';
-import { SettingsScene } from '../scenes/settings.js?v=3fef0c0bc335';
-import { TutorialScene } from '../scenes/tutorial.js?v=3fef0c0bc335';
+import { CHARACTERS } from '../data/characters.js?v=c86de9ab91eb';
+import { getStage, MAX_STAGE } from '../data/stages.js?v=c86de9ab91eb';
+import { STORY } from '../data/story.js?v=c86de9ab91eb';
+import { AudioEngine } from './audio.js?v=c86de9ab91eb';
+import { Input } from './input.js?v=c86de9ab91eb';
+import { ParticleSystem } from './particles.js?v=c86de9ab91eb';
+import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=c86de9ab91eb';
+import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=c86de9ab91eb';
+import { needsIOSInstallGuide } from './platform.js?v=c86de9ab91eb';
+import { cloudSync } from './cloud-sync.js?v=c86de9ab91eb';
+import { showInstallGuide } from '../ui/install-guide.js?v=c86de9ab91eb';
+import { showAccountPanel } from '../ui/account-panel.js?v=c86de9ab91eb';
+import { clamp, hexToRgba } from './math.js?v=c86de9ab91eb';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=c86de9ab91eb';
+import { TitleScene } from '../scenes/title.js?v=c86de9ab91eb';
+import { CharacterSelectScene } from '../scenes/characterSelect.js?v=c86de9ab91eb';
+import { GameplayScene } from '../scenes/gameplay.js?v=c86de9ab91eb';
+import { StoryScene } from '../scenes/story.js?v=c86de9ab91eb';
+import { ComicScene } from '../scenes/comic.js?v=c86de9ab91eb';
+import { VictoryScene } from '../scenes/victory.js?v=c86de9ab91eb';
+import { CreditsScene } from '../scenes/credits.js?v=c86de9ab91eb';
+import { SettingsScene } from '../scenes/settings.js?v=c86de9ab91eb';
+import { TutorialScene } from '../scenes/tutorial.js?v=c86de9ab91eb';
 /** Posições normalizadas usadas quando não há layout livre salvo. */
 function presetTouchPositions(layout, dock) {
     const y = dock === 'top' ? 0.1 : 0.9;
@@ -557,6 +558,10 @@ export class Game {
     }
     gotoTutorial(onDone) {
         this.transitionTo(() => this.setScene(new TutorialScene(this, onDone)));
+    }
+    /** Protótipo: abre a abertura do Capítulo 1 em estilo quadrinhos. */
+    startComicPreview() {
+        this.setScene(new ComicScene(this, getStage(1), 'intro', () => this.showTitle()));
     }
     // ------------------------------------------------------------- cenas
     setScene(scene) {

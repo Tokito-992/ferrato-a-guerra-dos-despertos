@@ -1,8 +1,8 @@
 /** Ilustração procedural de inimigos e chefes. */
-import { clamp, hexToRgba, mixColor, TAU } from '../core/math.js?v=3fef0c0bc335';
-import { getStage } from '../data/stages.js?v=3fef0c0bc335';
-import { visualStyle } from './style.js?v=3fef0c0bc335';
-import { glow, joint, limb, roundRectPath } from './theme.js?v=3fef0c0bc335';
+import { clamp, hexToRgba, mixColor, TAU } from '../core/math.js?v=c86de9ab91eb';
+import { getStage } from '../data/stages.js?v=c86de9ab91eb';
+import { visualStyle } from './style.js?v=c86de9ab91eb';
+import { glow, joint, limb, roundRectPath } from './theme.js?v=c86de9ab91eb';
 function tint(color, flash) {
     return flash > 0 ? mixColor(color, '#ffffff', clamp(flash * 4.5, 0, 0.9)) : color;
 }

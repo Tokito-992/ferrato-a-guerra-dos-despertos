@@ -39,6 +39,11 @@ try {
   const game = new Game(canvas);
   game.start();
 
+  // Protótipo de cutscene em quadrinhos: abra o jogo com ?comic=1.
+  if (new URLSearchParams(window.location.search).get('comic') === '1') {
+    game.startComicPreview();
+  }
+
   // Restaura a sessão da conta e consome links de confirmação/recuperação.
   void cloudSync.init().then(({ recovery, confirmed }) => {
     if (recovery) {
