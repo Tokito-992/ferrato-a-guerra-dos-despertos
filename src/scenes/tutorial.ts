@@ -1,6 +1,7 @@
 /** Tutorial ilustrado de abertura: controles, combate, Câmara do Coração e celular. */
 
 import type { Game, Scene } from '../core/game.js';
+import { TITLE_THEME_INDEX } from '../core/audio.js';
 import { clamp, hexToRgba, TAU } from '../core/math.js';
 import { drawTitleBackground } from '../render/backgrounds.js';
 import { drawCharacterSilhouette } from '../render/characters.js';
@@ -97,7 +98,7 @@ export class TutorialScene implements Scene {
   ) {}
 
   enter(): void {
-    this.game.audio.playMusic(35);
+    this.game.audio.playMusic(TITLE_THEME_INDEX);
     this.game.audio.playAmbience('cosmic');
     this.page = 0;
     this.t = 0;

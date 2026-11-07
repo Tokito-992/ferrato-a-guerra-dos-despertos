@@ -1,11 +1,12 @@
 /** Tela de vitória: o Véu se fecha, os seis Despertos respiram. */
-import { CHARACTERS, CHARACTER_ORDER } from '../data/characters.js?v=89d06180c01f';
-import { MAX_STAGE } from '../data/stages.js?v=89d06180c01f';
-import { clamp, hexToRgba, TAU } from '../core/math.js?v=89d06180c01f';
-import { drawTitleBackground } from '../render/backgrounds.js?v=89d06180c01f';
-import { drawCharacterPortrait } from '../render/characters.js?v=89d06180c01f';
-import { FONTS, glow, label, panel } from '../render/theme.js?v=89d06180c01f';
-import { Menu } from '../ui/menu.js?v=89d06180c01f';
+import { TITLE_THEME_INDEX } from '../core/audio.js?v=9c45571a7549';
+import { CHARACTERS, CHARACTER_ORDER } from '../data/characters.js?v=9c45571a7549';
+import { MAX_STAGE } from '../data/stages.js?v=9c45571a7549';
+import { clamp, hexToRgba, TAU } from '../core/math.js?v=9c45571a7549';
+import { drawTitleBackground } from '../render/backgrounds.js?v=9c45571a7549';
+import { drawCharacterPortrait } from '../render/characters.js?v=9c45571a7549';
+import { FONTS, glow, label, panel } from '../render/theme.js?v=9c45571a7549';
+import { Menu } from '../ui/menu.js?v=9c45571a7549';
 export class VictoryScene {
     constructor(game, charId) {
         this.game = game;
@@ -19,7 +20,7 @@ export class VictoryScene {
         ]);
     }
     enter() {
-        this.game.audio.playMusic(35);
+        this.game.audio.playMusic(TITLE_THEME_INDEX);
         this.game.audio.playAmbience('cosmic');
         this.game.audio.sfx('victory');
         this.game.persist();

@@ -1,26 +1,26 @@
 /** Núcleo do jogo: loop, troca de cenas, transições, hitstop e persistência. */
-import { CHARACTERS } from '../data/characters.js?v=89d06180c01f';
-import { getStage, MAX_STAGE } from '../data/stages.js?v=89d06180c01f';
-import { STORY } from '../data/story.js?v=89d06180c01f';
-import { AudioEngine } from './audio.js?v=89d06180c01f';
-import { Input } from './input.js?v=89d06180c01f';
-import { ParticleSystem } from './particles.js?v=89d06180c01f';
-import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=89d06180c01f';
-import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=89d06180c01f';
-import { needsIOSInstallGuide } from './platform.js?v=89d06180c01f';
-import { cloudSync } from './cloud-sync.js?v=89d06180c01f';
-import { showInstallGuide } from '../ui/install-guide.js?v=89d06180c01f';
-import { showAccountPanel } from '../ui/account-panel.js?v=89d06180c01f';
-import { clamp, hexToRgba } from './math.js?v=89d06180c01f';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=89d06180c01f';
-import { TitleScene } from '../scenes/title.js?v=89d06180c01f';
-import { CharacterSelectScene } from '../scenes/characterSelect.js?v=89d06180c01f';
-import { GameplayScene } from '../scenes/gameplay.js?v=89d06180c01f';
-import { ComicScene } from '../scenes/comic.js?v=89d06180c01f';
-import { VictoryScene } from '../scenes/victory.js?v=89d06180c01f';
-import { CreditsScene } from '../scenes/credits.js?v=89d06180c01f';
-import { SettingsScene } from '../scenes/settings.js?v=89d06180c01f';
-import { TutorialScene } from '../scenes/tutorial.js?v=89d06180c01f';
+import { CHARACTERS } from '../data/characters.js?v=9c45571a7549';
+import { getStage, MAX_STAGE } from '../data/stages.js?v=9c45571a7549';
+import { STORY } from '../data/story.js?v=9c45571a7549';
+import { AudioEngine } from './audio.js?v=9c45571a7549';
+import { Input } from './input.js?v=9c45571a7549';
+import { ParticleSystem } from './particles.js?v=9c45571a7549';
+import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=9c45571a7549';
+import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=9c45571a7549';
+import { needsIOSInstallGuide } from './platform.js?v=9c45571a7549';
+import { cloudSync } from './cloud-sync.js?v=9c45571a7549';
+import { showInstallGuide } from '../ui/install-guide.js?v=9c45571a7549';
+import { showAccountPanel } from '../ui/account-panel.js?v=9c45571a7549';
+import { clamp, hexToRgba } from './math.js?v=9c45571a7549';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=9c45571a7549';
+import { TitleScene } from '../scenes/title.js?v=9c45571a7549';
+import { CharacterSelectScene } from '../scenes/characterSelect.js?v=9c45571a7549';
+import { GameplayScene } from '../scenes/gameplay.js?v=9c45571a7549';
+import { ComicScene } from '../scenes/comic.js?v=9c45571a7549';
+import { VictoryScene } from '../scenes/victory.js?v=9c45571a7549';
+import { CreditsScene } from '../scenes/credits.js?v=9c45571a7549';
+import { SettingsScene } from '../scenes/settings.js?v=9c45571a7549';
+import { TutorialScene } from '../scenes/tutorial.js?v=9c45571a7549';
 /** Posições normalizadas usadas quando não há layout livre salvo. */
 function presetTouchPositions(layout, dock) {
     const y = dock === 'top' ? 0.1 : 0.9;

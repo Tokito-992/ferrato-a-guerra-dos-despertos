@@ -1,6 +1,7 @@
 /** Configurações: layout dos controles de toque, dock, áudio e tutorial. */
 
 import type { Game, Scene } from '../core/game.js';
+import { TITLE_THEME_INDEX } from '../core/audio.js';
 import { hexToRgba } from '../core/math.js';
 import { drawTitleBackground } from '../render/backgrounds.js';
 import { drawCharacterSilhouette } from '../render/characters.js';
@@ -20,7 +21,7 @@ export class SettingsScene implements Scene {
   }
 
   enter(): void {
-    this.game.audio.playMusic(35);
+    this.game.audio.playMusic(TITLE_THEME_INDEX);
     this.game.audio.playAmbience('cosmic');
     this.buildMenu();
   }

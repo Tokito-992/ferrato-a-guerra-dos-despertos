@@ -1,8 +1,9 @@
 /** Créditos finais com rolagem cinematográfica. */
-import { CREDITS, TITLE_QUOTE } from '../data/story.js?v=89d06180c01f';
-import { clamp, hexToRgba } from '../core/math.js?v=89d06180c01f';
-import { drawTitleBackground } from '../render/backgrounds.js?v=89d06180c01f';
-import { FONTS, label } from '../render/theme.js?v=89d06180c01f';
+import { TITLE_THEME_INDEX } from '../core/audio.js?v=9c45571a7549';
+import { CREDITS, TITLE_QUOTE } from '../data/story.js?v=9c45571a7549';
+import { clamp, hexToRgba } from '../core/math.js?v=9c45571a7549';
+import { drawTitleBackground } from '../render/backgrounds.js?v=9c45571a7549';
+import { FONTS, label } from '../render/theme.js?v=9c45571a7549';
 const LINE_H = 78;
 export class CreditsScene {
     constructor(game) {
@@ -12,7 +13,7 @@ export class CreditsScene {
         this.finished = false;
     }
     enter() {
-        this.game.audio.playMusic(35);
+        this.game.audio.playMusic(TITLE_THEME_INDEX);
         this.game.audio.playAmbience('cosmic');
     }
     finish() {

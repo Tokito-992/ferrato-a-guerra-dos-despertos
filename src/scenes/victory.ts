@@ -1,6 +1,7 @@
 /** Tela de vitória: o Véu se fecha, os seis Despertos respiram. */
 
 import type { Game, Scene } from '../core/game.js';
+import { TITLE_THEME_INDEX } from '../core/audio.js';
 import type { CharacterId } from '../data/characters.js';
 import { CHARACTERS, CHARACTER_ORDER } from '../data/characters.js';
 import { MAX_STAGE } from '../data/stages.js';
@@ -27,7 +28,7 @@ export class VictoryScene implements Scene {
   }
 
   enter(): void {
-    this.game.audio.playMusic(35);
+    this.game.audio.playMusic(TITLE_THEME_INDEX);
     this.game.audio.playAmbience('cosmic');
     this.game.audio.sfx('victory');
     this.game.persist();

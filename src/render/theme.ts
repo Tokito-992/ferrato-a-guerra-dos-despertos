@@ -82,11 +82,13 @@ export function label(
     glow?: string;
     alpha?: number;
     spacing?: number;
+    /** Estilo tipográfico opcional (ex.: itálico para citações). */
+    style?: 'normal' | 'italic';
   } = {},
 ): void {
   ctx.save();
-  ctx.globalAlpha = opts.alpha ?? 1;
-  ctx.font = `${opts.weight ?? 600} ${size}px ${opts.font ?? FONTS.ui}`;
+  ctx.globalAlpha = ctx.globalAlpha * (opts.alpha ?? 1);
+  ctx.font = `${opts.style ? `${opts.style} ` : ''}${opts.weight ?? 600} ${size}px ${opts.font ?? FONTS.ui}`;
   ctx.textAlign = opts.align ?? 'left';
   ctx.textBaseline = opts.baseline ?? 'alphabetic';
   if (opts.spacing && opts.spacing !== 0) {

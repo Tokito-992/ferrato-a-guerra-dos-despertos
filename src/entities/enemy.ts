@@ -609,7 +609,7 @@ export class Enemy extends Combatant {
       life: 0.8,
     });
     world.particles.ring(this.x, this.centerY, this.def.accent, this.elite ? 150 : 80, 0.5, 3);
-    world.audio.sfx(this.elite ? 'explode' : 'death');
+    world.audio.sfx(this.elite ? 'eliteDown' : 'enemyDown');
     if (this.elite) {
       world.shake(0.7);
       world.flash(this.def.accent, 0.16);

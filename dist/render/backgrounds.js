@@ -2,8 +2,8 @@
  * Cenários procedurais com parallax para as seis fases e para o menu.
  * Nenhuma imagem externa é usada: tudo é desenhado no Canvas.
  */
-import { clamp, hexToRgba, TAU } from '../core/math.js?v=89d06180c01f';
-import { roundRectPath } from './theme.js?v=89d06180c01f';
+import { clamp, hexToRgba, TAU } from '../core/math.js?v=9c45571a7549';
+import { roundRectPath } from './theme.js?v=9c45571a7549';
 const W = 1280;
 const H = 720;
 /** Ruído determinístico para que o cenário não "trema" entre frames. */
@@ -3035,140 +3035,285 @@ export function drawStageBackground(ctx, stage, cameraX, time) {
     drawAmbient(ctx, stage, time);
     drawStageAtmosphere(ctx, stage, time);
 }
-/** Fundo animado do menu principal: o Nexus observando. */
+/** Fundo animado do menu principal: o Véu observando o arquivo. */
 export function drawTitleBackground(ctx, time) {
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#05030b');
-    g.addColorStop(0.55, '#150b2a');
-    g.addColorStop(1, '#08040f');
+    g.addColorStop(0, '#03020a');
+    g.addColorStop(0.42, '#120a24');
+    g.addColorStop(0.78, '#0a0618');
+    g.addColorStop(1, '#04020a');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
-    // Nebulosas.
-    const n1 = ctx.createRadialGradient(920, 300, 20, 920, 300, 480);
-    n1.addColorStop(0, 'rgba(255,138,226,0.18)');
-    n1.addColorStop(0.4, 'rgba(180,139,255,0.09)');
+    // Nebulosas em deriva lenta.
+    const driftX = Math.sin(time * 0.045) * 26;
+    const driftY = Math.cos(time * 0.037) * 18;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const n1 = ctx.createRadialGradient(994 + driftX, 248 + driftY, 20, 994 + driftX, 248 + driftY, 500);
+    n1.addColorStop(0, 'rgba(255,138,226,0.2)');
+    n1.addColorStop(0.38, 'rgba(180,139,255,0.1)');
     n1.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = n1;
     ctx.fillRect(0, 0, W, H);
-    const n2 = ctx.createRadialGradient(190, 500, 20, 190, 500, 420);
-    n2.addColorStop(0, 'rgba(86,227,255,0.1)');
+    const n2 = ctx.createRadialGradient(240 - driftX * 0.6, 520 - driftY, 20, 240, 520, 460);
+    n2.addColorStop(0, 'rgba(86,227,255,0.09)');
+    n2.addColorStop(0.6, 'rgba(86,227,255,0.025)');
     n2.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = n2;
     ctx.fillRect(0, 0, W, H);
-    // Estrelas.
-    for (let i = 0; i < 170; i++) {
-        const x = hash(i * 5) * W;
-        const y = hash(i * 9 + 2) * H;
-        const a = 0.25 + Math.abs(Math.sin(time * (0.4 + hash(i) * 1.4) + i)) * 0.6;
-        ctx.fillStyle = hexToRgba(i % 7 === 0 ? '#ff8ae2' : '#ffffff', a);
-        ctx.fillRect(x, y, i % 11 === 0 ? 2 : 1, i % 11 === 0 ? 2 : 1);
+    const n3 = ctx.createRadialGradient(700 + driftX * 0.4, 70, 10, 700, 70, 320);
+    n3.addColorStop(0, 'rgba(255,138,60,0.07)');
+    n3.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = n3;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+    // Estrelas em três profundidades.
+    for (let i = 0; i < 230; i++) {
+        const layer = i % 3;
+        const x = hash(i * 5.3) * W;
+        const y = hash(i * 9.7 + 2) * H;
+        const twinkle = 0.35 + Math.abs(Math.sin(time * (0.35 + hash(i) * 1.5) + i * 1.7)) * 0.65;
+        const alpha = (layer === 0 ? 0.16 : layer === 1 ? 0.32 : 0.58) * twinkle;
+        const size = layer === 2 ? 1.7 : 1;
+        ctx.fillStyle = hexToRgba(i % 9 === 0 ? '#ff8ae2' : i % 13 === 0 ? '#56e3ff' : '#ffffff', alpha);
+        ctx.fillRect(x, y, size, size);
+        if (i % 41 === 0) {
+            ctx.strokeStyle = hexToRgba('#ffffff', alpha * 0.35);
+            ctx.lineWidth = 0.7;
+            ctx.beginPath();
+            ctx.moveTo(x - 4, y + 0.5);
+            ctx.lineTo(x + 4, y + 0.5);
+            ctx.moveTo(x + 0.5, y - 4);
+            ctx.lineTo(x + 0.5, y + 4);
+            ctx.stroke();
+        }
+    }
+    // Estrela cadente ocasional.
+    const shoot = (time % 11) / 11;
+    if (shoot < 0.09) {
+        const p = shoot / 0.09;
+        const sx = 180 + p * 540;
+        const sy = 80 + p * 150;
+        const trail = ctx.createLinearGradient(sx, sy, sx - 120, sy - 34);
+        trail.addColorStop(0, 'rgba(255,255,255,0.75)');
+        trail.addColorStop(0.3, 'rgba(255,138,226,0.35)');
+        trail.addColorStop(1, 'rgba(255,138,226,0)');
+        ctx.strokeStyle = trail;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx - 120, sy - 34);
+        ctx.stroke();
     }
     // Aros do Véu.
     ctx.save();
-    ctx.translate(920, 320);
+    ctx.translate(994, 248);
     ctx.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < 5; i++) {
-        ctx.strokeStyle = hexToRgba(i % 2 ? '#b48bff' : '#ff8ae2', 0.1 + i * 0.015);
-        ctx.lineWidth = 2.4;
+    for (let i = 0; i < 6; i++) {
+        const rot = 0.12 + Math.sin(time * 0.09 + i * 0.7) * 0.05;
+        ctx.strokeStyle = hexToRgba(i % 2 ? '#b48bff' : '#ff8ae2', 0.07 + i * 0.014);
+        ctx.lineWidth = i === 0 ? 2.2 : 1.3;
         ctx.beginPath();
-        ctx.ellipse(0, 0, 210 + i * 58, 58 + i * 20, 0.16 + Math.sin(time * 0.1 + i) * 0.04, 0, TAU);
+        ctx.ellipse(0, 0, 196 + i * 46, 52 + i * 17, rot, 0, TAU);
+        ctx.stroke();
+    }
+    // Runas nos aros.
+    for (let i = 0; i < 36; i++) {
+        const a = (i / 36) * TAU + time * 0.018;
+        const rx = 378;
+        const ry = 132;
+        const x = Math.cos(a) * rx;
+        const y = Math.sin(a) * ry;
+        const len = i % 4 === 0 ? 7 : 3.5;
+        ctx.strokeStyle = hexToRgba(i % 3 === 0 ? '#ffe6a3' : '#ff8ae2', 0.13);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - Math.sin(a) * len, y + Math.cos(a) * len * 0.4);
         ctx.stroke();
     }
     ctx.restore();
-    // Olho.
-    const blink = Math.max(0, Math.sin(time * 0.42 + 2.2));
-    const open = 0.45 + (1 - Math.pow(blink, 8)) * 0.55;
+    // Olho do Véu.
+    const blinkWave = Math.max(0, Math.sin(time * 0.42 + 2.2));
+    const blink = Math.pow(blinkWave, 16);
+    const open = 1 - blink * 0.86;
+    const gazeX = Math.sin(time * 0.17) * 10 + Math.sin(time * 0.061) * 5;
+    const gazeY = Math.cos(time * 0.13) * 5;
     ctx.save();
-    ctx.translate(920, 320);
+    ctx.translate(994, 248);
+    // Órbita escura.
+    const socket = ctx.createRadialGradient(0, 0, 20, 0, 0, 230);
+    socket.addColorStop(0, 'rgba(8,4,16,0.9)');
+    socket.addColorStop(0.6, 'rgba(8,4,16,0.45)');
+    socket.addColorStop(1, 'rgba(8,4,16,0)');
+    ctx.fillStyle = socket;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 220, 140, 0, 0, TAU);
+    ctx.fill();
+    // Esclera.
+    const sclera = ctx.createRadialGradient(gazeX * 0.4, gazeY * 0.4, 6, 0, 0, 180);
+    sclera.addColorStop(0, 'rgba(255,250,255,0.95)');
+    sclera.addColorStop(0.3, 'rgba(246,220,246,0.88)');
+    sclera.addColorStop(0.7, 'rgba(205,164,240,0.58)');
+    sclera.addColorStop(1, 'rgba(130,80,200,0.22)');
+    ctx.fillStyle = sclera;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 174, 102 * open, 0, 0, TAU);
+    ctx.fill();
+    // Vasos sanguíneos muito sutis.
+    for (let i = 0; i < 7; i++) {
+        const side = i % 2 === 0 ? -1 : 1;
+        ctx.strokeStyle = 'rgba(255,120,170,0.14)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(side * 160, (hash(i) - 0.5) * 30);
+        ctx.quadraticCurveTo(side * 112, (hash(i + 3) - 0.5) * 64, side * 62, (hash(i + 7) - 0.5) * 54);
+        ctx.stroke();
+    }
+    // Íris.
+    const irisR = 52;
+    const iris = ctx.createRadialGradient(gazeX - 10, gazeY - 10, 4, gazeX, gazeY, irisR);
+    iris.addColorStop(0, '#08040e');
+    iris.addColorStop(0.32, '#2b0b4a');
+    iris.addColorStop(0.62, '#7d2bb5');
+    iris.addColorStop(0.88, '#ff8ae2');
+    iris.addColorStop(1, '#3a0a5a');
+    ctx.fillStyle = iris;
+    ctx.beginPath();
+    ctx.ellipse(gazeX, gazeY, irisR, irisR * Math.max(0.18, open), 0, 0, TAU);
+    ctx.fill();
+    // Fibras da íris.
+    ctx.save();
+    ctx.translate(gazeX, gazeY);
+    for (let i = 0; i < 30; i++) {
+        const a = (i / 30) * TAU + time * 0.01;
+        const r0 = 16 + hash(i) * 8;
+        const r1 = irisR * (0.72 + hash(i + 4) * 0.22);
+        ctx.strokeStyle = hexToRgba(i % 3 === 0 ? '#ffe6a3' : '#ff8ae2', 0.18 + hash(i) * 0.12);
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0 * open);
+        ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1 * open);
+        ctx.stroke();
+    }
+    ctx.restore();
+    // Pupila em fenda.
+    const pupilW = 9 + Math.sin(time * 0.9) * 2.4;
+    ctx.fillStyle = '#04020a';
+    ctx.beginPath();
+    ctx.ellipse(gazeX, gazeY, pupilW, 38 * open, 0, 0, TAU);
+    ctx.fill();
+    // Reflexos.
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.beginPath();
+    ctx.arc(gazeX - 16, gazeY - 15, 5.4, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath();
+    ctx.arc(gazeX + 14, gazeY + 12, 2.4, 0, TAU);
+    ctx.fill();
+    // Pálpebras.
+    ctx.strokeStyle = 'rgba(255,235,250,0.55)';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 174, 102 * open, 0, Math.PI * 1.06, Math.PI * 1.94);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,138,226,0.32)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.ellipse(0, -6, 182, 112 * open, 0, Math.PI * 1.08, Math.PI * 1.92);
+    ctx.stroke();
+    ctx.restore();
+    // Halo suave ao redor do olho.
+    ctx.save();
+    ctx.translate(994, 248);
     ctx.globalCompositeOperation = 'lighter';
-    const eg = ctx.createRadialGradient(0, 0, 8, 0, 0, 170);
-    eg.addColorStop(0, 'rgba(255,255,255,0.9)');
-    eg.addColorStop(0.12, 'rgba(255,138,226,0.75)');
-    eg.addColorStop(0.45, 'rgba(180,139,255,0.25)');
+    const eg = ctx.createRadialGradient(0, 0, 8, 0, 0, 230);
+    eg.addColorStop(0, 'rgba(255,255,255,0.1)');
+    eg.addColorStop(0.2, 'rgba(255,138,226,0.13)');
+    eg.addColorStop(0.55, 'rgba(180,139,255,0.06)');
     eg.addColorStop(1, 'rgba(180,139,255,0)');
     ctx.fillStyle = eg;
     ctx.beginPath();
-    ctx.ellipse(0, 0, 150, 92 * open, 0, 0, TAU);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 150, 92 * open, 0, 0, TAU);
-    ctx.stroke();
-    // Íris.
-    const ig = ctx.createRadialGradient(-12, -8, 4, 0, 0, 48);
-    ig.addColorStop(0, '#0a0612');
-    ig.addColorStop(0.5, '#3a0a5a');
-    ig.addColorStop(1, '#ff8ae2');
-    ctx.fillStyle = ig;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 38, 38 * open, 0, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = '#05030b';
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 7, 30 * open, 0, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.beginPath();
-    ctx.arc(-14, -12, 5, 0, TAU);
+    ctx.ellipse(0, 0, 230, 145, 0, 0, TAU);
     ctx.fill();
     ctx.restore();
-    // Fragmentos.
-    for (let i = 0; i < 18; i++) {
-        const x = hash(i * 13 + 1) * W;
-        const y = 80 + hash(i * 7 + 4) * 500;
-        const s = 4 + hash(i) * 14;
-        const a = time * (0.04 + hash(i + 2) * 0.1);
+    // Reflexo horizontal de lente.
+    const flare = ctx.createLinearGradient(660, 248, 1328, 248);
+    flare.addColorStop(0, 'rgba(255,138,226,0)');
+    flare.addColorStop(0.34, 'rgba(255,138,226,0.05)');
+    flare.addColorStop(0.5, 'rgba(255,255,255,0.2)');
+    flare.addColorStop(0.66, 'rgba(86,227,255,0.05)');
+    flare.addColorStop(1, 'rgba(86,227,255,0)');
+    ctx.fillStyle = flare;
+    ctx.fillRect(660, 246, 668, 4);
+    // Fragmentos flutuantes.
+    for (let i = 0; i < 20; i++) {
+        const depth = 0.35 + hash(i + 8) * 0.65;
+        const x = wrap(hash(i * 13 + 1) * W + time * (4 + depth * 14), W + 120, 60);
+        const y = 90 + hash(i * 7 + 4) * 470 + Math.sin(time * (0.2 + hash(i) * 0.35) + i) * 14;
+        const s = 3 + hash(i) * (7 + depth * 10);
         ctx.save();
         ctx.translate(x, y);
-        ctx.rotate(a + hash(i) * TAU);
-        ctx.fillStyle = hexToRgba(i % 3 === 0 ? '#ff8ae2' : '#b48bff', 0.12 + hash(i) * 0.12);
+        ctx.rotate(time * (0.03 + hash(i + 2) * 0.12) + hash(i) * TAU);
+        ctx.globalAlpha = 0.2 + hash(i) * 0.24;
+        ctx.fillStyle = i % 3 === 0 ? '#ff8ae2' : i % 3 === 1 ? '#b48bff' : '#ffe6a3';
         ctx.beginPath();
         ctx.moveTo(0, -s);
-        ctx.lineTo(s * 0.5, s * 0.4);
-        ctx.lineTo(-s * 0.35, s * 0.7);
+        ctx.lineTo(s * 0.56, s * 0.35);
+        ctx.lineTo(-s * 0.2, s * 0.78);
+        ctx.lineTo(-s * 0.5, s * 0.1);
         ctx.closePath();
         ctx.fill();
         ctx.restore();
     }
-    // Plataforma / silhuetas ao fundo.
-    const fg = ctx.createLinearGradient(0, 560, 0, H);
+    // Plataforma e neblina.
+    const fg = ctx.createLinearGradient(0, 548, 0, H);
     fg.addColorStop(0, 'rgba(5,3,11,0)');
-    fg.addColorStop(0.5, 'rgba(5,3,11,0.75)');
+    fg.addColorStop(0.45, 'rgba(5,3,11,0.72)');
     fg.addColorStop(1, '#05030b');
     ctx.fillStyle = fg;
-    ctx.fillRect(0, 540, W, H - 540);
-    // Chão com fissuras.
-    ctx.fillStyle = 'rgba(8,4,16,0.92)';
+    ctx.fillRect(0, 530, W, H - 530);
+    ctx.fillStyle = 'rgba(8,4,16,0.94)';
     ctx.beginPath();
-    ctx.moveTo(0, 630);
-    ctx.lineTo(W, 610);
+    ctx.moveTo(0, 632);
+    ctx.lineTo(W, 608);
     ctx.lineTo(W, H);
     ctx.lineTo(0, H);
     ctx.closePath();
     ctx.fill();
-    for (let i = 0; i < 9; i++) {
-        const x = 80 + i * 150;
-        ctx.strokeStyle = hexToRgba(i % 2 ? '#b48bff' : '#ff8ae2', 0.16);
-        ctx.lineWidth = 1.3;
+    // Fissuras com brilho.
+    for (let i = 0; i < 11; i++) {
+        const x = 60 + i * 122;
+        const glowA = 0.1 + Math.abs(Math.sin(time * 0.7 + i)) * 0.1;
+        ctx.strokeStyle = hexToRgba(i % 2 ? '#b48bff' : '#ff8ae2', glowA);
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.moveTo(x, 640);
-        ctx.lineTo(x - 20, 680);
-        ctx.lineTo(x + 16, 706);
+        ctx.lineTo(x - 22, 678);
+        ctx.lineTo(x + 14, 704);
+        ctx.lineTo(x - 4, 720);
         ctx.stroke();
     }
-    // Brasas flutuantes.
+    // Brasas subindo.
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < 40; i++) {
-        const x = (hash(i * 3) * W + time * (6 + hash(i) * 12)) % W;
-        const y = H - ((hash(i * 7) * H + time * (18 + hash(i + 2) * 40)) % (H + 60));
-        const a = 0.18 + hash(i + 3) * 0.35;
-        ctx.fillStyle = hexToRgba(i % 2 ? '#ff8ae2' : '#b48bff', a);
+    for (let i = 0; i < 46; i++) {
+        const x = (hash(i * 3) * W + time * (5 + hash(i) * 13)) % W;
+        const y = H - ((hash(i * 7) * H + time * (16 + hash(i + 2) * 44)) % (H + 60));
+        const a = 0.12 + hash(i + 3) * 0.34;
+        ctx.fillStyle = hexToRgba(i % 3 === 0 ? '#ff8ae2' : i % 3 === 1 ? '#b48bff' : '#ffe6a3', a);
         ctx.beginPath();
-        ctx.arc(x, y, 1 + hash(i) * 2.2, 0, TAU);
+        ctx.arc(x, y, 0.8 + hash(i) * 2, 0, TAU);
         ctx.fill();
     }
     ctx.restore();
+    // Vinheta.
+    const vignette = ctx.createRadialGradient(W * 0.55, H * 0.42, H * 0.18, W * 0.55, H * 0.42, H * 0.86);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(0.72, 'rgba(0,0,0,0.18)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.66)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, W, H);
 }
 //# sourceMappingURL=backgrounds.js.map

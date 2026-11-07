@@ -9,12 +9,12 @@
  * texto precisou ser reescrito. Os capítulos de abertura de arco recebem arte
  * extra e uma página inteira de despertar.
  */
-import { STORY } from '../data/story.js?v=89d06180c01f';
-import { CHARACTERS } from '../data/characters.js?v=89d06180c01f';
-import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js?v=89d06180c01f';
-import { drawStageBackground } from '../render/backgrounds.js?v=89d06180c01f';
-import { BASE, drawCharacterFigure, drawCharacterPortrait } from '../render/characters.js?v=89d06180c01f';
-import { FONTS, label, roundRectPath } from '../render/theme.js?v=89d06180c01f';
+import { STORY } from '../data/story.js?v=9c45571a7549';
+import { CHARACTERS } from '../data/characters.js?v=9c45571a7549';
+import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js?v=9c45571a7549';
+import { drawStageBackground } from '../render/backgrounds.js?v=9c45571a7549';
+import { BASE, drawCharacterFigure, drawCharacterPortrait } from '../render/characters.js?v=9c45571a7549';
+import { FONTS, label, roundRectPath } from '../render/theme.js?v=9c45571a7549';
 const PAGE_SIZE = 3;
 const GAP = 16;
 const MARGIN_X = 40;

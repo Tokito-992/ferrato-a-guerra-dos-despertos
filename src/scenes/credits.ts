@@ -1,6 +1,7 @@
 /** Créditos finais com rolagem cinematográfica. */
 
 import type { Game, Scene } from '../core/game.js';
+import { TITLE_THEME_INDEX } from '../core/audio.js';
 import { CREDITS, TITLE_QUOTE } from '../data/story.js';
 import { clamp, hexToRgba } from '../core/math.js';
 import { drawTitleBackground } from '../render/backgrounds.js';
@@ -16,7 +17,7 @@ export class CreditsScene implements Scene {
   constructor(private readonly game: Game) {}
 
   enter(): void {
-    this.game.audio.playMusic(35);
+    this.game.audio.playMusic(TITLE_THEME_INDEX);
     this.game.audio.playAmbience('cosmic');
   }
 

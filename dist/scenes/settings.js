@@ -1,10 +1,11 @@
 /** Configurações: layout dos controles de toque, dock, áudio e tutorial. */
-import { hexToRgba } from '../core/math.js?v=89d06180c01f';
-import { drawTitleBackground } from '../render/backgrounds.js?v=89d06180c01f';
-import { drawCharacterSilhouette } from '../render/characters.js?v=89d06180c01f';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=89d06180c01f';
-import { Menu } from '../ui/menu.js?v=89d06180c01f';
-import { needsIOSInstallGuide } from '../core/platform.js?v=89d06180c01f';
+import { TITLE_THEME_INDEX } from '../core/audio.js?v=9c45571a7549';
+import { hexToRgba } from '../core/math.js?v=9c45571a7549';
+import { drawTitleBackground } from '../render/backgrounds.js?v=9c45571a7549';
+import { drawCharacterSilhouette } from '../render/characters.js?v=9c45571a7549';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=9c45571a7549';
+import { Menu } from '../ui/menu.js?v=9c45571a7549';
+import { needsIOSInstallGuide } from '../core/platform.js?v=9c45571a7549';
 export class SettingsScene {
     constructor(game) {
         this.game = game;
@@ -15,7 +16,7 @@ export class SettingsScene {
         this.buildMenu();
     }
     enter() {
-        this.game.audio.playMusic(35);
+        this.game.audio.playMusic(TITLE_THEME_INDEX);
         this.game.audio.playAmbience('cosmic');
         this.buildMenu();
     }

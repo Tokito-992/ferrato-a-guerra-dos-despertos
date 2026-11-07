@@ -1,5 +1,5 @@
 /** Helpers visuais: painéis, tipografia, brilhos e barras. */
-import { clamp, hexToRgba, mixColor } from '../core/math.js?v=89d06180c01f';
+import { clamp, hexToRgba, mixColor } from '../core/math.js?v=9c45571a7549';
 export const FONTS = {
     title: '"Cinzel", "Times New Roman", serif',
     ui: '"Rajdhani", "Segoe UI", system-ui, sans-serif',
@@ -48,8 +48,8 @@ export function panel(ctx, x, y, w, h, opts = {}) {
 }
 export function label(ctx, text, x, y, size, color, opts = {}) {
     ctx.save();
-    ctx.globalAlpha = opts.alpha ?? 1;
-    ctx.font = `${opts.weight ?? 600} ${size}px ${opts.font ?? FONTS.ui}`;
+    ctx.globalAlpha = ctx.globalAlpha * (opts.alpha ?? 1);
+    ctx.font = `${opts.style ? `${opts.style} ` : ''}${opts.weight ?? 600} ${size}px ${opts.font ?? FONTS.ui}`;
     ctx.textAlign = opts.align ?? 'left';
     ctx.textBaseline = opts.baseline ?? 'alphabetic';
     if (opts.spacing && opts.spacing !== 0) {

@@ -1,9 +1,10 @@
 /** Tutorial ilustrado de abertura: controles, combate, Câmara do Coração e celular. */
-import { clamp, hexToRgba, TAU } from '../core/math.js?v=89d06180c01f';
-import { drawTitleBackground } from '../render/backgrounds.js?v=89d06180c01f';
-import { drawCharacterSilhouette } from '../render/characters.js?v=89d06180c01f';
-import { drawHeart } from '../render/hearts.js?v=89d06180c01f';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=89d06180c01f';
+import { TITLE_THEME_INDEX } from '../core/audio.js?v=9c45571a7549';
+import { clamp, hexToRgba, TAU } from '../core/math.js?v=9c45571a7549';
+import { drawTitleBackground } from '../render/backgrounds.js?v=9c45571a7549';
+import { drawCharacterSilhouette } from '../render/characters.js?v=9c45571a7549';
+import { drawHeart } from '../render/hearts.js?v=9c45571a7549';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=9c45571a7549';
 function inside(box, x, y) {
     return x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h;
 }
@@ -70,7 +71,7 @@ export class TutorialScene {
         this.nextRect = { x: 1056, y: 646, w: 150, h: 44 };
     }
     enter() {
-        this.game.audio.playMusic(35);
+        this.game.audio.playMusic(TITLE_THEME_INDEX);
         this.game.audio.playAmbience('cosmic');
         this.page = 0;
         this.t = 0;
