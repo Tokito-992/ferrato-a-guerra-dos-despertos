@@ -14,6 +14,7 @@ export const STORY = {
         n('New Haven, 17h10. O céu ainda era um céu normal. Ravi equilibrava três pizzas na bicicleta e uma promessa na cabeça: voltar antes do jantar.'),
         ravi('Se eu perder o emprego hoje, pelo menos foi por uma boa causa. Três entregas, duas ruas, uma pizza de calabresa. Fácil.'),
         n('O primeiro tremor derrubou a placa da pizzaria. O segundo trouxe algo que andava como gente e cheirava a ferrugem.'),
+        n('O rastejante saltou. Ravi fechou os olhos — e o Ferrato acordou. A bioeletricidade explodiu do seu peito, azul como um relâmpago preso no sangue.'),
     ], [
         n('A rua ficou em silêncio quando o último rastejante caiu. Ravi ainda segurava a caixa de pizza — agora vazia, com um buraco do tamanho de um punho.'),
         ravi('Mãe? Seu Jorge? Alguém...?'),

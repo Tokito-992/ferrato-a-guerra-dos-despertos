@@ -7,7 +7,7 @@ import type { Player } from '../entities/player.js';
 import { visualStyle } from './style.js';
 import { glow, joint, limb, roundRectPath } from './theme.js';
 
-interface Build {
+export interface Build {
   bob: number;
   lean: number;
   crouch: number;
@@ -27,7 +27,7 @@ interface Build {
   airborne: boolean;
 }
 
-const BASE: Build = {
+export const BASE: Build = {
   bob: 0,
   lean: 0.04,
   crouch: 0,

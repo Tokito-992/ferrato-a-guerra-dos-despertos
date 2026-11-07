@@ -1,5 +1,5 @@
 /** Câmera com suavização, limites de cenário e screen shake. */
-import { clamp, damp, rand } from './math.js?v=7f4be62fa121';
+import { clamp, damp, rand } from './math.js?v=7697375bbbf2';
 export class Camera {
     constructor(viewW, viewH) {
         this.viewW = viewW;
