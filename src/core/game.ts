@@ -556,7 +556,13 @@ export class Game {
       const go = () => this.showGameplay(stage.id, id);
       const intro = STORY[stage.id]?.intro;
       if (!skipStory && intro && intro.length > 0) {
-        this.setScene(new StoryScene(this, stage, 'intro', go));
+        // O Capítulo 1 usa a abertura em quadrinhos; os demais seguem na
+        // cutscene cinematográfica até receberem arte própria.
+        if (stage.id === 1) {
+          this.setScene(new ComicScene(this, stage, 'intro', go));
+        } else {
+          this.setScene(new StoryScene(this, stage, 'intro', go));
+        }
       } else {
         go();
       }
@@ -631,7 +637,7 @@ export class Game {
     this.transitionTo(() => this.setScene(new TutorialScene(this, onDone)));
   }
 
-  /** Protótipo: abre a abertura do Capítulo 1 em estilo quadrinhos. */
+  /** Atalho de revisão: abre direto a abertura do Capítulo 1 em quadrinhos. */
   startComicPreview(): void {
     this.setScene(new ComicScene(this, getStage(1), 'intro', () => this.showTitle()));
   }

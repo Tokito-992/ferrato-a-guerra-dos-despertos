@@ -5,8 +5,8 @@
  * pública; a proteção dos saves vem das políticas RLS criadas em
  * `supabase/schema.sql`.
  */
-import { sanitizeSave } from './save.js?v=c86de9ab91eb';
-import { isCloudConfigured, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './cloud-config.js?v=c86de9ab91eb';
+import { sanitizeSave } from './save.js?v=7f4be62fa121';
+import { isCloudConfigured, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './cloud-config.js?v=7f4be62fa121';
 export class CloudError extends Error {
     constructor(message, status = 0, code = '') {
         super(message);

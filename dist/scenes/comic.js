@@ -8,12 +8,12 @@
  * O protótipo reaproveita os mesmos `StoryBeat[]` da cutscene normal, então
  * nenhum texto precisou ser reescrito.
  */
-import { STORY } from '../data/story.js?v=c86de9ab91eb';
-import { CHARACTERS } from '../data/characters.js?v=c86de9ab91eb';
-import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js?v=c86de9ab91eb';
-import { drawStageBackground } from '../render/backgrounds.js?v=c86de9ab91eb';
-import { drawCharacterPortrait } from '../render/characters.js?v=c86de9ab91eb';
-import { FONTS, label, roundRectPath } from '../render/theme.js?v=c86de9ab91eb';
+import { STORY } from '../data/story.js?v=7f4be62fa121';
+import { CHARACTERS } from '../data/characters.js?v=7f4be62fa121';
+import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js?v=7f4be62fa121';
+import { drawStageBackground } from '../render/backgrounds.js?v=7f4be62fa121';
+import { drawCharacterPortrait } from '../render/characters.js?v=7f4be62fa121';
+import { FONTS, label, roundRectPath } from '../render/theme.js?v=7f4be62fa121';
 const PAGE_SIZE = 3;
 const GAP = 16;
 const MARGIN_X = 40;

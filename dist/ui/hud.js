@@ -1,9 +1,9 @@
 /** HUD de combate: vida, habilidade, combo, ondas e chefe. */
-import { clamp, hexToRgba } from '../core/math.js?v=c86de9ab91eb';
-import { rankColor } from '../core/rank.js?v=c86de9ab91eb';
-import { FONTS, bar, glow, label, panel, roundRectPath } from '../render/theme.js?v=c86de9ab91eb';
-import { drawCharacterPortrait } from '../render/characters.js?v=c86de9ab91eb';
-import { drawHeart } from '../render/hearts.js?v=c86de9ab91eb';
+import { clamp, hexToRgba } from '../core/math.js?v=7f4be62fa121';
+import { rankColor } from '../core/rank.js?v=7f4be62fa121';
+import { FONTS, bar, glow, label, panel, roundRectPath } from '../render/theme.js?v=7f4be62fa121';
+import { drawCharacterPortrait } from '../render/characters.js?v=7f4be62fa121';
+import { drawHeart } from '../render/hearts.js?v=7f4be62fa121';
 const VIEW_W = 1280;
 const VIEW_H = 720;
 function bannerAlpha(b) {

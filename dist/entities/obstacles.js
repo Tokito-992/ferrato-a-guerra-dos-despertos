@@ -1,7 +1,7 @@
 /** Obstáculos de arena: fraturas hostis, santuários, âncoras e sobrecargas. */
-import { clamp, rand, TAU } from '../core/math.js?v=c86de9ab91eb';
-import { drawHeart } from '../render/hearts.js?v=c86de9ab91eb';
-import { FONTS, glow, label } from '../render/theme.js?v=c86de9ab91eb';
+import { clamp, rand, TAU } from '../core/math.js?v=7f4be62fa121';
+import { drawHeart } from '../render/hearts.js?v=7f4be62fa121';
+import { FONTS, glow, label } from '../render/theme.js?v=7f4be62fa121';
 const VISUALS = {
     fracture: { name: 'FRATURA', color: '#ff5a3c', accent: '#ffd166' },
     sanctuary: { name: 'SANTUÁRIO', color: '#8df4a8', accent: '#fff4cd' },

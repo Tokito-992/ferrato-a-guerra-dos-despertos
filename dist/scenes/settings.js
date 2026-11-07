@@ -1,10 +1,10 @@
 /** Configurações: layout dos controles de toque, dock, áudio e tutorial. */
-import { hexToRgba } from '../core/math.js?v=c86de9ab91eb';
-import { drawTitleBackground } from '../render/backgrounds.js?v=c86de9ab91eb';
-import { drawCharacterSilhouette } from '../render/characters.js?v=c86de9ab91eb';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=c86de9ab91eb';
-import { Menu } from '../ui/menu.js?v=c86de9ab91eb';
-import { needsIOSInstallGuide } from '../core/platform.js?v=c86de9ab91eb';
+import { hexToRgba } from '../core/math.js?v=7f4be62fa121';
+import { drawTitleBackground } from '../render/backgrounds.js?v=7f4be62fa121';
+import { drawCharacterSilhouette } from '../render/characters.js?v=7f4be62fa121';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=7f4be62fa121';
+import { Menu } from '../ui/menu.js?v=7f4be62fa121';
+import { needsIOSInstallGuide } from '../core/platform.js?v=7f4be62fa121';
 export class SettingsScene {
     constructor(game) {
         this.game = game;
