@@ -1,7 +1,7 @@
 /** Inimigos comuns com IA própria por arquétipo. */
-import { clamp, rand, rectsOverlap, TAU } from '../core/math.js?v=9c45571a7549';
-import { Combatant } from './combatant.js?v=9c45571a7549';
-import { ENEMY_BASE, ELITE_DAMAGE_MULT, ELITE_HP_MULT } from '../data/enemies.js?v=9c45571a7549';
+import { clamp, rand, rectsOverlap, TAU } from '../core/math.js?v=be05988e5819';
+import { Combatant } from './combatant.js?v=be05988e5819';
+import { ENEMY_BASE, ELITE_DAMAGE_MULT, ELITE_HP_MULT } from '../data/enemies.js?v=be05988e5819';
 export class Enemy extends Combatant {
     constructor(stage, kind, x, elite = false) {
         const base = ENEMY_BASE[kind];
@@ -21,6 +21,12 @@ export class Enemy extends Combatant {
         this.isHovering = false;
         this.contactCooldown = 0;
         this.telegraphLabel = '';
+        /** Fúria: abaixo de 35% de vida, o inimigo acelera e encadeia golpes. */
+        this.enrage = false;
+        this.enragePulse = 0;
+        this.comboStep = 0;
+        this.aimX = 0;
+        this.aimY = 0;
         this.def = base;
         this.stage = stage;
         this.elite = elite;
@@ -43,6 +49,18 @@ export class Enemy extends Combatant {
             return 0;
         const w = Math.max(0.01, this.def.windup);
         return clamp(this.stateTime / w, 0, 1);
+    }
+    get attackRatio() {
+        if (this.state !== 'attack')
+            return 0;
+        return clamp(this.stateTime / Math.max(0.01, this.def.attackDuration), 0, 1);
+    }
+    get hpRatio() {
+        return clamp(this.hp / Math.max(1, this.maxHp), 0, 1);
+    }
+    /** Velocidade efetiva, com o bônus de fúria. */
+    get moveSpeed() {
+        return this.def.speed * (this.enrage ? 1.18 : 1);
     }
     get damageValue() {
         return this.def.damage * this.stage.difficulty * (this.elite ? ELITE_DAMAGE_MULT : 1);
@@ -77,6 +95,22 @@ export class Enemy extends Combatant {
             }
             return;
         }
+        // Fúria: um sobressalto visual e mecânico quando a criatura está por cair.
+        if (!this.enrage && this.hp > 0 && this.hp <= this.maxHp * 0.35) {
+            this.enrage = true;
+            this.enragePulse = 1.2;
+            this.comboStep = 0;
+            world.particles.ring(this.x, this.centerY, this.def.accent, 74, 0.55, 3);
+            world.particles.burst(this.x, this.centerY, 14, this.def.accent, {
+                speed: 220,
+                gravity: -80,
+                size: 3,
+                life: 0.6,
+            });
+            world.audio.sfx(this.elite ? 'roar' : 'seal');
+            world.flash(this.def.accent, this.elite ? 0.12 : 0.06);
+        }
+        this.enragePulse = Math.max(0, this.enragePulse - dt);
         if (this.hitstun > 0) {
             this.state = 'stagger';
             this.aiPhysics(dt, world, 6);
@@ -92,7 +126,7 @@ export class Enemy extends Combatant {
             this.state = 'chase';
             this.stateTime = 0;
         }
-        this.cooldown = Math.max(0, this.cooldown - dt);
+        this.cooldown = Math.max(0, this.cooldown - dt * (this.enrage ? 1.35 : 1));
         this.updateAI(dt, world);
         if (this.isHovering) {
             this.hoverMovement(dt, world);
@@ -129,13 +163,15 @@ export class Enemy extends Combatant {
         const player = world.player;
         const dx = player.x - this.x;
         const adx = Math.abs(dx);
+        this.aimX = player.x;
+        this.aimY = player.centerY;
         this.stateTime += dt;
         switch (this.def.ai) {
             case 'leaper': {
                 if (this.state === 'chase') {
                     this.faceToward(player.x);
                     if (adx > this.def.range || adx > 260) {
-                        this.vx = Math.sign(dx) * this.def.speed;
+                        this.vx = Math.sign(dx) * this.moveSpeed;
                         this.walkPhase += dt * 10;
                     }
                     else {
@@ -165,7 +201,9 @@ export class Enemy extends Combatant {
                         this.touchGroundBurst(world);
                         this.state = 'recover';
                         this.stateTime = 0;
-                        this.cooldown = this.def.attackCooldown * rand(0.9, 1.2);
+                        const combo = this.enrage && this.comboStep === 0 && adx < 300 && Math.random() < 0.4;
+                        this.comboStep = combo ? 1 : 0;
+                        this.cooldown = combo ? 0 : this.def.attackCooldown * rand(0.9, 1.2);
                     }
                 }
                 else if (this.state === 'recover' && this.stateTime > 0.35) {
@@ -180,7 +218,7 @@ export class Enemy extends Combatant {
                 if (this.state === 'chase') {
                     this.faceToward(player.x);
                     if (adx > reach) {
-                        this.vx = Math.sign(dx) * this.def.speed;
+                        this.vx = Math.sign(dx) * this.moveSpeed;
                         this.walkPhase += dt * 9;
                     }
                     else {
@@ -228,7 +266,10 @@ export class Enemy extends Combatant {
                     if (this.stateTime >= this.def.attackDuration) {
                         this.state = 'recover';
                         this.stateTime = 0;
-                        this.cooldown = this.def.attackCooldown * rand(0.85, 1.25);
+                        // Fúria encadeia um segundo golpe curto, com um respiro mínimo.
+                        const combo = this.enrage && this.comboStep === 0 && adx < this.def.range * 1.6 && Math.random() < 0.5;
+                        this.comboStep = combo ? 1 : 0;
+                        this.cooldown = combo ? 0 : this.def.attackCooldown * rand(0.85, 1.25);
                     }
                 }
                 else if (this.state === 'recover' && this.stateTime > 0.4) {
@@ -240,7 +281,7 @@ export class Enemy extends Combatant {
             case 'flyer': {
                 const targetX = player.x - Math.sign(dx) * 190 + Math.sin(this.animPhase * 1.4) * 40;
                 if (this.state === 'chase') {
-                    this.vx = clamp((targetX - this.x) * 1.6, -this.def.speed, this.def.speed);
+                    this.vx = clamp((targetX - this.x) * 1.6, -this.moveSpeed, this.moveSpeed);
                     this.faceToward(player.x);
                     if (this.cooldown <= 0 && adx < 520)
                         this.beginWindup();
@@ -248,7 +289,7 @@ export class Enemy extends Combatant {
                 else if (this.state === 'windup' && this.stateTime >= this.def.windup) {
                     this.state = 'attack';
                     this.stateTime = 0;
-                    const shots = this.elite ? 3 : 1;
+                    const shots = (this.elite ? 3 : 1) + (this.enrage ? 1 : 0);
                     for (let i = 0; i < shots; i++) {
                         const spread = (i - (shots - 1) / 2) * 0.16;
                         const angle = Math.atan2(player.centerY - (this.y - 30), player.x - this.x) + spread;
@@ -279,7 +320,7 @@ export class Enemy extends Combatant {
                 if (this.state === 'chase') {
                     this.faceToward(player.x);
                     if (adx > 190) {
-                        this.vx = Math.sign(dx) * this.def.speed;
+                        this.vx = Math.sign(dx) * this.moveSpeed;
                         this.walkPhase += dt * 12;
                     }
                     else {
@@ -305,7 +346,9 @@ export class Enemy extends Combatant {
                     if (this.stateTime > this.def.attackDuration) {
                         this.state = 'recover';
                         this.stateTime = 0;
-                        this.cooldown = this.def.attackCooldown * rand(0.9, 1.2);
+                        const combo = this.enrage && this.comboStep === 0 && Math.random() < 0.45;
+                        this.comboStep = combo ? 1 : 0;
+                        this.cooldown = combo ? 0 : this.def.attackCooldown * rand(0.9, 1.2);
                     }
                 }
                 else if (this.state === 'recover' && this.stateTime > 0.55) {
@@ -319,9 +362,9 @@ export class Enemy extends Combatant {
                     this.faceToward(player.x);
                     const ideal = 300;
                     if (adx < ideal - 60)
-                        this.vx = -Math.sign(dx) * this.def.speed;
+                        this.vx = -Math.sign(dx) * this.moveSpeed;
                     else if (adx > ideal + 80)
-                        this.vx = Math.sign(dx) * this.def.speed;
+                        this.vx = Math.sign(dx) * this.moveSpeed;
                     else
                         this.vx *= 0.85;
                     if (this.cooldown <= 0)
@@ -331,7 +374,7 @@ export class Enemy extends Combatant {
                     this.state = 'attack';
                     this.stateTime = 0;
                     const angle = Math.atan2(player.centerY - (this.y - 66), player.x - this.x);
-                    const shots = this.elite ? 3 : 1;
+                    const shots = (this.elite ? 3 : 1) + (this.enrage ? 1 : 0);
                     for (let i = 0; i < shots; i++) {
                         world.spawnProjectile({
                             x: this.x + Math.cos(angle) * 26,
@@ -374,7 +417,7 @@ export class Enemy extends Combatant {
                 if (this.state === 'chase') {
                     this.faceToward(player.x);
                     if (adx > this.def.range) {
-                        this.vx = Math.sign(dx) * this.def.speed;
+                        this.vx = Math.sign(dx) * this.moveSpeed;
                         this.walkPhase += dt * 6;
                     }
                     else {
@@ -403,7 +446,7 @@ export class Enemy extends Combatant {
                 if (this.state === 'chase') {
                     this.faceToward(player.x);
                     if (adx > 120) {
-                        this.vx = Math.sign(dx) * this.def.speed;
+                        this.vx = Math.sign(dx) * this.moveSpeed;
                         this.walkPhase += dt * 10;
                     }
                     else {
@@ -429,7 +472,9 @@ export class Enemy extends Combatant {
                     if (this.stateTime > this.def.attackDuration) {
                         this.state = 'recover';
                         this.stateTime = 0;
-                        this.cooldown = this.def.attackCooldown * rand(0.9, 1.25);
+                        const combo = this.enrage && this.comboStep === 0 && adx < this.def.range * 1.6 && Math.random() < 0.55;
+                        this.comboStep = combo ? 1 : 0;
+                        this.cooldown = combo ? 0 : this.def.attackCooldown * rand(0.9, 1.25);
                     }
                 }
                 else if (this.state === 'recover' && this.stateTime > 0.35) {
@@ -441,14 +486,14 @@ export class Enemy extends Combatant {
             case 'turret': {
                 this.faceToward(player.x);
                 if (this.state === 'chase') {
-                    this.vx = clamp((player.x - this.x) * 0.4, -this.def.speed, this.def.speed);
+                    this.vx = clamp((player.x - this.x) * 0.4, -this.moveSpeed, this.moveSpeed);
                     if (adx < 700 && this.cooldown <= 0)
                         this.beginWindup();
                 }
                 else if (this.state === 'windup' && this.stateTime >= this.def.windup) {
                     this.state = 'attack';
                     this.stateTime = 0;
-                    const count = this.elite ? 5 : 3;
+                    const count = (this.elite ? 5 : 3) + (this.enrage ? 2 : 0);
                     const baseAngle = Math.atan2(player.centerY - (this.y - 80), player.x - this.x);
                     for (let i = 0; i < count; i++) {
                         const a = baseAngle + (i - (count - 1) / 2) * 0.22;
@@ -479,7 +524,7 @@ export class Enemy extends Combatant {
                 if (this.state === 'hover' || this.state === 'chase') {
                     this.state = 'chase';
                     const targetX = player.x - Math.sign(dx) * 120;
-                    this.vx = clamp((targetX - this.x) * 1.3, -this.def.speed, this.def.speed);
+                    this.vx = clamp((targetX - this.x) * 1.3, -this.moveSpeed, this.moveSpeed);
                     this.faceToward(player.x);
                     if (this.cooldown <= 0)
                         this.beginWindup();
@@ -505,7 +550,9 @@ export class Enemy extends Combatant {
                         this.stateTime = 0;
                         this.isHovering = true;
                         this.y = Math.max(this.stage.floor - 60, this.y);
-                        this.cooldown = this.def.attackCooldown * rand(0.9, 1.2);
+                        const combo = this.enrage && this.comboStep === 0 && Math.random() < 0.5;
+                        this.comboStep = combo ? 1 : 0;
+                        this.cooldown = combo ? 0 : this.def.attackCooldown * rand(0.9, 1.2);
                         world.particles.ring(this.x, this.y, this.def.accent, 60, 0.4, 3);
                     }
                 }
@@ -522,6 +569,9 @@ export class Enemy extends Combatant {
         this.stateTime = 0;
         this.windupFlash = 0.12;
         this.telegraphLabel = this.def.windupFx;
+        // Marca o segundo golpe do combo para que ele não se repita indefinidamente.
+        if (this.comboStep === 1)
+            this.comboStep = 2;
     }
     doBruteSlam(world) {
         const radius = this.elite ? 170 : 135;

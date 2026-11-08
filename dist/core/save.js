@@ -1,7 +1,8 @@
 /** Persistência local de progresso (localStorage) — campanha de 36 capítulos. */
-import { CHARACTER_ORDER } from '../data/characters.js?v=9c45571a7549';
-import { CHAPTERS_PER_ARC, MAX_STAGE } from '../data/stages.js?v=9c45571a7549';
-import { isRank } from './rank.js?v=9c45571a7549';
+import { CHARACTER_ORDER } from '../data/characters.js?v=be05988e5819';
+import { CHAPTERS_PER_ARC, MAX_STAGE } from '../data/stages.js?v=be05988e5819';
+import { ARCHIVE_ENTRY_IDS, backfillArchiveIds } from '../data/archive.js?v=be05988e5819';
+import { isRank } from './rank.js?v=be05988e5819';
 export const TOUCH_BUTTON_IDS = [
     'left',
     'right',
@@ -71,6 +72,9 @@ function sanitize(data) {
             unlocked.push(hero);
     }
     const selected = validHero(data.selected);
+    const archive = Array.isArray(data.archive)
+        ? Array.from(new Set(data.archive.filter((id) => typeof id === 'string' && ARCHIVE_ENTRY_IDS.has(id))))
+        : backfillArchiveIds(cleared, maxStage);
     return {
         version: VERSION,
         unlocked,
@@ -86,6 +90,7 @@ function sanitize(data) {
         touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
         touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
         touchPositions: sanitizeTouchPositions(data.touchPositions),
+        archive,
     };
 }
 /**
@@ -128,11 +133,12 @@ function migrateLegacy(data) {
             unlocked.push(hero);
     }
     const selected = validHero(data.selected);
+    const migratedCleared = Array.from(new Set(cleared)).sort((a, b) => a - b);
     return {
         version: VERSION,
         unlocked,
         maxStage,
-        cleared: Array.from(new Set(cleared)).sort((a, b) => a - b),
+        cleared: migratedCleared,
         selected: selected && unlocked.includes(selected) ? selected : heroForStage(maxStage),
         kills: typeof data.kills === 'number' && data.kills > 0 ? Math.round(data.kills) : 0,
         deaths: typeof data.deaths === 'number' && data.deaths > 0 ? Math.round(data.deaths) : 0,
@@ -143,6 +149,7 @@ function migrateLegacy(data) {
         touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
         touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
         touchPositions: sanitizeTouchPositions(data.touchPositions),
+        archive: backfillArchiveIds(migratedCleared, maxStage),
     };
 }
 export function defaultSave() {
@@ -161,6 +168,7 @@ export function defaultSave() {
         touchLayout: 'standard',
         touchDock: 'bottom',
         touchPositions: null,
+        archive: [],
     };
 }
 /** Valida e normaliza um save vindo do localStorage ou da nuvem. */

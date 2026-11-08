@@ -9,12 +9,12 @@
  * texto precisou ser reescrito. Os capítulos de abertura de arco recebem arte
  * extra e uma página inteira de despertar.
  */
-import { STORY } from '../data/story.js?v=9c45571a7549';
-import { CHARACTERS } from '../data/characters.js?v=9c45571a7549';
-import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js?v=9c45571a7549';
-import { drawStageBackground } from '../render/backgrounds.js?v=9c45571a7549';
-import { BASE, drawCharacterFigure, drawCharacterPortrait } from '../render/characters.js?v=9c45571a7549';
-import { FONTS, label, roundRectPath } from '../render/theme.js?v=9c45571a7549';
+import { STORY } from '../data/story.js?v=be05988e5819';
+import { CHARACTERS } from '../data/characters.js?v=be05988e5819';
+import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js?v=be05988e5819';
+import { drawStageBackground } from '../render/backgrounds.js?v=be05988e5819';
+import { BASE, drawCharacterFigure, drawCharacterPortrait } from '../render/characters.js?v=be05988e5819';
+import { FONTS, label, roundRectPath } from '../render/theme.js?v=be05988e5819';
 const PAGE_SIZE = 3;
 const GAP = 16;
 const MARGIN_X = 40;
@@ -350,6 +350,11 @@ export class ComicScene {
                 this.drawImpactPanel(ctx, rect, index);
                 return;
             }
+        }
+        // Cap. 12: o último quadro precisa mostrar o braço de Miriam acendendo.
+        if (this.stage.id === 12 && this.phase === 'intro' && globalIndex === 4) {
+            this.drawMiriamIgnitionPanel(ctx, rect);
+            return;
         }
         this.drawGenericPanel(ctx, rect, beat, globalIndex);
     }
@@ -1737,6 +1742,408 @@ export class ComicScene {
         ctx.restore();
     }
     /** Fallback para qualquer outro capítulo: fundo + retrato + texto. */
+    // -------------------------------------------------------- painéis especiais
+    /** Painel final do Cap. 12: o braço de Miriam acende em magma diante do portal. */
+    drawMiriamIgnitionPanel(ctx, rect) {
+        const time = this.t;
+        const camera = (this.stage.width - this.game.width) * 0.82;
+        this.drawBackgroundIn(ctx, rect, camera, 1.16);
+        // Brasília sob um céu doente.
+        const dusk = ctx.createLinearGradient(rect.x, rect.y, rect.x, rect.y + rect.h);
+        dusk.addColorStop(0, 'rgba(8,4,12,0.48)');
+        dusk.addColorStop(0.5, 'rgba(38,9,9,0.3)');
+        dusk.addColorStop(1, 'rgba(5,3,8,0.72)');
+        ctx.fillStyle = dusk;
+        ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+        // Portal orbital: uma ferida aberta no céu.
+        const px = rect.x + rect.w * 0.72;
+        const py = rect.y + rect.h * 0.34;
+        const pulse = 0.8 + Math.sin(time * 2.2) * 0.12;
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.globalCompositeOperation = 'lighter';
+        const halo = ctx.createRadialGradient(0, 0, 4, 0, 0, 150);
+        halo.addColorStop(0, 'rgba(255,220,150,0.5)');
+        halo.addColorStop(0.3, 'rgba(255,96,40,0.26)');
+        halo.addColorStop(1, 'rgba(255,51,87,0)');
+        ctx.fillStyle = halo;
+        ctx.fillRect(-160, -160, 320, 320);
+        ctx.rotate(time * 0.08);
+        for (let i = 0; i < 3; i++) {
+            ctx.strokeStyle = hexToRgba(i === 1 ? '#ffd166' : '#ff7a2f', (0.5 - i * 0.1) * pulse);
+            ctx.lineWidth = 3.4 - i * 0.8;
+            ctx.beginPath();
+            ctx.arc(0, 0, 30 + i * 14, i * 0.9, i * 0.9 + Math.PI * 1.52);
+            ctx.stroke();
+        }
+        const core = ctx.createRadialGradient(0, 0, 1, 0, 0, 30);
+        core.addColorStop(0, 'rgba(255,255,255,0.95)');
+        core.addColorStop(0.3, 'rgba(255,209,102,0.85)');
+        core.addColorStop(1, 'rgba(255,51,87,0)');
+        ctx.fillStyle = core;
+        ctx.beginPath();
+        ctx.arc(0, 0, 30, 0, TAU);
+        ctx.fill();
+        ctx.rotate(-time * 0.08);
+        ctx.strokeStyle = 'rgba(255,140,70,0.42)';
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 7; i++) {
+            const a = i * 0.92 + 0.3;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(a) * 34, Math.sin(a) * 34);
+            ctx.lineTo(Math.cos(a + 0.09) * (72 + (i % 3) * 16), Math.sin(a + 0.09) * (72 + (i % 3) * 16));
+            ctx.stroke();
+        }
+        ctx.restore();
+        this.drawVektharSilhouette(ctx, rect.x + rect.w * 0.45, rect.y + rect.h * 0.66, 0.92);
+        this.drawIgnitingArm(ctx, rect);
+    }
+    /** Vek'thar ao fundo, pequeno diante do portal, para dar escala ao braço. */
+    drawVektharSilhouette(ctx, cx, groundY, scale) {
+        ctx.save();
+        ctx.translate(cx, groundY);
+        ctx.scale(scale, scale);
+        const ink = 'rgba(6,4,9,0.94)';
+        ctx.fillStyle = ink;
+        // Pernas.
+        roundRectPath(ctx, -27, -68, 21, 70, 7);
+        ctx.fill();
+        roundRectPath(ctx, 7, -68, 21, 70, 7);
+        ctx.fill();
+        // Capa.
+        ctx.beginPath();
+        ctx.moveTo(-34, -124);
+        ctx.quadraticCurveTo(-58, -64, -42, -6);
+        ctx.lineTo(42, -6);
+        ctx.quadraticCurveTo(58, -66, 34, -124);
+        ctx.closePath();
+        ctx.fill();
+        // Torso.
+        roundRectPath(ctx, -23, -132, 46, 76, 10);
+        ctx.fill();
+        // Ombreiras.
+        ctx.beginPath();
+        ctx.ellipse(-30, -126, 18, 13, -0.25, 0, TAU);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(30, -126, 18, 13, 0.25, 0, TAU);
+        ctx.fill();
+        // Elmo com chifres.
+        roundRectPath(ctx, -12, -164, 24, 34, 6);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-10, -160);
+        ctx.quadraticCurveTo(-26, -176, -30, -190);
+        ctx.quadraticCurveTo(-14, -184, -4, -166);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(10, -160);
+        ctx.quadraticCurveTo(26, -176, 30, -190);
+        ctx.quadraticCurveTo(14, -184, 4, -166);
+        ctx.closePath();
+        ctx.fill();
+        // Canhão erguido para o portal.
+        ctx.save();
+        ctx.translate(18, -118);
+        ctx.rotate(-0.92);
+        roundRectPath(ctx, -8, -9, 70, 18, 6);
+        ctx.fill();
+        roundRectPath(ctx, 52, -13, 16, 26, 5);
+        ctx.fill();
+        ctx.restore();
+        // Luz de contorno e olho.
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = 'rgba(255,122,47,0.4)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(34, -122);
+        ctx.quadraticCurveTo(54, -68, 42, -10);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(14, -162);
+        ctx.lineTo(30, -190);
+        ctx.stroke();
+        ctx.fillStyle = '#ff8a3c';
+        ctx.beginPath();
+        ctx.arc(0, -148, 3.4, 0, TAU);
+        ctx.fill();
+        const eg = ctx.createRadialGradient(0, -148, 1, 0, -148, 22);
+        eg.addColorStop(0, 'rgba(255,138,60,0.55)');
+        eg.addColorStop(1, 'rgba(255,138,60,0)');
+        ctx.fillStyle = eg;
+        ctx.fillRect(-24, -172, 48, 48);
+        ctx.restore();
+    }
+    /** Recorte da silhueta do braço (dois segmentos + articulações). */
+    armClipPath(ctx, a, b, c) {
+        const capsule = (p, q, wp, wq) => {
+            const dx = q.x - p.x;
+            const dy = q.y - p.y;
+            const len = Math.hypot(dx, dy) || 1;
+            const nx = -dy / len;
+            const ny = dx / len;
+            ctx.moveTo(p.x + nx * wp, p.y + ny * wp);
+            ctx.lineTo(p.x - nx * wp, p.y - ny * wp);
+            ctx.lineTo(q.x - nx * wq, q.y - ny * wq);
+            ctx.lineTo(q.x + nx * wq, q.y + ny * wq);
+            ctx.closePath();
+        };
+        ctx.beginPath();
+        ctx.arc(a.x, a.y, 54, 0, TAU);
+        ctx.arc(b.x, b.y, 49, 0, TAU);
+        ctx.arc(c.x, c.y, 44, 0, TAU);
+        capsule(a, b, 54, 49);
+        capsule(b, c, 49, 44);
+    }
+    /** Close do braço esquerdo de Miriam: costuras, placas e magma acendendo. */
+    drawIgnitingArm(ctx, rect) {
+        const time = this.t;
+        const shoulder = { x: rect.x - 36, y: rect.y + rect.h + 8 };
+        const elbow = { x: rect.x + 180, y: rect.y + rect.h * 0.79 };
+        const wrist = { x: rect.x + 350, y: rect.y + rect.h * 0.56 };
+        const fist = { x: rect.x + 416, y: rect.y + rect.h * 0.47 };
+        const skin = '#8a5a3b';
+        const skinLight = '#b87a52';
+        const skinDark = '#3a1f16';
+        const hot = '#ff9b3c';
+        const ember = '#ffd166';
+        // Calor irradiando do braço.
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const heat = ctx.createRadialGradient(elbow.x, elbow.y - 20, 10, elbow.x, elbow.y - 20, 250);
+        heat.addColorStop(0, 'rgba(255,122,47,0.34)');
+        heat.addColorStop(0.45, 'rgba(255,74,32,0.14)');
+        heat.addColorStop(1, 'rgba(255,51,87,0)');
+        ctx.fillStyle = heat;
+        ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+        ctx.restore();
+        const segment = (ax, ay, bx, by, width, color) => {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(ax, ay);
+            ctx.lineTo(bx, by);
+            ctx.stroke();
+        };
+        // Silhueta escura + massa do braço.
+        segment(shoulder.x, shoulder.y, elbow.x, elbow.y, 118, 'rgba(5,3,7,0.94)');
+        segment(elbow.x, elbow.y, wrist.x, wrist.y, 98, 'rgba(5,3,7,0.94)');
+        const armGrad = ctx.createLinearGradient(shoulder.x, shoulder.y - 40, wrist.x, wrist.y + 30);
+        armGrad.addColorStop(0, skinDark);
+        armGrad.addColorStop(0.3, skin);
+        armGrad.addColorStop(0.62, skinLight);
+        armGrad.addColorStop(1, skin);
+        segment(shoulder.x, shoulder.y, elbow.x, elbow.y, 108, armGrad);
+        segment(elbow.x, elbow.y, wrist.x, wrist.y, 88, armGrad);
+        // Textura e músculos, recortados na silhueta do braço.
+        ctx.save();
+        this.armClipPath(ctx, shoulder, elbow, wrist);
+        ctx.clip();
+        const sheen = ctx.createLinearGradient(shoulder.x - 30, shoulder.y, wrist.x, wrist.y);
+        sheen.addColorStop(0, 'rgba(255,255,255,0)');
+        sheen.addColorStop(0.5, 'rgba(255,255,255,0.1)');
+        sheen.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = sheen;
+        ctx.fillRect(rect.x - 60, rect.y, rect.w + 120, rect.h);
+        ctx.fillStyle = 'rgba(20,6,8,0.32)';
+        ctx.beginPath();
+        ctx.ellipse((shoulder.x + wrist.x) / 2, (shoulder.y + wrist.y) / 2 + 34, 190, 34, -0.6, 0, TAU);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(52,24,18,0.55)';
+        ctx.lineWidth = 1.6;
+        for (let i = 0; i < 5; i++) {
+            const t = 0.12 + i * 0.17;
+            const ax = shoulder.x + (elbow.x - shoulder.x) * t;
+            const ay = shoulder.y + (elbow.y - shoulder.y) * t;
+            ctx.beginPath();
+            ctx.moveTo(ax - 26, ay - 6);
+            ctx.quadraticCurveTo(ax, ay + 9, ax + 22, ay + 2);
+            ctx.stroke();
+        }
+        // Rachaduras de magma: acendem na pele e sobem até a manopla.
+        const crack = (points, width, alpha) => {
+            if (points.length < 2)
+                return;
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = hexToRgba(hot, alpha * 0.34);
+            ctx.lineWidth = width + 7;
+            ctx.beginPath();
+            points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+            ctx.stroke();
+            ctx.strokeStyle = hexToRgba(hot, alpha);
+            ctx.lineWidth = width;
+            ctx.stroke();
+            ctx.strokeStyle = hexToRgba(ember, alpha * 0.85);
+            ctx.lineWidth = Math.max(0.8, width * 0.38);
+            ctx.stroke();
+            ctx.restore();
+        };
+        const flow = 0.72 + Math.sin(time * 4.2) * 0.16;
+        crack([
+            [shoulder.x + 40, shoulder.y - 34],
+            [shoulder.x + 82, shoulder.y - 62],
+            [shoulder.x + 108, shoulder.y - 34],
+            [elbow.x - 18, elbow.y - 22],
+            [elbow.x + 6, elbow.y - 44],
+        ], 2.6, flow);
+        crack([
+            [elbow.x - 34, elbow.y + 18],
+            [elbow.x + 4, elbow.y - 2],
+            [wrist.x - 44, wrist.y + 12],
+            [wrist.x - 18, wrist.y - 8],
+        ], 2.2, flow * 0.9);
+        crack([
+            [shoulder.x + 4, shoulder.y - 88],
+            [shoulder.x + 44, shoulder.y - 96],
+            [elbow.x - 54, elbow.y - 6],
+        ], 1.5, flow * 0.7);
+        crack([
+            [elbow.x + 22, elbow.y + 40],
+            [elbow.x + 52, elbow.y + 8],
+            [wrist.x - 8, wrist.y + 34],
+        ], 1.4, flow * 0.65);
+        // Faixa de tecido atravessando o bíceps.
+        ctx.save();
+        ctx.translate((shoulder.x + elbow.x) / 2, (shoulder.y + elbow.y) / 2);
+        ctx.rotate(0.99);
+        ctx.fillStyle = '#2e211c';
+        roundRectPath(ctx, -58, -12, 116, 24, 5);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(8,5,8,0.9)';
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,155,60,0.35)';
+        ctx.fillRect(-52, 6, 104, 2);
+        ctx.restore();
+        ctx.restore();
+        // Placas do antebraço.
+        const foreAngle = Math.atan2(wrist.y - elbow.y, wrist.x - elbow.x);
+        for (let i = 0; i < 3; i++) {
+            const t = 0.18 + i * 0.26;
+            const px = elbow.x + (wrist.x - elbow.x) * t;
+            const py = elbow.y + (wrist.y - elbow.y) * t;
+            const w = 92 - i * 10;
+            ctx.save();
+            ctx.translate(px, py);
+            ctx.rotate(foreAngle + Math.PI / 2);
+            const plate = ctx.createLinearGradient(-w / 2, -12, w / 2, 12);
+            plate.addColorStop(0, '#241a18');
+            plate.addColorStop(0.45, '#4a342d');
+            plate.addColorStop(1, '#6a5548');
+            ctx.fillStyle = plate;
+            roundRectPath(ctx, -w / 2, -14, w, 28, 7);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(6,5,10,0.92)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.fillStyle = '#8a7566';
+            for (const rx of [-w * 0.34, w * 0.34]) {
+                ctx.beginPath();
+                ctx.arc(rx, 0, 2.6, 0, TAU);
+                ctx.fill();
+            }
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.fillStyle = hexToRgba(hot, 0.5 + Math.sin(time * 5 + i) * 0.18);
+            ctx.fillRect(-w / 2 + 6, -2, w - 12, 2.4);
+            ctx.restore();
+            ctx.restore();
+        }
+        // Manopla da Miriam.
+        ctx.save();
+        ctx.translate(fist.x, fist.y);
+        ctx.rotate(-0.3);
+        const gaunt = ctx.createRadialGradient(-14, -18, 6, 0, 0, 74);
+        gaunt.addColorStop(0, '#6a5548');
+        gaunt.addColorStop(0.55, '#3b2a26');
+        gaunt.addColorStop(1, '#1c1311');
+        ctx.fillStyle = gaunt;
+        ctx.beginPath();
+        ctx.moveTo(-62, -8);
+        ctx.quadraticCurveTo(-58, -58, -6, -62);
+        ctx.quadraticCurveTo(48, -66, 64, -18);
+        ctx.quadraticCurveTo(72, 24, 30, 52);
+        ctx.quadraticCurveTo(-16, 66, -48, 38);
+        ctx.quadraticCurveTo(-72, 16, -62, -8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(5,3,7,0.95)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        for (let i = 0; i < 4; i++) {
+            const ky = -38 + i * 24;
+            ctx.fillStyle = '#5a453a';
+            roundRectPath(ctx, 28, ky - 9, 34, 18, 5);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(6,5,10,0.9)';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+            ctx.fillStyle = hexToRgba(hot, 0.8);
+            ctx.beginPath();
+            ctx.arc(56, ky, 2.2, 0, TAU);
+            ctx.fill();
+        }
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = hexToRgba(hot, 0.9);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-30, -46);
+        ctx.lineTo(-10, -20);
+        ctx.lineTo(-24, 4);
+        ctx.lineTo(-2, 30);
+        ctx.stroke();
+        ctx.strokeStyle = hexToRgba(ember, 0.8);
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+        const core = ctx.createRadialGradient(0, 0, 2, 0, 0, 54);
+        core.addColorStop(0, hexToRgba(hot, 0.3 + Math.sin(time * 4) * 0.1));
+        core.addColorStop(1, hexToRgba(hot, 0));
+        ctx.fillStyle = core;
+        ctx.beginPath();
+        ctx.arc(0, 0, 54, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+        ctx.restore();
+        // Fagulhas subindo do braço.
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 22; i++) {
+            const seed = i * 1.618;
+            const rise = (time * (0.16 + (i % 5) * 0.03) + i * 0.11) % 1;
+            const bx = rect.x + 50 + ((i * 71) % Math.max(1, rect.w - 90));
+            const by = rect.y + rect.h - 24 - rise * (rect.h * 0.78);
+            const drift = Math.sin(time * 1.6 + seed) * (10 + (i % 4) * 5);
+            const a = Math.sin(rise * Math.PI) * (0.3 + (i % 3) * 0.18);
+            const r = 1.2 + (i % 3) * 0.9;
+            ctx.fillStyle = i % 4 === 0 ? hexToRgba('#fff3c4', a) : hexToRgba(hot, a);
+            ctx.beginPath();
+            ctx.arc(bx + drift, by, r, 0, TAU);
+            ctx.fill();
+        }
+        for (let i = 0; i < 2; i++) {
+            const p = (time * 0.55 + i * 0.5) % 1;
+            const r = 46 + p * 150;
+            ctx.strokeStyle = hexToRgba(hot, (1 - p) * 0.18);
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(elbow.x + 30, elbow.y - 30, r, r * 0.52, -0.55, 0, TAU);
+            ctx.stroke();
+        }
+        ctx.restore();
+        // Vinheta local para fechar o quadro no braço.
+        const v = ctx.createRadialGradient(wrist.x, wrist.y, 40, wrist.x, wrist.y, rect.w * 0.82);
+        v.addColorStop(0, 'rgba(0,0,0,0)');
+        v.addColorStop(0.7, 'rgba(0,0,0,0.12)');
+        v.addColorStop(1, 'rgba(0,0,0,0.5)');
+        ctx.fillStyle = v;
+        ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+    }
     drawGenericPanel(ctx, rect, beat, globalIndex) {
         const camera = (this.stage.width - this.game.width) * (0.2 + (globalIndex % 3) * 0.12);
         this.drawBackgroundIn(ctx, rect, camera, 1.12);

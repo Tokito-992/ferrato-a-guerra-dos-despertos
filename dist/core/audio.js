@@ -32,7 +32,6 @@ const CHAPTER_MOODS = [
     { bpm: 1.12, transpose: 0, rotate: 5, arp: true, drums: 1.28, pad: 1.2, lead: 1.28 },
 ];
 export const STAGE_THEME_COUNT = 36;
-export const BOSS_THEME_OFFSET = STAGE_THEME_COUNT;
 const round2 = (value) => Math.round(value * 100) / 100;
 const round3 = (value) => Math.round(value * 1000) / 1000;
 const STAGE_THEMES = [];
@@ -54,6 +53,28 @@ for (let arc = 0; arc < ARC_BASES.length; arc++) {
         });
     }
 }
+/**
+ * Temas de combate: entram quando a fase vira `combat`. São mais rápidos,
+ * usam uma escala frígia e um pulso de baixo constante para criar urgência,
+ * mas ficam abaixo da trilha de chefe em intensidade.
+ */
+const COMBAT_THEMES = ARC_BASES.map((base, index) => ({
+    ...base,
+    bpm: Math.round(base.bpm * 1.26 + 5),
+    root: base.root + (index % 2 === 0 ? 1 : -1),
+    scale: [0, 1, 3, 5, 7, 8, 11],
+    progression: [0, 1, 5, 4, 0, 3, 1, 6],
+    padType: 'sawtooth',
+    bassType: 'sawtooth',
+    leadType: 'square',
+    arp: true,
+    drums: round2(base.drums * 1.5),
+    padGain: round3(base.padGain * 0.9),
+    leadGain: round2(base.leadGain * 0.92),
+    seed: base.seed * 71 + 211 + index * 29,
+    boss: false,
+    tension: true,
+}));
 /** Temas de chefe: mais graves, rápidos e dissonantes que o arco correspondente. */
 const BOSS_THEMES = ARC_BASES.map((base, index) => ({
     ...base,
@@ -88,9 +109,11 @@ const TITLE_THEME = {
     boss: false,
     arc: 0,
 };
-const THEMES = [...STAGE_THEMES, ...BOSS_THEMES, TITLE_THEME];
+export const COMBAT_THEME_OFFSET = STAGE_THEME_COUNT;
+export const BOSS_THEME_OFFSET = COMBAT_THEME_OFFSET + COMBAT_THEMES.length;
+const THEMES = [...STAGE_THEMES, ...COMBAT_THEMES, ...BOSS_THEMES, TITLE_THEME];
 /** Índice do tema usado em menus, créditos, tutorial e vitória. */
-export const TITLE_THEME_INDEX = STAGE_THEME_COUNT + BOSS_THEMES.length;
+export const TITLE_THEME_INDEX = BOSS_THEME_OFFSET + BOSS_THEMES.length;
 const midi = (n) => 440 * Math.pow(2, (n - 69) / 12);
 /** Gerador determinístico para que cada tema tenha sempre o mesmo motivo. */
 function rng(seed) {
@@ -318,7 +341,12 @@ export class AudioEngine {
             }
         }
     }
-    /** Trilha de chefe: 36–41, uma para cada arco. */
+    /** Trilha de tensão do combate: uma variação por arco. */
+    playCombatMusic(arc) {
+        const index = COMBAT_THEME_OFFSET + Math.max(0, Math.min(COMBAT_THEMES.length - 1, Math.round(arc) - 1));
+        this.playMusic(index);
+    }
+    /** Trilha de chefe: uma para cada arco, com prioridade sobre a de combate. */
     playBossMusic(arc) {
         const index = BOSS_THEME_OFFSET + Math.max(0, Math.min(BOSS_THEMES.length - 1, Math.round(arc) - 1));
         this.playMusic(index);
@@ -497,36 +525,54 @@ export class AudioEngine {
         if ((cycleBar === 15 || cycleBar === 31) && s16 === 0) {
             this.riser(at, stepDur * 15, 0.1);
         }
+        if (t.tension && (cycleBar === 7 || cycleBar === 23) && s16 === 0) {
+            this.riser(at, stepDur * 15, 0.055);
+        }
+        // Drone de tensão: segunda menor grave, trocando a cada quatro compassos.
+        if (t.tension && s16 === 0 && cycleBar % 4 === 0) {
+            const droneDur = stepDur * 62;
+            this.padVoice(this.scaleMidi(t, chordDeg, -12), at, droneDur, t.padGain * 0.8, 'sawtooth', 0);
+            this.padVoice(this.scaleMidi(t, chordDeg + 1, -12), at, droneDur, t.padGain * 0.38, 'sawtooth', 0);
+        }
         // Bateria.
         const d = t.drums * energy;
         if (s16 === 0 || s16 === 8)
             this.kick(at, 0.5 * d);
         if (section >= 1 && (s16 === 6 || s16 === 14))
             this.kick(at, 0.24 * d);
-        if (t.boss && (s16 === 3 || s16 === 11))
-            this.kick(at, 0.18 * d);
+        if ((t.boss || t.tension) && (s16 === 3 || s16 === 11))
+            this.kick(at, 0.2 * d);
         if (s16 === 4 || s16 === 12)
             this.snare(at, 0.24 * d);
         if (section >= 1 && s16 === 15)
             this.snare(at, 0.1 * d);
         if (section >= 1 && s16 === 7)
             this.snare(at, 0.06 * d);
+        if (t.tension && cycleBar % 8 === 7 && s16 >= 12) {
+            this.snare(at, (0.05 + (s16 - 12) * 0.018) * d);
+        }
         if (s16 % 2 === 0)
             this.hat(at, (s16 % 4 === 0 ? 0.05 : 0.03) * d, false);
         if (section >= 2 && s16 % 2 === 1)
             this.hat(at, 0.018 * d, false);
+        if (t.tension && section === 1 && s16 % 2 === 1)
+            this.hat(at, 0.016 * d, false);
         if (section >= 1 && s16 === 14)
             this.hat(at, 0.055 * d, true);
         if (slot === 3 && s16 >= 12)
             this.tom(at, [210, 175, 140, 110][s16 - 12], 0.12 * d);
-        // Baixo.
-        const bassPattern = section === 0
-            ? [0, 6, 10]
-            : section === 1
+        // Baixo: no combate, ostinato contínuo em vez de notas espaçadas.
+        const bassPattern = t.tension
+            ? section === 0
                 ? [0, 4, 8, 12]
-                : section === 2
-                    ? [0, 2, 4, 6, 8, 10, 12, 14]
-                    : [0, 8];
+                : [0, 2, 4, 6, 8, 10, 12, 14]
+            : section === 0
+                ? [0, 6, 10]
+                : section === 1
+                    ? [0, 4, 8, 12]
+                    : section === 2
+                        ? [0, 2, 4, 6, 8, 10, 12, 14]
+                        : [0, 8];
         const bassIndex = bassPattern.indexOf(s16);
         if (bassIndex >= 0) {
             const offsets = [0, 0, 4, 0, 7, 0, 4, 0];
@@ -546,6 +592,11 @@ export class AudioEngine {
             if (section >= 1) {
                 this.padVoice(this.scaleMidi(t, chordDeg, 24), at, dur, t.padGain * 0.32, 'sine', 0);
             }
+        }
+        // Stabs dissonantes no contratempo: o "sobressalto" da trilha de combate.
+        if (t.tension && section >= 1 && s16 === 6) {
+            this.leadVoice(this.scaleMidi(t, chordDeg + 1, 12), at, stepDur * 2.1, 0.024, 'sawtooth', 0.9);
+            this.leadVoice(this.scaleMidi(t, chordDeg + 6, 12), at, stepDur * 2.1, 0.018, 'sawtooth', 0.7);
         }
         // Arpejo.
         if (t.arp || section >= 2) {

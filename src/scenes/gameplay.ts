@@ -13,6 +13,14 @@ import type { CharacterId } from '../data/characters.js';
 import { MAX_STAGE } from '../data/stages.js';
 import type { StageDef, WaveDef } from '../data/stages.js';
 import type { EnemyKind } from '../data/enemies.js';
+import {
+  archiveBossId,
+  archiveCreatureId,
+  archivePhenomenonId,
+  archivePlaceId,
+  archiveRelicId,
+  stageRelicKinds,
+} from '../data/archive.js';
 import { Combatant } from '../entities/combatant.js';
 import { Player } from '../entities/player.js';
 import { Enemy } from '../entities/enemy.js';
@@ -45,6 +53,29 @@ interface Timer {
 
 function insideRect(rect: { x: number; y: number; w: number; h: number }, x: number, y: number): boolean {
   return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
+}
+
+/** Grão de filme procedural, gerado uma vez e repetido em tela. */
+let grainPattern: CanvasPattern | null = null;
+function getGrainPattern(ctx: CanvasRenderingContext2D): CanvasPattern | null {
+  if (grainPattern) return grainPattern;
+  if (typeof document === 'undefined') return null;
+  const tile = document.createElement('canvas');
+  tile.width = 128;
+  tile.height = 128;
+  const g = tile.getContext('2d');
+  if (!g) return null;
+  const img = g.createImageData(128, 128);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = 90 + Math.floor(Math.random() * 165);
+    img.data[i] = v;
+    img.data[i + 1] = v;
+    img.data[i + 2] = v;
+    img.data[i + 3] = 8 + Math.floor(Math.random() * 20);
+  }
+  g.putImageData(img, 0, 0);
+  grainPattern = ctx.createPattern(tile, 'repeat');
+  return grainPattern;
 }
 
 export class GameplayScene implements Scene, World {
@@ -151,6 +182,14 @@ export class GameplayScene implements Scene, World {
     this.game.setTouchControlsVisible(true);
     this.audio.playMusic(this.stage.music);
     this.audio.playAmbience(this.stage.ambient);
+    this.discover(
+      [
+        archivePlaceId(this.stage.id),
+        archivePhenomenonId(this.stage.ambient),
+        ...stageRelicKinds(this.stage).map((kind) => archiveRelicId(kind)),
+      ],
+      'ARQUIVO DO VÉU ATUALIZADO',
+    );
   }
 
   exit(): void {
@@ -184,6 +223,7 @@ export class GameplayScene implements Scene, World {
   spawnEnemy(kind: string, x: number, elite = false): Enemy {
     const px = clamp(x, this.camera.x + 74, this.camera.x + this.viewW - 74);
     const enemy = new Enemy(this.stage, kind as EnemyKind, px, elite);
+    this.game.unlockArchive([archiveCreatureId(this.stage.arc, enemy.def.kind)]);
     this.enemies.push(enemy);
     this.particles.ring(px, this.stage.floor - 6, enemy.def.accent, 42, 0.35, 2);
     for (let i = 0; i < 8; i++) {
@@ -200,6 +240,14 @@ export class GameplayScene implements Scene, World {
       });
     }
     return enemy;
+  }
+
+  /** Revela registros no livro e avisa o jogador sem interromper o combate. */
+  private discover(ids: readonly string[], label: string): void {
+    const fresh = this.game.unlockArchive(ids);
+    if (fresh.length === 0) return;
+    const noun = fresh.length === 1 ? 'REGISTRO' : 'REGISTROS';
+    this.game.setNotice(`${label}  ·  ${fresh.length} ${noun} NO ARQUIVO`, '#b48bff', 3.1);
   }
 
   damageEnemy(target: Combatant, damage: number, opts: HitOptions = {}): void {
@@ -395,6 +443,8 @@ export class GameplayScene implements Scene, World {
       this.introT -= dt;
       if (this.introT <= 0) {
         this.phase = 'combat';
+        // A trilha do estágio cede lugar à tensão assim que o combate começa.
+        this.audio.playCombatMusic(this.stage.arc);
         this.audio.sfx('wave');
       }
     }
@@ -508,6 +558,8 @@ export class GameplayScene implements Scene, World {
       this.game.slowMo(0.32, 2.6);
       this.game.flash(this.boss.def.colors.glow, 0.3);
       this.audio.sfx('victory');
+      // O combate terminou: a tensão sai e o tema do plano volta para o finale.
+      this.audio.playMusic(this.stage.music);
       this.persistRecord();
       this.after(2.7, () => this.game.finishStage(this.stage.id, this.player.charId));
     }
@@ -517,6 +569,7 @@ export class GameplayScene implements Scene, World {
     if (this.phase === 'cleared') return;
     this.phase = 'cleared';
     this.waveActive = false;
+    this.audio.playMusic(this.stage.music);
     this.addScore(1500);
     this.setBanner(
       'CAPÍTULO CONCLUÍDO',
@@ -538,6 +591,10 @@ export class GameplayScene implements Scene, World {
     this.waveDamageStart = this.damageTaken;
     this.waveComboStart = this.maxCombo;
     this.waveKillStart = this.kills;
+    this.discover(
+      wave.spawns.map((group) => archiveCreatureId(this.stage.arc, group.kind)),
+      'CRIATURA AVISTADA',
+    );
     const maxCam = Math.max(0, this.stage.width - this.viewW);
     const lock = clamp(this.player.x - this.viewW * 0.44, 0, maxCam);
     this.camera.setBounds(lock, lock);
@@ -616,6 +673,7 @@ export class GameplayScene implements Scene, World {
     this.camera.snapTo(maxCam);
     const bossX = maxCam + this.viewW - 335;
     this.boss = new Boss(bossId, bossX, this.stage.floor);
+    this.discover([archiveBossId(bossId)], 'CHEFE REVELADO');
     // Chefes ficam mais resistentes a cada arco, sem depender apenas de dano.
     const hpScale = 0.95 + (this.stage.arc - 1) * 0.07;
     this.boss.maxHp = Math.round(this.boss.maxHp * hpScale);
@@ -723,6 +781,7 @@ export class GameplayScene implements Scene, World {
     );
     this.hunter = this.spawnEnemy(kind, x, true);
     this.hunterSpawned = true;
+    this.discover([archiveCreatureId(this.stage.arc, this.hunter.def.kind)], 'CAÇADOR REVELADO');
     this.pressure = clamp(this.pressure + 4, 0, 100);
     this.setBanner('CAÇADOR DO VÉU', 'SUA PERFORMANCE ATRAIU UMA AMEAÇA ANTIGA', '#ff6a9a', 3.2);
     this.audio.sfx('roar');
@@ -740,6 +799,7 @@ export class GameplayScene implements Scene, World {
     this.obstacles.push(
       new StageObstacle('fracture', x, this.stage.floor, this.stage, { temporary: true, life: 8 }),
     );
+    this.discover([archiveRelicId('fracture')], 'ANOMALIA REVELADA');
     this.text('ANOMALIA', x, this.stage.floor - 132, '#ff5a3c', 15);
     this.game.flash('#ff5a3c', 0.06);
   }
@@ -748,6 +808,8 @@ export class GameplayScene implements Scene, World {
     if (this.bonusTriggered) return;
     this.bonusTriggered = true;
     this.phase = 'bonus';
+    // A Câmara é um respiro: a tensão do combate dá lugar ao tema do plano.
+    this.audio.playMusic(this.stage.music);
     this.waveActive = false;
     this.bonusTimer = this.bonusDuration;
     this.bonusCollected = 0;
@@ -853,6 +915,7 @@ export class GameplayScene implements Scene, World {
     this.addScore(200 + this.bonusCollected * 90);
     this.pressure = clamp(this.pressure + 2.5, 0, 100);
     this.phase = 'combat';
+    this.audio.playCombatMusic(this.stage.arc);
     this.bonusMotes = [];
     this.bonusTimer = 0;
     this.hazards = this.hazards.filter((h) => h.owner !== 'enemy');
@@ -1048,6 +1111,7 @@ export class GameplayScene implements Scene, World {
     ctx.restore();
 
     if (visualStyle.anime) this.drawAnimeScreen(ctx, camX);
+    this.drawScreenPostFx(ctx);
 
     if (this.phase === 'bonus') {
       ctx.save();
@@ -1176,6 +1240,68 @@ export class GameplayScene implements Scene, World {
     ctx.fillStyle = grade;
     ctx.fillRect(0, 0, w, h);
     ctx.restore();
+  }
+
+  /** Pós-processamento de tela: vinheta dinâmica, tingimento, perigo e grão. */
+  private drawScreenPostFx(ctx: CanvasRenderingContext2D): void {
+    const w = this.viewW;
+    const h = this.viewH;
+    const hpDanger = clamp(1 - this.player.hpRatio, 0, 1);
+    const bossDanger = this.boss ? clamp(this.boss.phaseIndex / 2, 0, 1) : 0;
+    const danger = clamp(hpDanger * 0.7 + bossDanger * 0.45, 0, 1);
+    const pressure = clamp(this.pressure / 100, 0, 1);
+    const tint = this.phase === 'bonus' ? '#ff6a9a' : this.boss ? this.boss.def.colors.accent : this.stage.palette.accent;
+
+    // Vinheta.
+    const vg = ctx.createRadialGradient(w / 2, h * 0.45, h * 0.3, w / 2, h * 0.5, h * 0.9);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(0.62, `rgba(2,3,9,${0.1 + danger * 0.08})`);
+    vg.addColorStop(1, `rgba(0,0,0,${0.46 + danger * 0.2})`);
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, w, h);
+
+    // Tingimento de borda pela paleta da fase/chefe.
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const sideW = 150 + pressure * 60;
+    const left = ctx.createLinearGradient(0, 0, sideW, 0);
+    left.addColorStop(0, hexToRgba(tint, 0.07 + pressure * 0.05));
+    left.addColorStop(1, hexToRgba(tint, 0));
+    ctx.fillStyle = left;
+    ctx.fillRect(0, 0, sideW, h);
+    const right = ctx.createLinearGradient(w, 0, w - sideW, 0);
+    right.addColorStop(0, hexToRgba(tint, 0.07 + pressure * 0.05));
+    right.addColorStop(1, hexToRgba(tint, 0));
+    ctx.fillStyle = right;
+    ctx.fillRect(w - sideW, 0, sideW, h);
+    const top = ctx.createLinearGradient(0, 0, 0, 110);
+    top.addColorStop(0, hexToRgba(tint, 0.05));
+    top.addColorStop(1, hexToRgba(tint, 0));
+    ctx.fillStyle = top;
+    ctx.fillRect(0, 0, w, 110);
+    ctx.restore();
+
+    // Pulso vermelho de perigo.
+    if (danger > 0.15) {
+      const pulse = 0.55 + Math.sin(this.time * (3.2 + danger * 2.4)) * 0.35;
+      const red = ctx.createRadialGradient(w / 2, h / 2, h * 0.36, w / 2, h / 2, h * 0.82);
+      red.addColorStop(0, 'rgba(255,20,46,0)');
+      red.addColorStop(0.75, `rgba(255,20,46,${0.05 * danger * pulse})`);
+      red.addColorStop(1, `rgba(255,20,46,${0.28 * danger * pulse})`);
+      ctx.fillStyle = red;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    // Grão de filme procedural.
+    const grain = getGrainPattern(ctx);
+    if (grain) {
+      ctx.save();
+      ctx.globalAlpha = 0.34 + pressure * 0.12;
+      ctx.translate(-((this.time * 43) % 128), -((this.time * 71) % 128));
+      ctx.fillStyle = grain;
+      ctx.fillRect(0, 0, w + 128, h + 128);
+      ctx.restore();
+    }
   }
 
   private drawArenaFrame(ctx: CanvasRenderingContext2D): void {

@@ -2,8 +2,8 @@
  * Cenários procedurais com parallax para as seis fases e para o menu.
  * Nenhuma imagem externa é usada: tudo é desenhado no Canvas.
  */
-import { clamp, hexToRgba, TAU } from '../core/math.js?v=9c45571a7549';
-import { roundRectPath } from './theme.js?v=9c45571a7549';
+import { clamp, hexToRgba, TAU } from '../core/math.js?v=be05988e5819';
+import { roundRectPath } from './theme.js?v=be05988e5819';
 const W = 1280;
 const H = 720;
 /** Ruído determinístico para que o cenário não "trema" entre frames. */
@@ -3313,6 +3313,135 @@ export function drawTitleBackground(ctx, time) {
     vignette.addColorStop(0, 'rgba(0,0,0,0)');
     vignette.addColorStop(0.72, 'rgba(0,0,0,0.18)');
     vignette.addColorStop(1, 'rgba(0,0,0,0.66)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, W, H);
+}
+/** Fundo do Arquivo do Véu: uma biblioteca impossível, feita de memória e poeira. */
+export function drawArchiveBackground(ctx, time) {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#05040c');
+    g.addColorStop(0.42, '#0d0a1d');
+    g.addColorStop(0.78, '#090613');
+    g.addColorStop(1, '#030208');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    // Janela alta ao centro, com vitral e um olho distante.
+    ctx.save();
+    ctx.translate(W / 2, 176);
+    const windowGlow = ctx.createRadialGradient(0, 0, 8, 0, 0, 250);
+    windowGlow.addColorStop(0, 'rgba(180,139,255,0.18)');
+    windowGlow.addColorStop(0.4, 'rgba(86,227,255,0.06)');
+    windowGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = windowGlow;
+    ctx.fillRect(-300, -220, 600, 500);
+    ctx.strokeStyle = 'rgba(180,139,255,0.14)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-92, 176);
+    ctx.lineTo(-92, -30);
+    ctx.quadraticCurveTo(0, -170, 92, -30);
+    ctx.lineTo(92, 176);
+    ctx.stroke();
+    for (let i = -3; i <= 3; i++) {
+        ctx.strokeStyle = 'rgba(180,139,255,0.08)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(i * 24, 176);
+        ctx.lineTo(i * 24, -26 - Math.abs(i) * 8);
+        ctx.stroke();
+    }
+    ctx.restore();
+    // Estantes laterais com livros.
+    for (const side of [-1, 1]) {
+        const baseX = side < 0 ? 0 : W;
+        for (let shelf = 0; shelf < 5; shelf++) {
+            const y = 150 + shelf * 112;
+            ctx.fillStyle = 'rgba(4,3,10,0.75)';
+            ctx.fillRect(side < 0 ? 0 : W - 132, y, 132, 8);
+            for (let i = 0; i < 9; i++) {
+                const w = 8 + hash(shelf * 17 + i + side) * 9;
+                const h = 34 + hash(shelf * 31 + i) * 42;
+                const x = side < 0 ? 12 + i * 13 : W - 22 - i * 13 - w;
+                const tint = i % 4 === 0 ? '#b48bff' : i % 4 === 1 ? '#56e3ff' : i % 4 === 2 ? '#ff8ae2' : '#ffd166';
+                ctx.fillStyle = hexToRgba(tint, 0.07 + hash(i + shelf) * 0.08);
+                ctx.fillRect(x, y - h, w, h);
+                ctx.fillStyle = hexToRgba('#ffffff', 0.05);
+                ctx.fillRect(x + 2, y - h + 6, 1, h - 12);
+            }
+        }
+    }
+    // Grande selo do Véu atrás do livro.
+    ctx.save();
+    ctx.translate(W / 2, H / 2 + 18);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.12;
+    ctx.rotate(time * 0.025);
+    ctx.strokeStyle = '#b48bff';
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([3, 14]);
+    ctx.beginPath();
+    ctx.arc(0, 0, 310, 0, TAU);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (let i = 0; i < 24; i++) {
+        const a = (i / 24) * TAU;
+        const long = i % 3 === 0;
+        ctx.strokeStyle = i % 2 === 0 ? '#b48bff' : '#56e3ff';
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * 286, Math.sin(a) * 286);
+        ctx.lineTo(Math.cos(a) * (long ? 264 : 276), Math.sin(a) * (long ? 264 : 276));
+        ctx.stroke();
+    }
+    ctx.rotate(-time * 0.045);
+    ctx.strokeStyle = '#ff8ae2';
+    for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.arc(0, 0, 170 + i * 34, i * 1.2, i * 1.2 + 2.1);
+        ctx.stroke();
+    }
+    ctx.restore();
+    // Poeira e runas flutuando.
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 90; i++) {
+        const x = (hash(i * 5.1) * W + Math.sin(time * 0.13 + i) * 30 + time * (1.5 + hash(i) * 4)) % W;
+        const y = (hash(i * 8.7 + 3) * H - time * (2 + hash(i + 2) * 7) + H) % H;
+        const a = 0.06 + hash(i + 5) * 0.22;
+        ctx.fillStyle = hexToRgba(i % 7 === 0 ? '#ffd166' : i % 5 === 0 ? '#56e3ff' : '#b48bff', a);
+        ctx.beginPath();
+        ctx.arc(x, y, 0.7 + hash(i) * 1.6, 0, TAU);
+        ctx.fill();
+    }
+    ctx.restore();
+    // Velas laterais.
+    for (const side of [-1, 1]) {
+        const x = W / 2 + side * 505;
+        const flicker = 0.72 + Math.sin(time * 7 + side) * 0.16 + Math.sin(time * 13.7) * 0.05;
+        const glowG = ctx.createRadialGradient(x, 514, 2, x, 514, 90 * flicker);
+        glowG.addColorStop(0, 'rgba(255,209,102,0.22)');
+        glowG.addColorStop(0.4, 'rgba(255,138,60,0.08)');
+        glowG.addColorStop(1, 'rgba(255,138,60,0)');
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = glowG;
+        ctx.beginPath();
+        ctx.arc(x, 514, 90 * flicker, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,230,163,0.85)';
+        ctx.beginPath();
+        ctx.ellipse(x, 510, 3.5, 10 * flicker, 0, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = 'rgba(232,220,196,0.22)';
+        ctx.fillRect(x - 5, 520, 10, 54);
+        ctx.fillStyle = 'rgba(4,3,10,0.6)';
+        ctx.fillRect(x - 18, 572, 36, 5);
+    }
+    // Vinheta pesada.
+    const vignette = ctx.createRadialGradient(W * 0.5, H * 0.46, H * 0.2, W * 0.5, H * 0.46, H * 0.9);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(0.65, 'rgba(0,0,0,0.18)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.78)');
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, W, H);
 }

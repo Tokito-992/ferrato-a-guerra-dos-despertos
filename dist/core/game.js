@@ -1,26 +1,28 @@
 /** Núcleo do jogo: loop, troca de cenas, transições, hitstop e persistência. */
-import { CHARACTERS } from '../data/characters.js?v=9c45571a7549';
-import { getStage, MAX_STAGE } from '../data/stages.js?v=9c45571a7549';
-import { STORY } from '../data/story.js?v=9c45571a7549';
-import { AudioEngine } from './audio.js?v=9c45571a7549';
-import { Input } from './input.js?v=9c45571a7549';
-import { ParticleSystem } from './particles.js?v=9c45571a7549';
-import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=9c45571a7549';
-import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=9c45571a7549';
-import { needsIOSInstallGuide } from './platform.js?v=9c45571a7549';
-import { cloudSync } from './cloud-sync.js?v=9c45571a7549';
-import { showInstallGuide } from '../ui/install-guide.js?v=9c45571a7549';
-import { showAccountPanel } from '../ui/account-panel.js?v=9c45571a7549';
-import { clamp, hexToRgba } from './math.js?v=9c45571a7549';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=9c45571a7549';
-import { TitleScene } from '../scenes/title.js?v=9c45571a7549';
-import { CharacterSelectScene } from '../scenes/characterSelect.js?v=9c45571a7549';
-import { GameplayScene } from '../scenes/gameplay.js?v=9c45571a7549';
-import { ComicScene } from '../scenes/comic.js?v=9c45571a7549';
-import { VictoryScene } from '../scenes/victory.js?v=9c45571a7549';
-import { CreditsScene } from '../scenes/credits.js?v=9c45571a7549';
-import { SettingsScene } from '../scenes/settings.js?v=9c45571a7549';
-import { TutorialScene } from '../scenes/tutorial.js?v=9c45571a7549';
+import { CHARACTERS } from '../data/characters.js?v=be05988e5819';
+import { getStage, MAX_STAGE } from '../data/stages.js?v=be05988e5819';
+import { STORY } from '../data/story.js?v=be05988e5819';
+import { AudioEngine } from './audio.js?v=be05988e5819';
+import { Input } from './input.js?v=be05988e5819';
+import { ParticleSystem } from './particles.js?v=be05988e5819';
+import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=be05988e5819';
+import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=be05988e5819';
+import { needsIOSInstallGuide } from './platform.js?v=be05988e5819';
+import { cloudSync } from './cloud-sync.js?v=be05988e5819';
+import { showInstallGuide } from '../ui/install-guide.js?v=be05988e5819';
+import { showAccountPanel } from '../ui/account-panel.js?v=be05988e5819';
+import { clamp, hexToRgba } from './math.js?v=be05988e5819';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=be05988e5819';
+import { TitleScene } from '../scenes/title.js?v=be05988e5819';
+import { CharacterSelectScene } from '../scenes/characterSelect.js?v=be05988e5819';
+import { GameplayScene } from '../scenes/gameplay.js?v=be05988e5819';
+import { ComicScene } from '../scenes/comic.js?v=be05988e5819';
+import { VictoryScene } from '../scenes/victory.js?v=be05988e5819';
+import { CreditsScene } from '../scenes/credits.js?v=be05988e5819';
+import { SettingsScene } from '../scenes/settings.js?v=be05988e5819';
+import { TutorialScene } from '../scenes/tutorial.js?v=be05988e5819';
+import { ArchiveScene } from '../scenes/archive.js?v=be05988e5819';
+import { ARCHIVE_ENTRY_IDS } from '../data/archive.js?v=be05988e5819';
 /** Posições normalizadas usadas quando não há layout livre salvo. */
 function presetTouchPositions(layout, dock) {
     const y = dock === 'top' ? 0.1 : 0.9;
@@ -557,6 +559,12 @@ export class Game {
     gotoSettings() {
         this.transitionTo(() => this.setScene(new SettingsScene(this)));
     }
+    gotoArchive() {
+        this.transitionTo(() => this.setScene(new ArchiveScene(this)));
+    }
+    showArchive() {
+        this.setScene(new ArchiveScene(this));
+    }
     gotoTutorial(onDone) {
         this.transitionTo(() => this.setScene(new TutorialScene(this, onDone)));
     }
@@ -585,8 +593,8 @@ export class Game {
         this.fade.color = color;
         this.fade.callback = callback;
     }
-    setNotice(text, color = '#ff8a3d') {
-        this.notice = { text, color, t: 0, max: 5.5 };
+    setNotice(text, color = '#ff8a3d', max = 5.5) {
+        this.notice = { text, color, t: 0, max };
     }
     persist() {
         writeSave(this.save);
@@ -599,6 +607,19 @@ export class Game {
     recordKill() {
         this.save.kills++;
         this.persist();
+    }
+    /** Revela registros no Arquivo do Véu e devolve apenas os que eram novos. */
+    unlockArchive(ids) {
+        const fresh = [];
+        for (const id of ids) {
+            if (!ARCHIVE_ENTRY_IDS.has(id) || this.save.archive.includes(id))
+                continue;
+            this.save.archive.push(id);
+            fresh.push(id);
+        }
+        if (fresh.length > 0)
+            this.persist();
+        return fresh;
     }
     // ------------------------------------------------------------- efeitos globais
     flash(color, alpha) {

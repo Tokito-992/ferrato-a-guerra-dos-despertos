@@ -322,6 +322,18 @@ function drawBoot(
   ctx.lineTo(x + w * 0.12, y - 5.2);
   ctx.stroke();
 
+  // Fivela metálica: ponto de leitura rápida no pé.
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.42)';
+  ctx.beginPath();
+  ctx.arc(x - w * 0.06, y - 3.9, 1.05, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = hexToRgba(c.accent, 0.7);
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(x - w * 0.18, y - 3.9);
+  ctx.lineTo(x + w * 0.06, y - 3.9);
+  ctx.stroke();
+
   // Assinatura de cada Desperto.
   switch (def.id) {
     case 'ravi':
@@ -1160,6 +1172,44 @@ export function drawCharacterFigure(
   ctx.stroke();
   ctx.restore();
 
+  // Costuras, rebites e brilho de tecido: leitura do traje em qualquer escala.
+  ctx.save();
+  ctx.strokeStyle = hexToRgba(mixColor(c.secondary, '#000000', 0.25), 0.55);
+  ctx.lineWidth = 0.9;
+  ctx.lineCap = 'round';
+  ctx.setLineDash([1.4, 1.5]);
+  ctx.beginPath();
+  ctx.moveTo(chestX + 1.5, chestY + 4);
+  ctx.quadraticCurveTo(chestX + 3, chestY + 16, hipX + 1.5, hipY - 4);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(chestX - 6.5, chestY + 4);
+  ctx.quadraticCurveTo(chestX - 8, chestY + 16, hipX - 5, hipY - 4);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle = hexToRgba(accent, 0.45);
+  ctx.lineWidth = 1.1;
+  for (const side of [-1, 1] as const) {
+    const sx = chestX + side * (chestW - 1.5);
+    ctx.beginPath();
+    ctx.moveTo(sx - 2.4, chestY + 3.2);
+    ctx.quadraticCurveTo(sx, chestY + 1.4, sx + 2.2, chestY + 3.4);
+    ctx.stroke();
+  }
+  const clothLight = ctx.createLinearGradient(chestX - chestW, chestY, chestX + chestW, hipY);
+  clothLight.addColorStop(0, 'rgba(255, 255, 255, 0)');
+  clothLight.addColorStop(0.62, 'rgba(255, 255, 255, 0.16)');
+  clothLight.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = clothLight;
+  ctx.beginPath();
+  ctx.moveTo(chestX - chestW + 2, chestY + 2);
+  ctx.quadraticCurveTo(chestX, chestY - 4, chestX + chestW - 2, chestY + 2);
+  ctx.lineTo(hipX + hipW - 3, hipY - 1);
+  ctx.lineTo(hipX - hipW + 3, hipY - 1);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
   // Detalhes de traje.
   ctx.save();
   ctx.globalAlpha *= 0.9;
@@ -1272,6 +1322,20 @@ export function drawCharacterFigure(
   ctx.fill();
   ctx.stroke();
 
+  // Rebites da fivela e brilho metálico do cinto.
+  ctx.fillStyle = hexToRgba(mixColor(accent, '#ffffff', 0.25), 0.9);
+  for (const offset of [-hipW * 0.55, 0, hipW * 0.55]) {
+    ctx.beginPath();
+    ctx.arc(hipX + offset, hipY - 1, 0.85, 0, TAU);
+    ctx.fill();
+  }
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.38)';
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(hipX - 2, hipY - 2.7);
+  ctx.lineTo(hipX + 2, hipY - 2.7);
+  ctx.stroke();
+
   // Perna dianteira.
   limbShaded(ctx, hipF.x, hipF.y, kneeF.x, kneeF.y, isWide ? 14 : 10.5, dark);
   limbShaded(ctx, kneeF.x, kneeF.y, footF.x, footF.y, isWide ? 13 : 9.5, secondary);
@@ -1314,48 +1378,105 @@ export function drawCharacterFigure(
   ctx.ellipse(-2, 4, 6.5, 4.5, 0.15, 0, TAU);
   ctx.fill();
 
-  // Olhos.
-  ctx.fillStyle = c.eye;
+  // Olhos: esclera, íris, pupila e brilho — o rosto precisa ler mesmo em escala pequena.
+  const glowingEyes = def.id === 'thryc' || def.id === 'ozric' || def.id === 'elodie';
   if (def.id === 'thryc') {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    glow(ctx, 0, -1.5, 10, c.eye, 0.4);
     ctx.fillStyle = '#ffffff';
-    ctx.globalAlpha *= 0.8;
     ctx.beginPath();
-    ctx.arc(-3, -1, 1.6, 0, TAU);
-    ctx.arc(3.4, -1, 1.6, 0, TAU);
+    ctx.ellipse(-3.2, -1.5, 2, 2.3, -0.08, 0, TAU);
+    ctx.ellipse(4, -1.5, 2.1, 2.4, 0.08, 0, TAU);
     ctx.fill();
-    ctx.globalAlpha = build.alpha;
-  } else if (def.id === 'kael') {
-    ctx.fillStyle = '#56e3ff';
-    ctx.fillRect(1.5, -3, 3, 2);
-    ctx.fillStyle = '#b48bff';
-    ctx.fillRect(-5, -3, 3, 2);
+    ctx.fillStyle = 'rgba(111, 242, 255, 0.75)';
+    ctx.beginPath();
+    ctx.arc(-3.2, -1.5, 1.2, 0, TAU);
+    ctx.arc(4, -1.5, 1.25, 0, TAU);
+    ctx.fill();
+    ctx.restore();
   } else {
+    // Esclera quente, com o olho de trás ligeiramente menor (perspectiva 3/4).
+    ctx.fillStyle = 'rgba(255, 250, 244, 0.94)';
     ctx.beginPath();
-    ctx.arc(4.2, -2, 1.5, 0, TAU);
+    ctx.ellipse(4.2, -1.8, 2.6, 2.1, -0.08, 0, TAU);
+    ctx.ellipse(-3.8, -1.8, 1.9, 1.7, 0.08, 0, TAU);
     ctx.fill();
+
+    // Íris com gradiente e pupila.
+    const iris = def.id === 'kael' ? '#56e3ff' : c.eye;
+    ctx.fillStyle = iris;
+    ctx.beginPath();
+    ctx.ellipse(4.6, -1.8, 1.6, 1.85, 0, 0, TAU);
+    ctx.ellipse(-3.6, -1.8, 1.25, 1.5, 0, 0, TAU);
+    ctx.fill();
+    if (def.id === 'kael') {
+      // Heterocromia: um olho ciano, o outro violeta.
+      ctx.fillStyle = '#b48bff';
+      ctx.beginPath();
+      ctx.ellipse(-3.6, -1.8, 1.25, 1.5, 0, 0, TAU);
+      ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(12, 9, 18, 0.9)';
+    ctx.beginPath();
+    ctx.ellipse(4.8, -1.6, 0.72, 1.2, 0, 0, TAU);
+    ctx.ellipse(-3.5, -1.6, 0.55, 0.95, 0, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.beginPath();
+    ctx.arc(4.1, -2.6, 0.6, 0, TAU);
+    ctx.arc(-3.9, -2.5, 0.42, 0, TAU);
+    ctx.fill();
+    if (glowingEyes) glow(ctx, 4.2, -1.8, 6, c.eye, 0.18);
+
+    // Cílios e linha superior, no tom do cabelo.
+    ctx.strokeStyle = hexToRgba(mixColor(c.hair, '#000000', 0.25), 0.9);
+    ctx.lineWidth = 1.1;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(1.8, -3.4);
+    ctx.quadraticCurveTo(4.3, -4.5, 6.7, -3);
+    ctx.moveTo(-5.8, -3.1);
+    ctx.quadraticCurveTo(-4.3, -4, -2.5, -3.2);
+    ctx.stroke();
   }
 
-  // Nariz, boca, sobrancelha e brilho de rosto.
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+  // Sobrancelhas, nariz, boca e brilho de rosto.
+  ctx.strokeStyle = hexToRgba(mixColor(c.hair, '#000000', 0.1), 0.85);
+  ctx.lineWidth = 1.25;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(2.2, -5);
+  ctx.quadraticCurveTo(4.4, -5.8, 6.6, -4.9);
+  ctx.moveTo(-5.6, -4.7);
+  ctx.quadraticCurveTo(-4.1, -5.4, -2.6, -4.8);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.32)';
   ctx.lineWidth = 0.8;
   ctx.beginPath();
-  ctx.moveTo(7.2, -1.2);
-  ctx.lineTo(8.2, 1.6);
-  ctx.lineTo(6.8, 2.2);
+  ctx.moveTo(7.4, -1.2);
+  ctx.lineTo(8.3, 1.6);
+  ctx.lineTo(6.9, 2.2);
   ctx.stroke();
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.28)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.32)';
   ctx.lineWidth = 0.7;
   ctx.beginPath();
-  ctx.moveTo(5.2, 4.6);
-  ctx.lineTo(7.4, 4.4);
+  ctx.moveTo(7.8, -0.8);
+  ctx.lineTo(8.1, 0.6);
   ctx.stroke();
-  ctx.strokeStyle = hexToRgba(mixColor(c.hair, '#000000', 0.2), 0.7);
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = hexToRgba(mixColor(c.skin, '#7a2a30', 0.55), 0.75);
+  ctx.lineWidth = 0.9;
   ctx.beginPath();
-  ctx.moveTo(2.4, -4.6);
-  ctx.lineTo(5.8, -4.2);
+  ctx.moveTo(4.6, 4.6);
+  ctx.quadraticCurveTo(6.2, 4.1, 7.6, 4.4);
   ctx.stroke();
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.moveTo(5.3, 5.1);
+  ctx.lineTo(7, 5);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.arc(1, 1, 7, Math.PI * 1.2, Math.PI * 1.55);
@@ -1450,6 +1571,67 @@ export function drawCharacterFigure(
     flash,
     build,
   });
+
+  // Luz de contorno: separa a silhueta do cenário e realça os detalhes.
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineCap = 'round';
+  const rimAlpha = visualStyle.anime ? 0.5 : 0.3;
+  const rimColor = hexToRgba(mixColor(c.accent, '#ffffff', 0.5), rimAlpha);
+  const rimGlow = hexToRgba(c.accent, visualStyle.anime ? 0.16 : 0.1);
+  const headR = isSlim ? 8 : 9;
+
+  // Cabeça: arco frontal luminoso.
+  ctx.save();
+  ctx.translate(headX, headY);
+  ctx.rotate(build.headTilt);
+  ctx.strokeStyle = rimGlow;
+  ctx.lineWidth = 3.6;
+  ctx.beginPath();
+  ctx.arc(0, 0, headR + 1.1, -1.05, 0.55);
+  ctx.stroke();
+  ctx.strokeStyle = rimColor;
+  ctx.lineWidth = 1.35;
+  ctx.beginPath();
+  ctx.arc(0, 0, headR + 0.35, -0.92, 0.35);
+  ctx.stroke();
+  ctx.restore();
+
+  // Ombros e tronco.
+  ctx.strokeStyle = rimGlow;
+  ctx.lineWidth = 3.4;
+  ctx.beginPath();
+  ctx.moveTo(shoulderF.x + 4, shoulderF.y + 1);
+  ctx.quadraticCurveTo(chestX + chestW + 2, chestY + 11, hipX + hipW + 1, hipY - 2);
+  ctx.stroke();
+  ctx.strokeStyle = rimColor;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(shoulderF.x + 3.2, shoulderF.y);
+  ctx.quadraticCurveTo(chestX + chestW - 0.5, chestY + 9, hipX + hipW - 0.5, hipY - 3);
+  ctx.stroke();
+
+  // Braço e perna dianteiros.
+  ctx.strokeStyle = hexToRgba(mixColor(c.accent, '#ffffff', 0.65), rimAlpha * 0.85);
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(shoulderF.x + 2.8, shoulderF.y + 1.5);
+  ctx.lineTo(elbowF.x + 2.4, elbowF.y + 1);
+  ctx.lineTo(handF.x + 2, handF.y);
+  ctx.moveTo(hipF.x + 3.4, hipF.y + 1);
+  ctx.lineTo(kneeF.x + 3, kneeF.y + 1);
+  ctx.lineTo(footF.x + 3.5, footF.y - 1);
+  ctx.stroke();
+
+  // Brilho especular no ombro e na bota.
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+  ctx.beginPath();
+  ctx.ellipse(shoulderF.x + 2.2, shoulderF.y - 0.6, 2.6, 1.1, -0.35, 0, TAU);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(footF.x + 3, footF.y - 5.4, 2.2, 0.9, -0.12, 0, TAU);
+  ctx.fill();
+  ctx.restore();
 
   ctx.restore();
 }
@@ -2001,6 +2183,26 @@ function drawWeapon(
       ctx.stroke();
       ctx.restore();
       glow(ctx, bx + 20, by - 10, 26, accent, 0.35);
+
+      // Cintilância que corre pela curva da lâmina.
+      const glintT = (Math.sin(time * 1.7) + 1) * 0.5;
+      const glintX = lerp(bx, ex, glintT);
+      const glintY = lerp(by, ey, glintT);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(255, 220, 225, 0.9)';
+      ctx.beginPath();
+      ctx.moveTo(glintX, glintY - 4.5);
+      ctx.lineTo(glintX + 1.3, glintY - 0.9);
+      ctx.lineTo(glintX + 4.8, glintY);
+      ctx.lineTo(glintX + 1.3, glintY + 0.9);
+      ctx.lineTo(glintX, glintY + 4.5);
+      ctx.lineTo(glintX - 1.3, glintY + 0.9);
+      ctx.lineTo(glintX - 4.8, glintY);
+      ctx.lineTo(glintX - 1.3, glintY - 0.9);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
       ctx.restore();
       break;
     }
@@ -2102,6 +2304,26 @@ function drawWeapon(
       ctx.beginPath();
       ctx.arc(gripEnd.x, gripEnd.y, 2.4, 0, TAU);
       ctx.fill();
+
+      // Cintilância que percorre o fio da lâmina.
+      const glintT = (Math.sin(time * 1.8) + 1) * 0.5;
+      const glintX = lerp(base.x, tipBase.x, glintT);
+      const glintY = lerp(base.y, tipBase.y, glintT);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.beginPath();
+      ctx.moveTo(glintX, glintY - 4);
+      ctx.lineTo(glintX + 1.2, glintY - 0.8);
+      ctx.lineTo(glintX + 4.2, glintY);
+      ctx.lineTo(glintX + 1.2, glintY + 0.8);
+      ctx.lineTo(glintX, glintY + 4);
+      ctx.lineTo(glintX - 1.2, glintY + 0.8);
+      ctx.lineTo(glintX - 4.2, glintY);
+      ctx.lineTo(glintX - 1.2, glintY - 0.8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
       ctx.restore();
       break;
     }
@@ -2802,24 +3024,47 @@ function drawAnimeRimLight(ctx: CanvasRenderingContext2D, p: Player, time: numbe
   ctx.scale(p.facing * p.scale, p.scale);
   ctx.globalCompositeOperation = 'lighter';
 
-  const rim = ctx.createLinearGradient(6, -90, 34, -10);
-  rim.addColorStop(0, hexToRgba(accent, 0.22 * pulse));
-  rim.addColorStop(0.55, hexToRgba(accent, 0.08 * pulse));
+  // Halo lateral que separa o corpo do cenário.
+  const rim = ctx.createLinearGradient(6, -104, 34, -10);
+  rim.addColorStop(0, hexToRgba(accent, 0.24 * pulse));
+  rim.addColorStop(0.55, hexToRgba(accent, 0.09 * pulse));
   rim.addColorStop(1, hexToRgba(accent, 0));
   ctx.fillStyle = rim;
   ctx.beginPath();
-  ctx.ellipse(18, -48, 22, 48, 0, 0, TAU);
+  ctx.ellipse(19, -55, 24, 52, 0, 0, TAU);
   ctx.fill();
 
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
-  ctx.lineWidth = 1.4;
+  // Contorno nítido da cabeça, ombro, braço e perna.
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.62)';
+  ctx.lineWidth = 1.7;
   ctx.beginPath();
-  ctx.arc(0, -78, 15, -1.25, 0.55);
+  ctx.arc(0, -100, 15.2, -1.3, 0.42);
   ctx.stroke();
 
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+  ctx.strokeStyle = hexToRgba(accent, 0.55);
+  ctx.lineWidth = 3.4;
   ctx.beginPath();
-  ctx.ellipse(9, -60, 3.2, 1.2, -0.5, 0, TAU);
+  ctx.moveTo(13, -84);
+  ctx.quadraticCurveTo(23, -62, 17, -34);
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(14, -82);
+  ctx.quadraticCurveTo(21, -60, 16, -36);
+  ctx.moveTo(7, -18);
+  ctx.quadraticCurveTo(10, -8, 11, 0);
+  ctx.stroke();
+
+  // Brilhos pontuais no ombro, cabelo e bota.
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+  ctx.beginPath();
+  ctx.ellipse(10, -88, 3.4, 1.4, -0.5, 0, TAU);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(12, -6, 2.6, 1.1, -0.2, 0, TAU);
   ctx.fill();
   ctx.restore();
 }
@@ -3057,6 +3302,33 @@ export function drawCharacterPortrait(
   ctx.translate(-8 * s, 40 * s);
   ctx.scale(s, s);
 
+  // Halo atrás da cabeça: dá volume ao retrato e separa o herói do fundo.
+  const halo = ctx.createRadialGradient(0, -32, 6, 0, -32, 34);
+  halo.addColorStop(0, dim ? 'rgba(44, 44, 64, 0.28)' : hexToRgba(c.accent, 0.18));
+  halo.addColorStop(0.65, dim ? 'rgba(30, 30, 44, 0.08)' : hexToRgba(c.accent, 0.05));
+  halo.addColorStop(1, hexToRgba(c.accent, 0));
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.arc(0, -32, 34, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = hexToRgba(c.accent, dim ? 0.12 : 0.32);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(0, -32, 27.5, 0, TAU);
+  ctx.stroke();
+  ctx.save();
+  ctx.globalAlpha = dim ? 0.12 : 0.38;
+  ctx.strokeStyle = c.accent;
+  ctx.lineWidth = 0.9;
+  for (let i = 0; i < 8; i++) {
+    const ang = (i / 8) * TAU + Math.PI * 0.12;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(ang) * 29, -32 + Math.sin(ang) * 29);
+    ctx.lineTo(Math.cos(ang) * 35, -32 + Math.sin(ang) * 35);
+    ctx.stroke();
+  }
+  ctx.restore();
+
   // Ombro / busto.
   ctx.beginPath();
   ctx.moveTo(-34, 30);
@@ -3087,6 +3359,14 @@ export function drawCharacterPortrait(
   ctx.quadraticCurveTo(-8, 16, -6, 30);
   ctx.moveTo(10, 4);
   ctx.quadraticCurveTo(8, 18, 10, 30);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(-19, 9);
+  ctx.quadraticCurveTo(-14, 18, -13, 30);
+  ctx.moveTo(17, 10);
+  ctx.quadraticCurveTo(14, 19, 15, 30);
   ctx.stroke();
   ctx.restore();
 
@@ -3147,6 +3427,13 @@ export function drawCharacterPortrait(
     ctx.beginPath();
     ctx.arc(7, -1.5, 1.1, 0, TAU);
     ctx.fill();
+    // Brilho especular na borda superior da ombreira.
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(-9, -4.2);
+    ctx.quadraticCurveTo(-2, -7.2, 7, -3.8);
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -3172,6 +3459,19 @@ export function drawCharacterPortrait(
   ctx.moveTo(-11, -1);
   ctx.quadraticCurveTo(0, 7, 11, -1);
   ctx.stroke();
+  // Costura da gola e fecho central.
+  ctx.setLineDash([1.8, 1.8]);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.38)';
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(-9, 0.5);
+  ctx.quadraticCurveTo(0, 6, 9, 0.5);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = hexToRgba(c.accent, 0.9);
+  ctx.beginPath();
+  ctx.arc(0, 6.2, 1.2, 0, TAU);
+  ctx.fill();
 
   // Cabeça.
   ctx.beginPath();
@@ -3200,65 +3500,171 @@ export function drawCharacterPortrait(
   ctx.ellipse(0, -16, 12, 5, 0, 0, TAU);
   ctx.fill();
 
-  // Olhos.
-  ctx.fillStyle = c.eye;
-  ctx.beginPath();
-  ctx.ellipse(-7, -34, 3, 2.2, 0, 0, TAU);
-  ctx.ellipse(8, -34, 3, 2.2, 0, 0, TAU);
-  ctx.fill();
-  if (def.id !== 'thryc') {
-    ctx.fillStyle = 'rgba(18, 14, 24, 0.72)';
+  // Olhos grandes de anime: esclera, íris em gradiente, pupila e brilhos.
+  if (def.id === 'thryc') {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    glow(ctx, -7.5, -34.5, 13, c.eye, 0.4);
+    glow(ctx, 8.5, -34.5, 13, c.eye, 0.4);
+    ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.ellipse(-7, -34, 1.1, 1.5, 0, 0, TAU);
-    ctx.ellipse(8, -34, 1.1, 1.5, 0, 0, TAU);
+    ctx.ellipse(-7.5, -34.5, 4.2, 3.4, -0.08, 0, TAU);
+    ctx.ellipse(8.5, -34.5, 4.4, 3.5, 0.08, 0, TAU);
     ctx.fill();
+    ctx.fillStyle = 'rgba(111, 242, 255, 0.85)';
+    ctx.beginPath();
+    ctx.ellipse(-7.5, -34.5, 2.1, 2.6, 0, 0, TAU);
+    ctx.ellipse(8.5, -34.5, 2.2, 2.7, 0, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+  } else {
+    // Esclera.
+    ctx.fillStyle = 'rgba(255, 251, 246, 0.96)';
+    ctx.beginPath();
+    ctx.ellipse(-7.5, -34.5, 4.1, 3.2, -0.06, 0, TAU);
+    ctx.ellipse(8.5, -34.5, 4.3, 3.35, 0.06, 0, TAU);
+    ctx.fill();
+
+    // Íris com gradiente radial.
+    for (const [ex, eyeScale] of [[-7.5, 1], [8.5, 1.05]] as const) {
+      const irisColor = def.id === 'kael' && ex < 0 ? '#b48bff' : c.eye;
+      const irisGrad = ctx.createRadialGradient(ex - 0.6, -35.6, 0.4, ex, -34.4, 3);
+      irisGrad.addColorStop(0, mixColor(irisColor, '#ffffff', 0.65));
+      irisGrad.addColorStop(0.45, irisColor);
+      irisGrad.addColorStop(1, mixColor(irisColor, '#120c18', 0.45));
+      ctx.fillStyle = irisGrad;
+      ctx.beginPath();
+      ctx.ellipse(ex, -34.4, 2.6 * eyeScale, 2.9, 0, 0, TAU);
+      ctx.fill();
+    }
+
+    // Pupila.
+    ctx.fillStyle = 'rgba(12, 9, 16, 0.92)';
+    ctx.beginPath();
+    ctx.ellipse(-7.5, -34.2, 1.1, 1.9, 0, 0, TAU);
+    ctx.ellipse(8.5, -34.2, 1.15, 1.95, 0, 0, TAU);
+    ctx.fill();
+
+    // Brilhos.
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.beginPath();
+    ctx.arc(-8.6, -35.5, 1.05, 0, TAU);
+    ctx.arc(7.4, -35.5, 1.1, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.beginPath();
+    ctx.arc(-6.4, -33.2, 0.55, 0, TAU);
+    ctx.arc(9.6, -33.2, 0.55, 0, TAU);
+    ctx.fill();
+    if (def.id === 'ozric' || def.id === 'elodie') {
+      glow(ctx, -7.5, -34.5, 9, c.eye, 0.18);
+      glow(ctx, 8.5, -34.5, 9, c.eye, 0.18);
+    }
+
+    // Cílios grossos e delineado.
+    ctx.strokeStyle = hexToRgba(mixColor(c.hair, '#000000', 0.25), 0.95);
+    ctx.lineWidth = 1.6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-11.8, -36.6);
+    ctx.quadraticCurveTo(-7.5, -39.4, -3.2, -36.4);
+    ctx.moveTo(4.2, -36.5);
+    ctx.quadraticCurveTo(8.5, -39.5, 12.8, -36.3);
+    ctx.stroke();
+    ctx.strokeStyle = hexToRgba(mixColor(c.hair, '#000000', 0.1), 0.45);
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(-10.6, -32.3);
+    ctx.quadraticCurveTo(-7.6, -31.1, -4.4, -32.4);
+    ctx.moveTo(5.4, -32.5);
+    ctx.quadraticCurveTo(8.4, -31.2, 11.4, -32.4);
+    ctx.stroke();
   }
 
-  // Brilho dos olhos, sobrancelhas, nariz e lábios.
-  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  // Sobrancelhas, nariz, lábios e sombras do rosto.
+  ctx.strokeStyle = hexToRgba(mixColor(c.hair, '#000000', 0.15), 0.8);
+  ctx.lineWidth = 1.7;
+  ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.arc(-8, -35, 0.8, 0, TAU);
-  ctx.arc(7, -35, 0.8, 0, TAU);
-  ctx.fill();
-  ctx.strokeStyle = hexToRgba(mixColor(c.hair, '#000000', 0.2), 0.55);
-  ctx.lineWidth = 1.1;
-  ctx.beginPath();
-  ctx.moveTo(-11, -40);
-  ctx.quadraticCurveTo(-7, -41.5, -3, -40);
-  ctx.moveTo(4, -40);
-  ctx.quadraticCurveTo(8, -41.5, 12, -40);
+  ctx.moveTo(-12.4, -41.2);
+  ctx.quadraticCurveTo(-8, -43.2, -3.4, -41);
+  ctx.moveTo(4.6, -41);
+  ctx.quadraticCurveTo(9, -43.2, 13.4, -41.1);
   ctx.stroke();
-  ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(0, -27.5);
-  ctx.lineTo(-1.2, -24);
-  ctx.quadraticCurveTo(0, -23, 1.3, -23.4);
+  ctx.moveTo(0.8, -30);
+  ctx.lineTo(-0.8, -24.2);
+  ctx.quadraticCurveTo(0.4, -23.1, 1.8, -23.7);
   ctx.stroke();
-  ctx.strokeStyle = hexToRgba(mixColor(c.skin, '#7a2a30', 0.5), 0.55);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(-0.4, -29);
+  ctx.lineTo(-1.2, -25.2);
+  ctx.stroke();
+  ctx.strokeStyle = hexToRgba(mixColor(c.skin, '#7a2a30', 0.55), 0.75);
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-5, -18.6);
+  ctx.quadraticCurveTo(-1.8, -20.2, 0, -19);
+  ctx.quadraticCurveTo(1.8, -20.2, 5, -18.6);
+  ctx.stroke();
+  ctx.strokeStyle = hexToRgba(mixColor(c.skin, '#7a2a30', 0.3), 0.55);
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(-3.4, -17.4);
+  ctx.quadraticCurveTo(0, -15.6, 3.4, -17.4);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(-2.4, -16.8);
+  ctx.quadraticCurveTo(0, -15.9, 2.4, -16.8);
+  ctx.stroke();
+  ctx.fillStyle = hexToRgba(mixColor(c.skin, '#ff6a7a', 0.28), 0.18);
+  ctx.beginPath();
+  ctx.ellipse(-11, -25.5, 5.4, 2.6, 0.15, 0, TAU);
+  ctx.ellipse(11, -25.5, 5.4, 2.6, -0.15, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.18)';
   ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.moveTo(-4, -18);
-  ctx.quadraticCurveTo(0, -16.5, 4, -18);
+  ctx.moveTo(-10.5, -15.2);
+  ctx.quadraticCurveTo(0, -11.8, 10.5, -15.2);
   ctx.stroke();
 
   // Cabelo por personagem.
   drawPortraitHeadwear(ctx, def, time, s);
 
   // Brilho no cabelo e luz de contorno.
-  ctx.strokeStyle = hexToRgba(mixColor(c.hair, '#ffffff', 0.6), 0.5);
-  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = hexToRgba(mixColor(c.hair, '#ffffff', 0.6), 0.65);
+  ctx.lineWidth = 1.8;
   ctx.beginPath();
   ctx.arc(-2, -44, 14, Math.PI * 1.1, Math.PI * 1.48);
   ctx.stroke();
-  ctx.strokeStyle = hexToRgba(c.accent, 0.32);
+  ctx.strokeStyle = hexToRgba(c.accent, 0.55);
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.ellipse(0, -32, 19.2, 22.2, 0, -0.95, 0.55);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.78)';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.ellipse(0, -32, 18.5, 21.5, 0, -0.9, 0.5);
+  ctx.ellipse(0, -32, 18.2, 21.2, 0, -0.82, 0.38);
   ctx.stroke();
+  ctx.strokeStyle = hexToRgba(c.accent, 0.45);
+  ctx.lineWidth = 1.6;
   ctx.beginPath();
   ctx.moveTo(20, -2);
   ctx.quadraticCurveTo(32, 8, 34, 28);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(22, 0);
+  ctx.quadraticCurveTo(32, 10, 33.5, 26);
   ctx.stroke();
 
   // Detalhes de traje.

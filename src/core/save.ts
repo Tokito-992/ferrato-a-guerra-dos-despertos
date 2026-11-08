@@ -3,6 +3,7 @@
 import { CHARACTER_ORDER } from '../data/characters.js';
 import type { CharacterId } from '../data/characters.js';
 import { CHAPTERS_PER_ARC, MAX_STAGE } from '../data/stages.js';
+import { ARCHIVE_ENTRY_IDS, backfillArchiveIds } from '../data/archive.js';
 import { isRank } from './rank.js';
 import type { Rank } from './rank.js';
 
@@ -61,6 +62,8 @@ export interface SaveData {
   touchDock: TouchDock;
   /** Posições livres dos botões; ausente = usa o preset de lado/dock. */
   touchPositions: TouchPositions | null;
+  /** Registros já avistados no Arquivo do Véu (bestiário). */
+  archive: string[];
 }
 
 interface LegacySave {
@@ -78,6 +81,7 @@ interface LegacySave {
   touchLayout?: string;
   touchDock?: string;
   touchPositions?: Record<string, unknown> | null;
+  archive?: unknown[];
 }
 
 /** Mantemos a chave v1 para conseguir migrar arquivos antigos sem perder progresso. */
@@ -148,6 +152,15 @@ function sanitize(data: LegacySave): SaveData {
   }
 
   const selected = validHero(data.selected);
+  const archive = Array.isArray(data.archive)
+    ? Array.from(
+        new Set(
+          data.archive.filter(
+            (id): id is string => typeof id === 'string' && ARCHIVE_ENTRY_IDS.has(id),
+          ),
+        ),
+      )
+    : backfillArchiveIds(cleared, maxStage);
   return {
     version: VERSION,
     unlocked,
@@ -163,6 +176,7 @@ function sanitize(data: LegacySave): SaveData {
     touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
     touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
     touchPositions: sanitizeTouchPositions(data.touchPositions),
+    archive,
   };
 }
 
@@ -211,11 +225,12 @@ function migrateLegacy(data: LegacySave): SaveData {
   }
 
   const selected = validHero(data.selected);
+  const migratedCleared = Array.from(new Set(cleared)).sort((a, b) => a - b);
   return {
     version: VERSION,
     unlocked,
     maxStage,
-    cleared: Array.from(new Set(cleared)).sort((a, b) => a - b),
+    cleared: migratedCleared,
     selected: selected && unlocked.includes(selected) ? selected : heroForStage(maxStage),
     kills: typeof data.kills === 'number' && data.kills > 0 ? Math.round(data.kills) : 0,
     deaths: typeof data.deaths === 'number' && data.deaths > 0 ? Math.round(data.deaths) : 0,
@@ -226,6 +241,7 @@ function migrateLegacy(data: LegacySave): SaveData {
     touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
     touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
     touchPositions: sanitizeTouchPositions(data.touchPositions),
+    archive: backfillArchiveIds(migratedCleared, maxStage),
   };
 }
 
@@ -245,6 +261,7 @@ export function defaultSave(): SaveData {
     touchLayout: 'standard',
     touchDock: 'bottom',
     touchPositions: null,
+    archive: [],
   };
 }
 

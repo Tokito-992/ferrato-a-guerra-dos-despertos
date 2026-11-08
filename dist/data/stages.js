@@ -8,7 +8,7 @@
  * As seis fases originais foram preservadas como os capítulos 6, 12, 18, 24,
  * 30 e 36 — os confrontos finais de Ravi, Miriam, Kael, Ozric, Élodie e Thryc.
  */
-import { hexToRgba, mixColor } from '../core/math.js?v=9c45571a7549';
+import { hexToRgba, mixColor } from '../core/math.js?v=be05988e5819';
 export const ARC_COUNT = 6;
 export const CHAPTERS_PER_ARC = 6;
 export const MAX_STAGE = ARC_COUNT * CHAPTERS_PER_ARC;
@@ -173,7 +173,7 @@ const ARC_SEEDS = [
         finale: {
             name: 'O Despertar',
             location: 'Terra — Subúrbio de New Haven',
-            synopsis: 'O céu se abre por completo. Criaturas ferratizadas sobem do asfalto e o sangue de alguns moradores começa a ferver.',
+            synopsis: 'O Colosso desperta no subúrbio. A cidade vira um estômago de carne e concreto — e Ravi descobre que a faísca não foi um acidente.',
             motive: 'Alguém precisa ficar de pé quando a rua inteira cai.',
             width: 2600,
             waves: [
@@ -213,7 +213,7 @@ const ARC_SEEDS = [
             {
                 name: 'Estrada de Cinzas',
                 location: 'Terra — Rodovia dos Imortais',
-                synopsis: 'Um comboio de sobreviventes corta a estrada sob uma chuva de brasas. Miriam assume o volante e a responsabilidade.',
+                synopsis: 'Miriam lidera 43 sobreviventes de New Haven de volta a Brasília sob uma chuva de brasas. A estrada é longa, e o Ferrato já sabe o caminho.',
                 motive: 'Ninguém fica para trás — nunca.',
                 eliteName: 'Saqueador Carbonizado',
                 waves: ['Convoy Interrompido', 'Fogo na Rodovia', 'O Saqueador'],
@@ -274,7 +274,7 @@ const ARC_SEEDS = [
         finale: {
             name: 'Cinzas Ascendentes',
             location: 'Terra — Ruínas de Brasília',
-            synopsis: 'O exército convencional caiu. Os ataques são coordenados. Aberrações maiores mostram que não são invasores: são conquistadores.',
+            synopsis: 'Vek’thar espera sob o portal orbital. Miriam precisa vencer o general, evacuar os 43 sobreviventes e aceitar a ajuda de um engenheiro que veio do céu.',
             motive: 'Ela já viu fogo demais. Desta vez vai apagar a fonte.',
             width: 2820,
             waves: [
@@ -361,7 +361,7 @@ const ARC_SEEDS = [
             {
                 name: 'Órbita de Guerra',
                 location: 'Espaço — Casco Externo de SOLACE',
-                synopsis: "Sem gravidade, sem chão, sem plano B. O portal se abre e o Núcleo-Orbitário Xal'mor desperta.",
+                synopsis: 'Xal’mor ataca no casco de SOLACE. Kael descobre que o núcleo orbital é a fechadura do portal — e que derrubá-lo vai arrastar a estação para baixo.',
                 motive: 'Mesmo no vazio, a gente escolhe ficar.',
                 eliteName: 'Sentinela Orbital',
                 waves: ['Casco Externo', 'Sem Gravidade', 'A Sentinela Orbital'],
@@ -374,7 +374,7 @@ const ARC_SEEDS = [
         finale: {
             name: 'Órbita Quebrada',
             location: 'Espaço — Estação SOLACE',
-            synopsis: "Para impedir a abertura de um portal massivo, os Despertos vão ao espaço. Lá descobrem os Khar'uun — e o que o Ferrato fez com eles.",
+            synopsis: 'No coração de SOLACE, Xal’mor espera. Kael precisa desligar o núcleo orbital antes que o portal engula a estação — e o preço pode ser cair com ela.',
             motive: 'Se o espaço não tem chão, Kael constrói um.',
             width: 2940,
             waves: [
@@ -482,7 +482,7 @@ const ARC_SEEDS = [
         finale: {
             name: 'Portões Corrompidos',
             location: 'Inferno — Níveis do Abismo Rubro',
-            synopsis: 'Ao fecharem um Portão, os Despertos são arrastados para o Inferno. As legiões de almas corrompidas são mais cruéis do que qualquer coisa já vista.',
+            synopsis: 'Ozric quebra a última corrente de memória e encontra o grupo nos Portões. Acheron espera — e o Abismo quer uma sentença final.',
             motive: 'Ele não veio julgar o Barão. Veio libertar as almas.',
             width: 3040,
             waves: [
@@ -578,7 +578,7 @@ const ARC_SEEDS = [
             {
                 name: 'Asas de Luz',
                 location: 'Céu — Escadaria de Malakhim',
-                synopsis: 'A escadaria até o Arcanjo é feita de penas e culpa. Élodie sobe sem pedir perdão.',
+                synopsis: 'A escadaria até Malakhim é feita de penas e culpa. Élodie sobe sem pedir perdão — e descobre que o Arcanjo está esperando por ela.',
                 motive: 'Não vim purificar o céu. Vim abrir espaço para ele respirar.',
                 eliteName: 'Arauto da Aurora',
                 waves: ['Escadaria', 'Asas de Luz', 'O Arauto'],
@@ -591,7 +591,7 @@ const ARC_SEEDS = [
         finale: {
             name: 'Véu Rasgado',
             location: 'Céu — Eclésia Celestial em Ruínas',
-            synopsis: 'A maior parte do exército celestial sucumbiu. Os restantes se dividem entre purificar a Eclésia com fogo ou lutar ao lado dos Despertos.',
+            synopsis: 'Malakhim espera na Eclésia em ruínas. Élodie precisa impedir que o mestre purifique o que restou do Céu — e abrir a porta para o que existe entre os planos.',
             motive: 'Ela não vai purificar o céu. Vai impedir que ele caia.',
             width: 3140,
             waves: [
@@ -676,10 +676,10 @@ const ARC_SEEDS = [
             {
                 name: 'O Primeiro Eco',
                 location: 'Nexus — Ponte de Memórias',
-                synopsis: 'Thryc vê seis vidas do outro lado do Véu. Pela primeira vez, elu escolhe intervir.',
+                synopsis: 'Thryc vê cinco vidas do outro lado do Véu. Pela primeira vez, elu escolhe intervir.',
                 motive: 'A esperança é uma memória que insiste em voltar.',
                 eliteName: 'Guardião da Ponte',
-                waves: ['Ponte', 'Memórias dos Seis', 'O Guardião'],
+                waves: ['Ponte', 'Memórias dos Cinco', 'O Guardião'],
                 tint: '#14102a',
                 tintAmount: 0.1,
                 accent: '#6ff2ff',
@@ -688,7 +688,7 @@ const ARC_SEEDS = [
             {
                 name: 'Antes do Fim',
                 location: 'Nexus — Limiar do Ferrato',
-                synopsis: 'Os ecos dos seis Despertos se encontram no limiar. Thryc reúne coragem para o que vem depois do fim.',
+                synopsis: 'Os ecos dos cinco Despertos se encontram no limiar. Thryc reúne coragem para o que vem depois do fim.',
                 motive: 'Se o fim é uma escolha, eu escolho o amanhã.',
                 eliteName: 'Arauto do Fim',
                 waves: ['Limiar', 'Ecos do Mundo', 'O Arauto'],

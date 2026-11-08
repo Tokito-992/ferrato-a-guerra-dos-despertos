@@ -26,6 +26,8 @@ import { VictoryScene } from '../scenes/victory.js';
 import { CreditsScene } from '../scenes/credits.js';
 import { SettingsScene } from '../scenes/settings.js';
 import { TutorialScene } from '../scenes/tutorial.js';
+import { ArchiveScene } from '../scenes/archive.js';
+import { ARCHIVE_ENTRY_IDS } from '../data/archive.js';
 
 export interface Scene {
   update(dt: number): void;
@@ -628,6 +630,14 @@ export class Game {
     this.transitionTo(() => this.setScene(new SettingsScene(this)));
   }
 
+  gotoArchive(): void {
+    this.transitionTo(() => this.setScene(new ArchiveScene(this)));
+  }
+
+  showArchive(): void {
+    this.setScene(new ArchiveScene(this));
+  }
+
   gotoTutorial(onDone: () => void): void {
     this.transitionTo(() => this.setScene(new TutorialScene(this, onDone)));
   }
@@ -660,8 +670,8 @@ export class Game {
     this.fade.callback = callback;
   }
 
-  setNotice(text: string, color = '#ff8a3d'): void {
-    this.notice = { text, color, t: 0, max: 5.5 };
+  setNotice(text: string, color = '#ff8a3d', max = 5.5): void {
+    this.notice = { text, color, t: 0, max };
   }
 
   persist(): void {
@@ -677,6 +687,18 @@ export class Game {
   recordKill(): void {
     this.save.kills++;
     this.persist();
+  }
+
+  /** Revela registros no Arquivo do Véu e devolve apenas os que eram novos. */
+  unlockArchive(ids: readonly string[]): string[] {
+    const fresh: string[] = [];
+    for (const id of ids) {
+      if (!ARCHIVE_ENTRY_IDS.has(id) || this.save.archive.includes(id)) continue;
+      this.save.archive.push(id);
+      fresh.push(id);
+    }
+    if (fresh.length > 0) this.persist();
+    return fresh;
   }
 
   // ------------------------------------------------------------- efeitos globais

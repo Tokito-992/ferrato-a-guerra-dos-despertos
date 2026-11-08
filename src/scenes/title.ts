@@ -11,6 +11,7 @@ import { CHARACTER_ORDER, CHARACTERS } from '../data/characters.js';
 import type { CharacterId } from '../data/characters.js';
 import { ARC_COUNT, getArcStages, getStage, MAX_STAGE } from '../data/stages.js';
 import { TITLE_QUOTE } from '../data/story.js';
+import { archiveTotalProgress } from '../data/archive.js';
 import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js';
 import { drawTitleBackground } from '../render/backgrounds.js';
 import { drawCharacterPortrait } from '../render/characters.js';
@@ -239,8 +240,9 @@ export class TitleScene implements Scene {
     const arcsDone = Array.from({ length: ARC_COUNT }, (_, index) => index + 1).filter((arc) =>
       getArcStages(arc).every((chapter) => save.cleared.includes(chapter.id)),
     ).length;
+    const archive = archiveTotalProgress(save);
     const items: MenuItem[] = [
-      { id: 'new', badge: '01', label: 'NOVO JOGO', detail: 'ARCO I · CAP. 1', accent: '#ff8a3d', height: 54 },
+      { id: 'new', badge: '01', label: 'NOVO JOGO', detail: 'ARCO I · CAP. 1', accent: '#ff8a3d', height: 46 },
       {
         id: 'continue',
         badge: '02',
@@ -248,7 +250,7 @@ export class TitleScene implements Scene {
         detail: hasProgress ? stage.subtitle.toUpperCase() : 'SEM PROGRESSO',
         disabled: !hasProgress,
         accent: '#56e3ff',
-        height: 54,
+        height: 46,
       },
       {
         id: 'select',
@@ -256,9 +258,17 @@ export class TitleScene implements Scene {
         label: 'DESPERTOS & ARCOS',
         detail: `${arcsDone} / ${ARC_COUNT} ARCOS`,
         accent: '#b48bff',
-        height: 54,
+        height: 46,
       },
-      { id: 'settings', badge: '04', label: 'CONFIGURAÇÕES', detail: 'CONTROLES · ÁUDIO · TELA', accent: '#56e3ff', height: 54 },
+      {
+        id: 'archive',
+        badge: '04',
+        label: 'ARQUIVO DO VÉU',
+        detail: `${archive.unlocked} / ${archive.total} REGISTROS`,
+        accent: '#ffd166',
+        height: 46,
+      },
+      { id: 'settings', badge: '05', label: 'CONFIGURAÇÕES', detail: 'CONTROLES · ÁUDIO · TELA', accent: '#56e3ff', height: 46 },
     ];
 
     const cloud = this.game.cloudSnapshot;
@@ -279,7 +289,7 @@ export class TitleScene implements Scene {
         detail,
         accent: '#ffd166',
         minor: true,
-        height: 30,
+        height: 28,
       });
     }
 
@@ -290,7 +300,7 @@ export class TitleScene implements Scene {
       detail: 'O VÉU',
       accent: '#ffe6a3',
       minor: true,
-      height: 30,
+      height: 28,
     });
     this.menu.setItems(items, keepIndex);
   }
@@ -312,6 +322,9 @@ export class TitleScene implements Scene {
         break;
       case 'select':
         this.game.gotoCharacterSelect(this.game.save.maxStage, this.game.save.selected);
+        break;
+      case 'archive':
+        this.game.gotoArchive();
         break;
       case 'settings':
         this.game.gotoSettings();
@@ -458,10 +471,10 @@ export class TitleScene implements Scene {
     });
 
     // Menu principal + ações secundárias.
-    this.menu.draw(ctx, 80, 356, 470, {
-      itemHeight: 54,
-      gap: 6,
-      size: 17,
+    this.menu.draw(ctx, 80, 348, 470, {
+      itemHeight: 46,
+      gap: 4,
+      size: 16,
       accent: '#ff8a3d',
     });
     ctx.restore();
