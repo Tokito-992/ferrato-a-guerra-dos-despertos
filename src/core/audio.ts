@@ -92,17 +92,20 @@ interface ChapterMood {
   lead: number;
 }
 
-/** Seis humores por arco: entrada, tensão, exploração, ascensão, clímax e finale. */
+/** Sete humores por arco: entrada, tensão, exploração, ascensão, clímax, crônica e finale. */
 const CHAPTER_MOODS: ChapterMood[] = [
   { bpm: 0.9, transpose: 0, rotate: 0, arp: false, drums: 0.7, pad: 1.16, lead: 0.82 },
   { bpm: 0.95, transpose: 2, rotate: 1, arp: false, drums: 0.86, pad: 1.08, lead: 0.9 },
   { bpm: 1.0, transpose: -2, rotate: 2, arp: true, drums: 1.0, pad: 1.0, lead: 1.0 },
   { bpm: 1.04, transpose: 3, rotate: 3, arp: true, drums: 1.08, pad: 1.04, lead: 1.08 },
   { bpm: 1.08, transpose: 5, rotate: 4, arp: true, drums: 1.16, pad: 1.1, lead: 1.18 },
+  // Crônica: o capítulo de vínculo antes do chefe. Mais lento, intimista,
+  // com o pad e a melodia à frente e a bateria quase ausente.
+  { bpm: 0.82, transpose: -5, rotate: 6, arp: false, drums: 0.48, pad: 1.34, lead: 1.06 },
   { bpm: 1.12, transpose: 0, rotate: 5, arp: true, drums: 1.28, pad: 1.2, lead: 1.28 },
 ];
 
-export const STAGE_THEME_COUNT = 36;
+export const STAGE_THEME_COUNT = ARC_BASES.length * CHAPTER_MOODS.length;
 
 const round2 = (value: number): number => Math.round(value * 100) / 100;
 const round3 = (value: number): number => Math.round(value * 1000) / 1000;

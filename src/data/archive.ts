@@ -68,35 +68,35 @@ export const ARCHIVE_SECTIONS: ArchiveSectionDef[] = [
     label: 'Despertos',
     short: 'DESPERTOS',
     accent: '#56e3ff',
-    description: 'As seis vidas que o Véu não conseguiu digerir.',
+    description: 'As seis vidas que o Véu não conseguiu digerir. Cada uma escolheu se levantar antes de receber poder.',
   },
   {
     id: 'creatures',
     label: 'Criaturas',
     short: 'CRIATURAS',
     accent: '#ff8a3d',
-    description: 'Tudo o que o Ferrato tocou e deixou com fome.',
+    description: 'O que o Ferrato tocou e não conseguiu digerir: corpos, memórias e fomes que sobraram.',
   },
   {
     id: 'bosses',
     label: 'Chefes',
     short: 'CHEFES',
     accent: '#ff3357',
-    description: 'As mãos que o Véu usa para segurar um plano inteiro.',
+    description: 'As mãos que o Véu usa para segurar um plano inteiro. Cada chefe foi alguém antes da fome.',
   },
   {
     id: 'places',
     label: 'Lugares & Elites',
     short: 'LUGARES',
     accent: '#ffd166',
-    description: 'Os capítulos, suas ruínas e os campeões de cada um.',
+    description: 'Os mundos que o Ferrato devorou e os capítulos que os Despertos atravessaram.',
   },
   {
     id: 'relics',
     label: 'Fenômenos & Relíquias',
     short: 'MAPA',
     accent: '#b48bff',
-    description: 'As coisas estranhas que pulsam pelo mapa.',
+    description: 'As feridas, âncoras e milagres que pulsam pelo mapa.',
   },
 ];
 
@@ -315,8 +315,8 @@ function creatureEntries(): ArchiveEntry[] {
 function bossEntries(): ArchiveEntry[] {
   return (Object.keys(BOSSES) as BossId[]).map((id) => {
     const def = BOSSES[id];
-    // BossDef.stage guarda o arco (1–6); o chefe fecha o sexto capítulo do arco.
-    const arc = def.stage;
+    // BossDef.arc guarda o arco (1–6); o chefe fecha o sétimo capítulo do arco.
+    const arc = def.arc;
     const stage = getStage(arc * CHAPTERS_PER_ARC);
     return {
       id: archiveBossId(id),
@@ -324,7 +324,7 @@ function bossEntries(): ArchiveEntry[] {
       name: def.name,
       subtitle: `${def.title} · ${stage.location}`,
       lore: [
-        def.intro,
+        ...def.lore,
         `Fases: ${def.phases.map((phase) => phase.name).join(' → ')}.`,
         def.defeat,
       ],

@@ -5,8 +5,10 @@
  * aprofundam a história pessoal do herói; o sexto é o clímax com o chefe do
  * planeta antes de o Véu levar o grupo ao próximo arco.
  *
- * As seis fases originais foram preservadas como os capítulos 6, 12, 18, 24,
- * 30 e 36 — os confrontos finais de Ravi, Miriam, Kael, Ozric, Élodie e Thryc.
+ * As seis fases originais foram preservadas como os capítulos 7, 14, 21, 28,
+ * 35 e 42 — os confrontos finais de Ravi, Miriam, Kael, Ozric, Élodie e Thryc.
+ * O sexto capítulo de cada arco é uma crônica de vínculo e lore: o mundo, os
+ * monstros, o Ferrato e o motivo de cada Desperto antes do confronto final.
  */
 
 import type { CharacterId } from './characters.js';
@@ -61,7 +63,7 @@ export interface StageDef {
   ambient: AmbientKind;
   palette: StagePalette;
   waves: WaveDef[];
-  /** Capítulos 1..5 não têm chefe; o capítulo 6 encerra o planeta. */
+  /** Capítulos 1..6 não têm chefe; o capítulo 7 encerra o planeta. */
   boss: BossId | null;
   character: CharacterId;
   enemyNames: Partial<Record<EnemyKind, string>>;
@@ -71,9 +73,9 @@ export interface StageDef {
 }
 
 export const ARC_COUNT = 6;
-export const CHAPTERS_PER_ARC = 6;
+export const CHAPTERS_PER_ARC = 7;
 export const MAX_STAGE = ARC_COUNT * CHAPTERS_PER_ARC;
-export const STAGE_ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
+export const STAGE_ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
 export const FLOOR_Y = 602;
 
 interface ChapterSeed {
@@ -280,6 +282,19 @@ const ARC_SEEDS: ArcSeed[] = [
         accent: '#ffd166',
         accent2: '#ff5a3c',
       },
+      {
+        name: 'A Igreja de New Haven',
+        location: 'Terra — Igreja de São Judas, New Haven',
+        synopsis:
+          'Ravi encontra a mãe e os 43 sobreviventes refugiados na igreja. Miriam chega com o comboio e explica o que é o Ferrato, o que são os monstros e por que os Despertos ainda estão de pé.',
+        motive: 'Ninguém enfrenta o fim sozinho — nem no fim do mundo.',
+        eliteName: 'Anjo de Fuligem',
+        waves: ['Nave Lotada', 'O Sino de Carne', 'O Anjo de Fuligem'],
+        tint: '#2a1420',
+        tintAmount: 0.14,
+        accent: '#ffd166',
+        accent2: '#8df4ff',
+      },
     ],
     finale: {
       name: 'O Despertar',
@@ -387,6 +402,19 @@ const ARC_SEEDS: ArcSeed[] = [
         accent: '#ff5a3c',
         accent2: '#ffd166',
       },
+      {
+        name: 'Os Quarenta e Três',
+        location: 'Terra — Memorial Khar’uun, Brasília',
+        synopsis:
+          'No memorial da primeira civilização devorada, Miriam mostra aos Despertos o que o Ferrato faz com um povo. Os 43 sobreviventes esperam no comboio — e ela conta as cabeças outra vez.',
+        motive: 'Quarenta e três. Ninguém a menos.',
+        eliteName: 'Guardião do Memorial',
+        waves: ['Praça de Cobre', 'Nomes na Cinza', 'O Guardião'],
+        tint: '#2a1c18',
+        tintAmount: 0.16,
+        accent: '#ffae5a',
+        accent2: '#8df4a8',
+      },
     ],
     finale: {
       name: 'Cinzas Ascendentes',
@@ -492,6 +520,19 @@ const ARC_SEEDS: ArcSeed[] = [
         tintAmount: 0.1,
         accent: '#6ff2ff',
         accent2: '#ff5a7a',
+      },
+      {
+        name: 'A Última Manutenção',
+        location: 'Espaço — SOLACE, Doca 3',
+        synopsis:
+          'Kael volta à Doca 3 para consertar a Aurora e ouvir a última gravação da Dra. Sora. O grupo descobre que o Ferrato não matou a tripulação: transformou-a em plantão eterno.',
+        motive: 'Um problema de cada vez. É assim que se conserta qualquer coisa.',
+        eliteName: 'Sentinela da Aurora',
+        waves: ['Berço de Manutenção', 'A Voz da Dra. Sora', 'A Sentinela'],
+        tint: '#0c1830',
+        tintAmount: 0.14,
+        accent: '#6ff2ff',
+        accent2: '#ffd166',
       },
     ],
     finale: {
@@ -605,6 +646,19 @@ const ARC_SEEDS: ArcSeed[] = [
         tint: '#20060a',
         tintAmount: 0.14,
         accent: '#ff4a2f',
+        accent2: '#ffd166',
+      },
+      {
+        name: 'A Corrente que Resta',
+        location: 'Inferno — Portão do Abismo',
+        synopsis:
+          'Ravi, Miriam e Kael descem ao portão e encontram Ozric preso à última corrente. Desta vez, o resgate não é uma memória: são três pessoas escolhendo não deixar o carrasco para trás.',
+        motive: 'Ninguém fica acorrentado no inferno.',
+        eliteName: 'Carcereiro da Última Corrente',
+        waves: ['Escada de Ossos', 'A Última Corrente', 'O Carcereiro'],
+        tint: '#24060c',
+        tintAmount: 0.18,
+        accent: '#ff3357',
         accent2: '#ffd166',
       },
     ],
@@ -722,6 +776,19 @@ const ARC_SEEDS: ArcSeed[] = [
         accent: '#fff4cd',
         accent2: '#ff8ae2',
       },
+      {
+        name: 'A Biblioteca da Aurora',
+        location: 'Céu — Biblioteca da Eclésia',
+        synopsis:
+          'Élodie abre o registro da primeira visita do Ferrato ao Céu e descobre por que Malakhim escolheu a purificação. Os nomes dos noviços ainda estão lá — e ela não vai deixá-los em silêncio.',
+        motive: 'Nomear não é selar. É lembrar.',
+        eliteName: 'Catalogador Caído',
+        waves: ['Estantes Suspensas', 'Nomes dos Noviços', 'O Catalogador'],
+        tint: '#2a2840',
+        tintAmount: 0.14,
+        accent: '#fff4cd',
+        accent2: '#8df4ff',
+      },
     ],
     finale: {
       name: 'Véu Rasgado',
@@ -837,6 +904,19 @@ const ARC_SEEDS: ArcSeed[] = [
         tintAmount: 0.08,
         accent: '#ff8ae2',
         accent2: '#6ff2ff',
+      },
+      {
+        name: 'Seis Cadeiras',
+        location: 'Nexus — Memória da Mesa',
+        synopsis:
+          'Thryc abre uma memória que o Ferrato não conseguiu digerir: uma mesa, seis cadeiras e uma pizza que nunca esfria. Pela primeira vez, os seis Despertos se veem como família.',
+        motive: 'A memória que insiste em voltar é a escolha de continuar junto.',
+        eliteName: 'Eco da Cadeira Vazia',
+        waves: ['Mesa de Madeira', 'Memórias dos Seis', 'O Eco da Cadeira'],
+        tint: '#140a24',
+        tintAmount: 0.12,
+        accent: '#ff8ae2',
+        accent2: '#ffd166',
       },
     ],
     finale: {

@@ -1,8 +1,8 @@
 /** Chefes com múltiplos estágios, telegrafia e padrões únicos por fase. */
-import { clamp, rand, rectsOverlap, TAU } from '../core/math.js?v=be05988e5819';
-import { Combatant } from './combatant.js?v=be05988e5819';
-import { BOSSES } from '../data/bosses.js?v=be05988e5819';
-import { getStage } from '../data/stages.js?v=be05988e5819';
+import { clamp, rand, rectsOverlap, TAU } from '../core/math.js?v=bf59b6c4844c';
+import { Combatant } from './combatant.js?v=bf59b6c4844c';
+import { BOSSES } from '../data/bosses.js?v=bf59b6c4844c';
+import { CHAPTERS_PER_ARC, getStage } from '../data/stages.js?v=bf59b6c4844c';
 const ATTACK_LABELS = {
     slam: 'PISADA',
     charge: 'INVESTIDA',
@@ -209,7 +209,7 @@ export class Boss extends Combatant {
         }
         else {
             this.vx = target;
-            this.applyPhysics(dt, getStage(this.def.stage).floor, 8);
+            this.applyPhysics(dt, getStage(this.def.arc * CHAPTERS_PER_ARC).floor, 8);
         }
         this.x = clamp(this.x, world.camera.x + 80, world.camera.x + world.viewW - 80);
     }
@@ -1010,7 +1010,7 @@ export class Boss extends Combatant {
         p.invuln = Math.max(p.invuln, 1.1);
         // Reforços na transição (exceto no primeiro chefe).
         if (this.def.id !== 'colossus') {
-            this.summon(world, this.def.stage >= 4 ? 'shade' : 'drone', 2);
+            this.summon(world, this.def.arc >= 4 ? 'shade' : 'drone', 2);
         }
     }
     alphaDeath(dt, world) {

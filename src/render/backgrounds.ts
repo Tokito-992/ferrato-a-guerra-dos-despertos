@@ -4,11 +4,25 @@
  */
 
 import { clamp, hexToRgba, TAU } from '../core/math.js';
+import { CHAPTERS_PER_ARC } from '../data/stages.js';
 import type { StageDef } from '../data/stages.js';
 import { roundRectPath } from './theme.js';
 
 const W = 1280;
 const H = 720;
+
+/**
+ * Mapeia o capítulo atual para o ID de arte legado.
+ *
+ * Os capítulos 1–5 de cada arco reutilizam a arte antiga do mesmo número;
+ * o finale (capítulo 7) reutiliza a arte do antigo finale (6). As crônicas
+ * novas (capítulo 6) têm arte própria nos IDs 101–106.
+ */
+export function artStageId(stage: StageDef): number {
+  if (stage.chapter === 6) return 100 + stage.arc;
+  const legacyChapter = stage.chapter === CHAPTERS_PER_ARC ? 6 : stage.chapter;
+  return (stage.arc - 1) * 6 + legacyChapter;
+}
 
 /** Ruído determinístico para que o cenário não "trema" entre frames. */
 function hash(n: number): number {
@@ -1493,7 +1507,7 @@ function stageMotes(
     }
     const aa = alpha * (0.45 + Math.abs(Math.sin(time * 0.8 + i)) * 0.55);
     ctx.fillStyle = hexToRgba(color, clamp(aa, 0, 0.9));
-    if (stage.ambient === 'feathers' || stage.id === 27 || stage.id === 29 || stage.id === 30) {
+    if (stage.ambient === 'feathers' || stage.arc === 5) {
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(time * 0.5 + i);
@@ -2023,12 +2037,12 @@ function drawStageSky(ctx: CanvasRenderingContext2D, stage: StageDef, cameraX: n
   ctx.restore();
 }
 
-/** Marco visual exclusivo de cada uma das 36 fases. */
+/** Marco visual exclusivo de cada uma das 42 fases. */
 function drawStageLandmark(ctx: CanvasRenderingContext2D, stage: StageDef, cameraX: number, time: number): void {
   const p = stage.palette;
   const f = stage.floor;
   ctx.save();
-  switch (stage.id) {
+  switch (artStageId(stage)) {
     case 1: {
       const x = 170 - cameraX * 0.15;
       ctx.fillStyle = hexToRgba(p.near, 0.96);
@@ -2951,8 +2965,429 @@ function drawStageLandmark(ctx: CanvasRenderingContext2D, stage: StageDef, camer
       stageSign(ctx, x + 300, f - 342, 230, 'FERRATO', p.accent, 38, 'A GUERRA DOS DESPERTOS');
       break;
     }
+    case 101: {
+      const x = 240 - cameraX * 0.13;
+      // Nave da igreja.
+      ctx.fillStyle = hexToRgba(p.near, 0.96);
+      ctx.fillRect(x, f - 236, 380, 236);
+      ctx.fillStyle = hexToRgba(p.mid, 1);
+      ctx.beginPath();
+      ctx.moveTo(x - 26, f - 236);
+      ctx.lineTo(x + 190, f - 330);
+      ctx.lineTo(x + 406, f - 236);
+      ctx.closePath();
+      ctx.fill();
+      // Torre e cruz.
+      ctx.fillStyle = hexToRgba(p.near, 1);
+      ctx.fillRect(x + 152, f - 360, 76, 124);
+      ctx.fillStyle = hexToRgba(p.accent, 0.8);
+      ctx.fillRect(x + 187, f - 402, 6, 46);
+      ctx.fillRect(x + 176, f - 388, 28, 6);
+      // Portal principal e vitral.
+      stageArch(ctx, x + 132, f, 116, 168, hexToRgba(p.accent, 0.55), 5);
+      stageRose(ctx, x + 190, f - 202, 38, p.accent, p.accent2, time);
+      for (let i = 0; i < 2; i++) {
+        const wx = x + 38 + i * 270;
+        ctx.fillStyle = hexToRgba(p.accent2, 0.16 + Math.sin(time * 1.4 + i) * 0.05);
+        ctx.fillRect(wx, f - 190, 44, 92);
+        ctx.strokeStyle = hexToRgba(p.accent, 0.35);
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(wx, f - 190, 44, 92);
+      }
+      // Velas e caixas de pizza na porta.
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 7; i++) {
+        const cx = x + 138 + i * 16;
+        const cy = f - 12 - (i % 3) * 5;
+        const candle = ctx.createRadialGradient(cx, cy, 1, cx, cy, 22);
+        candle.addColorStop(0, hexToRgba('#ffd166', 0.5));
+        candle.addColorStop(1, hexToRgba('#ffd166', 0));
+        ctx.fillStyle = candle;
+        ctx.fillRect(cx - 22, cy - 22, 44, 44);
+      }
+      ctx.restore();
+      for (let i = 0; i < 3; i++) {
+        ctx.fillStyle = 'rgba(160, 104, 52, 0.8)';
+        ctx.fillRect(x + 262 + i * 8, f - 16 - i * 12, 34, 12);
+      }
+      stageSign(ctx, x + 190, f - 438, 300, 'SÃO JUDAS', p.accent, 32, 'ABRIGO · 43 ALMAS');
+      break;
+    }
+    case 102: {
+      const x = 150 - cameraX * 0.12;
+      // Mural de cobre do memorial.
+      ctx.fillStyle = hexToRgba(p.near, 0.95);
+      ctx.fillRect(x, f - 238, 540, 238);
+      ctx.fillStyle = hexToRgba(p.accent, 0.2);
+      ctx.fillRect(x, f - 238, 540, 10);
+      ctx.fillRect(x + 28, f - 226, 6, 226);
+      ctx.fillRect(x + 506, f - 226, 6, 226);
+      // Quarenta e três nomes gravados.
+      for (let i = 0; i < 43; i++) {
+        const nx = x + 48 + (i % 9) * 52;
+        const ny = f - 206 + Math.floor(i / 9) * 34;
+        ctx.fillStyle = hexToRgba(i === 42 ? p.accent : '#e7c9a0', i === 42 ? 0.9 : 0.34);
+        ctx.fillRect(nx, ny, 34, 2.5);
+        ctx.fillRect(nx, ny + 7, 22, 1.5);
+      }
+      // Estátua de guerreiro Khar'uun.
+      ctx.save();
+      ctx.translate(x + 440, f - 26);
+      ctx.fillStyle = 'rgba(40, 25, 20, 0.95)';
+      roundRectPath(ctx, -24, -104, 48, 104, 8);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(0, -120, 20, 0, TAU);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-14, -134);
+      ctx.quadraticCurveTo(-40, -158, -44, -176);
+      ctx.quadraticCurveTo(-20, -162, -4, -140);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(14, -134);
+      ctx.quadraticCurveTo(40, -158, 44, -176);
+      ctx.quadraticCurveTo(20, -162, 4, -140);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(p.accent, 0.5);
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-38, 0);
+      ctx.lineTo(-38, -190);
+      ctx.stroke();
+      ctx.restore();
+      // Brasas de cobre subindo.
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 16; i++) {
+        const bx = x + 20 + ((i * 83 + time * 12) % 500);
+        const by = f - 30 - ((time * 20 + i * 37) % 180);
+        ctx.fillStyle = hexToRgba(p.accent2, 0.12 + (i % 3) * 0.05);
+        ctx.beginPath();
+        ctx.arc(bx, by, 1.2 + (i % 3), 0, TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+      stageSign(ctx, x + 270, f - 272, 340, 'MEMORIAL KHAR’UUN', p.accent, 30, '43 NOMES · NENHUM A MENOS');
+      break;
+    }
+    case 103: {
+      const x = 120 - cameraX * 0.1;
+      // Estrutura da doca.
+      ctx.fillStyle = hexToRgba(p.near, 0.95);
+      ctx.fillRect(x, f - 300, 190, 300);
+      ctx.fillRect(x + 560, f - 300, 150, 300);
+      ctx.fillStyle = hexToRgba(p.mid, 0.9);
+      ctx.fillRect(x + 190, f - 250, 370, 14);
+      ctx.fillRect(x + 220, f - 236, 14, 236);
+      ctx.fillRect(x + 510, f - 236, 14, 236);
+      // Aurora no berço de manutenção.
+      ctx.save();
+      ctx.translate(x + 360, f - 96);
+      const hull = ctx.createLinearGradient(0, -50, 0, 50);
+      hull.addColorStop(0, '#c9d8e8');
+      hull.addColorStop(0.45, '#6d8299');
+      hull.addColorStop(1, '#273342');
+      ctx.fillStyle = hull;
+      ctx.beginPath();
+      ctx.moveTo(-190, 0);
+      ctx.quadraticCurveTo(-150, -44, -20, -50);
+      ctx.quadraticCurveTo(150, -46, 200, 0);
+      ctx.quadraticCurveTo(140, 34, 0, 40);
+      ctx.quadraticCurveTo(-140, 34, -190, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(p.accent, 0.6);
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = hexToRgba(p.accent2, 0.55);
+      ctx.beginPath();
+      ctx.ellipse(120, -12, 42, 16, -0.1, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(42, 62, 84, 0.9)';
+      ctx.beginPath();
+      ctx.moveTo(-40, 10);
+      ctx.lineTo(-130, 58);
+      ctx.lineTo(-30, 44);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(40, 8);
+      ctx.lineTo(130, 56);
+      ctx.lineTo(30, 42);
+      ctx.closePath();
+      ctx.fill();
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 2; i++) {
+        const gx = -160 + i * 28;
+        const engine = ctx.createRadialGradient(gx, 0, 2, gx, 0, 34);
+        engine.addColorStop(0, hexToRgba(p.accent, 0.7));
+        engine.addColorStop(1, hexToRgba(p.accent, 0));
+        ctx.fillStyle = engine;
+        ctx.fillRect(gx - 34, -34, 68, 68);
+      }
+      ctx.restore();
+      ctx.restore();
+      // Braços do berço.
+      ctx.strokeStyle = hexToRgba(p.accent, 0.4);
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(x + 230, f);
+      ctx.lineTo(x + 260, f - 90);
+      ctx.lineTo(x + 330, f - 120);
+      ctx.moveTo(x + 500, f);
+      ctx.lineTo(x + 470, f - 90);
+      ctx.lineTo(x + 400, f - 120);
+      ctx.stroke();
+      // Luzes de alerta.
+      for (let i = 0; i < 4; i++) {
+        const a = 0.3 + Math.max(0, Math.sin(time * 3 + i)) * 0.5;
+        ctx.fillStyle = hexToRgba(p.accent2, a);
+        ctx.beginPath();
+        ctx.arc(x + 210 + i * 130, f - 268, 4, 0, TAU);
+        ctx.fill();
+      }
+      stageSign(ctx, x + 380, f - 330, 300, 'SOLACE · DOCA 3', p.accent, 28, 'MANUTENÇÃO');
+      break;
+    }
+    case 104: {
+      const x = 210 - cameraX * 0.14;
+      // Estrutura do portão.
+      ctx.fillStyle = hexToRgba(p.near, 0.98);
+      ctx.fillRect(x, f - 330, 470, 330);
+      ctx.fillStyle = 'rgba(6, 2, 4, 0.96)';
+      ctx.fillRect(x + 52, f - 300, 366, 300);
+      stageArch(ctx, x + 36, f, 398, 300, hexToRgba(p.accent, 0.72), 7);
+      // Crânios nos pilares.
+      for (let i = 0; i < 4; i++) {
+        const sy = f - 280 + i * 62;
+        for (const sx of [x + 16, x + 448]) {
+          ctx.fillStyle = 'rgba(210, 190, 160, 0.22)';
+          ctx.beginPath();
+          ctx.arc(sx, sy, 12, 0, TAU);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(5, 2, 4, 0.9)';
+          ctx.beginPath();
+          ctx.arc(sx - 4, sy - 2, 2.4, 0, TAU);
+          ctx.arc(sx + 4, sy - 2, 2.4, 0, TAU);
+          ctx.fill();
+        }
+      }
+      // Corrente gigante atravessando o portão.
+      stageChain(ctx, x - 30, f - 210, x + 500, f - 232, 70, p.accent2, time, 20);
+      // Brilho vermelho no vão.
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const gateGlow = ctx.createRadialGradient(x + 235, f - 150, 10, x + 235, f - 150, 190);
+      gateGlow.addColorStop(0, hexToRgba(p.accent, 0.28 + Math.sin(time * 2) * 0.06));
+      gateGlow.addColorStop(0.5, hexToRgba(p.accent, 0.1));
+      gateGlow.addColorStop(1, hexToRgba(p.accent, 0));
+      ctx.fillStyle = gateGlow;
+      ctx.fillRect(x, f - 340, 470, 340);
+      ctx.restore();
+      // Elos partidos no chão.
+      ctx.strokeStyle = hexToRgba(p.accent2, 0.45);
+      ctx.lineWidth = 4;
+      for (let i = 0; i < 4; i++) {
+        ctx.save();
+        ctx.translate(x + 70 + i * 96, f - 10 - (i % 2) * 8);
+        ctx.rotate(0.2 + i * 0.3);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 14, 7, 0, 0, TAU);
+        ctx.stroke();
+        ctx.restore();
+      }
+      stageSign(ctx, x + 235, f - 370, 340, 'PORTÃO DO ABISMO', p.accent, 28, 'A ÚLTIMA CORRENTE');
+      break;
+    }
+    case 105: {
+      const x = 170 - cameraX * 0.11;
+      // Janela alta da biblioteca.
+      ctx.fillStyle = hexToRgba(p.near, 0.92);
+      ctx.fillRect(x, f - 280, 430, 280);
+      ctx.fillStyle = 'rgba(8, 6, 18, 0.9)';
+      ctx.fillRect(x + 60, f - 260, 310, 260);
+      stageArch(ctx, x + 46, f, 338, 270, hexToRgba(p.accent, 0.55), 5);
+      // Estantes laterais.
+      for (let side = 0; side < 2; side++) {
+        const sx = x + (side === 0 ? -70 : 430);
+        ctx.fillStyle = hexToRgba(p.mid, 0.9);
+        ctx.fillRect(sx, f - 240, 66, 240);
+        for (let row = 0; row < 6; row++) {
+          ctx.fillStyle = hexToRgba(row % 2 ? p.accent : p.accent2, 0.22);
+          ctx.fillRect(sx + 8, f - 226 + row * 36, 50, 6);
+        }
+      }
+      // Livros flutuantes.
+      for (let i = 0; i < 12; i++) {
+        const bx = x + 40 + ((i * 97 + Math.sin(time * 0.3 + i) * 20) % 350);
+        const by = f - 70 - ((i * 47 + time * (8 + (i % 3) * 4)) % 210);
+        ctx.save();
+        ctx.translate(bx, by);
+        ctx.rotate(Math.sin(time * 0.6 + i) * 0.4);
+        ctx.fillStyle = hexToRgba(i % 2 ? p.accent : p.accent2, 0.2 + (i % 3) * 0.05);
+        ctx.fillRect(-10, -3, 20, 6);
+        ctx.strokeStyle = hexToRgba(p.accent, 0.3);
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-10, -3, 20, 6);
+        ctx.restore();
+      }
+      // Páginas subindo.
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 18; i++) {
+        const px = x + 30 + ((i * 71 + time * 9) % 370);
+        const py = f - 20 - ((time * 16 + i * 31) % 230);
+        ctx.fillStyle = hexToRgba(p.accent, 0.12 + (i % 3) * 0.04);
+        ctx.fillRect(px, py, 7, 4);
+      }
+      ctx.restore();
+      stageSign(ctx, x + 215, f - 322, 340, 'BIBLIOTECA DA AURORA', p.accent, 28, 'NOMES DOS NOVIÇOS');
+      break;
+    }
+    case 106: {
+      const x = 260 - cameraX * 0.1;
+      // Luz da memória.
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const lampX = x + 300;
+      const lampY = f - 330;
+      const memoryGlow = ctx.createRadialGradient(lampX, lampY, 4, lampX, lampY, 260);
+      memoryGlow.addColorStop(0, hexToRgba(p.accent, 0.3));
+      memoryGlow.addColorStop(0.5, hexToRgba(p.accent2, 0.1));
+      memoryGlow.addColorStop(1, hexToRgba(p.accent2, 0));
+      ctx.fillStyle = memoryGlow;
+      ctx.fillRect(x - 100, f - 500, 800, 500);
+      ctx.restore();
+      // Lâmpada.
+      ctx.strokeStyle = hexToRgba(p.accent, 0.5);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(lampX, 0);
+      ctx.lineTo(lampX, lampY);
+      ctx.stroke();
+      ctx.fillStyle = hexToRgba(p.accent, 0.9);
+      ctx.beginPath();
+      ctx.arc(lampX, lampY + 8, 7, 0, TAU);
+      ctx.fill();
+      // Mesa.
+      ctx.fillStyle = 'rgba(74, 44, 27, 0.95)';
+      ctx.beginPath();
+      ctx.moveTo(x + 80, f - 92);
+      ctx.lineTo(x + 520, f - 92);
+      ctx.lineTo(x + 490, f - 54);
+      ctx.lineTo(x + 110, f - 54);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(38, 21, 14, 0.95)';
+      ctx.fillRect(x + 130, f - 54, 18, 54);
+      ctx.fillRect(x + 452, f - 54, 18, 54);
+      // Seis cadeiras e seis silhuetas.
+      for (let i = 0; i < 6; i++) {
+        const cx = x + 128 + i * 68;
+        ctx.fillStyle = 'rgba(24, 13, 16, 0.95)';
+        ctx.fillRect(cx - 18, f - 168, 36, 76);
+        ctx.fillRect(cx - 18, f - 98, 36, 8);
+        ctx.fillStyle = hexToRgba(i % 2 ? p.accent : p.accent2, 0.16);
+        ctx.fillRect(cx - 14, f - 162, 28, 4);
+        ctx.fillStyle = 'rgba(6, 4, 10, 0.86)';
+        ctx.beginPath();
+        ctx.arc(cx, f - 196, 15, 0, TAU);
+        ctx.fill();
+        roundRectPath(ctx, cx - 18, f - 182, 36, 82, 9);
+        ctx.fill();
+        ctx.strokeStyle = hexToRgba(i % 2 ? p.accent : p.accent2, 0.4);
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+      }
+      // Caixa de pizza no centro.
+      ctx.fillStyle = 'rgba(216, 181, 106, 0.9)';
+      ctx.fillRect(x + 270, f - 104, 60, 14);
+      ctx.fillStyle = hexToRgba(p.accent, 0.6);
+      ctx.beginPath();
+      ctx.arc(x + 300, f - 98, 20, 0, TAU);
+      ctx.fill();
+      stageSign(ctx, x + 300, f - 380, 300, 'MEMÓRIA DA MESA', p.accent, 30, 'SEIS CADEIRAS');
+      break;
+    }
     default:
       break;
+  }
+  ctx.restore();
+}
+
+/**
+ * Eventos do mundo: portais, feridas e artefatos que pulsam no céu de cada
+ * arco. Ficam mais intensos perto da crônica e do confronto final.
+ */
+function drawWorldEvents(
+  ctx: CanvasRenderingContext2D,
+  stage: StageDef,
+  cameraX: number,
+  time: number,
+): void {
+  const p = stage.palette;
+  const strength = clamp(0.28 + stage.chapter * 0.08 + (stage.chapter === 6 ? 0.22 : 0), 0, 1.15);
+  const x = 900 - cameraX * 0.05 + Math.sin(time * 0.12) * 10;
+  const y = 180 + Math.sin(time * 0.2) * 8;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  switch (stage.arc) {
+    case 1:
+      stageRift(ctx, x, y - 30, 90 + 28 * strength, 96, p.accent2, time);
+      break;
+    case 2:
+      stagePortal(ctx, x, y, 70 + 42 * strength, 22 + 18 * strength, p.accent2, time);
+      break;
+    case 3: {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(time * 0.06);
+      for (let i = 0; i < 3; i++) {
+        ctx.strokeStyle = hexToRgba(i === 1 ? p.accent2 : p.accent, (0.22 - i * 0.05) * strength);
+        ctx.lineWidth = 2.2 - i * 0.4;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 62 + i * 24, 22 + i * 9, i * 0.45, 0, TAU);
+        ctx.stroke();
+      }
+      const core = ctx.createRadialGradient(0, 0, 2, 0, 0, 54);
+      core.addColorStop(0, hexToRgba(p.accent, 0.22 * strength));
+      core.addColorStop(1, hexToRgba(p.accent, 0));
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(0, 0, 54, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+      break;
+    }
+    case 4:
+      stageRift(ctx, x, y - 20, 92 + 30 * strength, 110, p.accent, time);
+      stageChain(ctx, x - 150, y + 24, x + 150, y + 40, 34, p.accent2, time, 12);
+      break;
+    case 5:
+      stagePortal(ctx, x, y, 80 + 32 * strength, 40 + 15 * strength, p.accent, time);
+      stageWing(ctx, x - 62, y + 10, 52, -1, p.accent2, 0.25 * strength);
+      stageWing(ctx, x + 62, y + 10, 52, 1, p.accent2, 0.25 * strength);
+      break;
+    case 6:
+    default:
+      stageEye(ctx, x, y, 80 + 32 * strength, 45 + 12 * strength, p.accent, time);
+      break;
+  }
+  // Detritos e memórias orbitando o evento.
+  for (let i = 0; i < 10; i++) {
+    const a = time * (0.1 + (i % 3) * 0.04) + i * 0.7;
+    const r = 80 + (i % 4) * 28;
+    const dx = x + Math.cos(a) * r;
+    const dy = y + Math.sin(a) * r * 0.5;
+    ctx.fillStyle = hexToRgba(i % 2 ? p.accent : p.accent2, 0.06 * strength);
+    ctx.beginPath();
+    ctx.arc(dx, dy, 1.2 + (i % 2), 0, TAU);
+    ctx.fill();
   }
   ctx.restore();
 }
@@ -2960,7 +3395,7 @@ function drawStageLandmark(ctx: CanvasRenderingContext2D, stage: StageDef, camer
 /** Clima, poeira e luzes próprios de cada capítulo. */
 function drawStageAtmosphere(ctx: CanvasRenderingContext2D, stage: StageDef, time: number): void {
   const p = stage.palette;
-  switch (stage.id) {
+  switch (artStageId(stage)) {
     case 1:
       stageRain(ctx, stage, time, p.accent2);
       stageMotes(ctx, stage, p.accent, 12, 'rise', time, 18, 1.4, 0.32);
@@ -3129,6 +3564,37 @@ function drawStageAtmosphere(ctx: CanvasRenderingContext2D, stage: StageDef, tim
       stageMotes(ctx, stage, p.accent, 26, 'orbit', time, 26, 1.7, 0.42);
       stageMotes(ctx, stage, p.accent2, 10, 'rise', time, 14, 1.3, 0.24);
       break;
+    case 101:
+      stageMotes(ctx, stage, '#ffd166', 22, 'rise', time, 18, 1.4, 0.42);
+      stageMotes(ctx, stage, p.accent2, 8, 'fall', time, 16, 1.1, 0.18);
+      break;
+    case 102:
+      stageMotes(ctx, stage, p.accent, 20, 'drift', time, 26, 1.5, 0.34);
+      stageMotes(ctx, stage, p.accent2, 10, 'rise', time, 18, 1.2, 0.24);
+      break;
+    case 103: {
+      const alarm = 0.025 + Math.max(0, Math.sin(time * 2.6)) * 0.06;
+      const g = ctx.createLinearGradient(0, 0, W, H);
+      g.addColorStop(0, `rgba(111, 242, 255, ${alarm})`);
+      g.addColorStop(0.6, 'rgba(111, 242, 255, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+      stageMotes(ctx, stage, p.accent, 18, 'rise', time, 20, 1.3, 0.3);
+      stageMotes(ctx, stage, '#ffe6a3', 6, 'orbit', time, 14, 1.1, 0.2);
+      break;
+    }
+    case 104:
+      stageMotes(ctx, stage, p.accent, 20, 'fall', time, 24, 1.5, 0.4);
+      stageMotes(ctx, stage, p.accent2, 8, 'rise', time, 14, 1.2, 0.22);
+      break;
+    case 105:
+      stageMotes(ctx, stage, p.accent, 24, 'drift', time, 22, 1.4, 0.38);
+      stageMotes(ctx, stage, p.accent2, 10, 'rise', time, 16, 1.2, 0.24);
+      break;
+    case 106:
+      stageMotes(ctx, stage, p.accent, 24, 'orbit', time, 18, 1.5, 0.38);
+      stageMotes(ctx, stage, p.accent2, 10, 'drift', time, 20, 1.2, 0.22);
+      break;
   }
 }
 
@@ -3171,6 +3637,7 @@ export function drawStageBackground(
       break;
   }
   drawStageLandmark(ctx, stage, cameraX, time);
+  drawWorldEvents(ctx, stage, cameraX, time);
 
   // Faixa de neblina entre cenário e chão.
   fog(ctx, p.fog, stage.floor - 190, 210, 1);

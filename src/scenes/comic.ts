@@ -12,6 +12,7 @@
 
 import type { Game, Scene } from '../core/game.js';
 import type { SfxName } from '../core/audio.js';
+import { CHAPTERS_PER_ARC } from '../data/stages.js';
 import type { StageDef } from '../data/stages.js';
 import type { StoryBeat, SpeakerId } from '../data/story.js';
 import { STORY } from '../data/story.js';
@@ -54,7 +55,7 @@ const SPEAKER_COLOR: Record<SpeakerId, string> = {
 };
 
 /** Capítulos de abertura de arco, que mostram o herói despertando. */
-export const AWAKENING_STAGES = new Set([1, 7, 13, 19, 25, 31]);
+export const AWAKENING_STAGES = new Set([1, 8, 15, 22, 29, 36]);
 
 const AWAKENING_SFX: Record<CharacterId, SfxName> = {
   ravi: 'abilityRavi',
@@ -75,6 +76,12 @@ interface AwakeningSfx {
 }
 
 const halftoneCache = new Map<string, CanvasPattern | null>();
+
+/** Ruído determinístico para texturas de impressão. */
+function comicNoise(n: number): number {
+  const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
 
 /** Padrão de retícula para sombras e texturas de quadrinhos. */
 function halftonePattern(ctx: CanvasRenderingContext2D, color: string): CanvasPattern | null {
@@ -179,7 +186,7 @@ export class ComicScene implements Scene {
 
   /** Quadro de página inteira em que o herói acorda com o Ferrato. */
   private isAwakeningPanel(globalIndex: number): boolean {
-    return this.phase === 'intro' && AWAKENING_STAGES.has(this.stage.id) && globalIndex === 3;
+    return this.phase === 'intro' && this.stage.chapter === 1 && globalIndex === 3;
   }
 
   private advance(): void {
@@ -424,6 +431,7 @@ export class ComicScene implements Scene {
     }
 
     this.drawPanelArt(ctx, rect, beat, index, globalIndex);
+    this.drawComicFx(ctx, rect, globalIndex);
     this.drawPanelText(ctx, rect, beat, index, globalIndex);
 
     if (!active) {
@@ -461,9 +469,19 @@ export class ComicScene implements Scene {
         return;
       }
     }
-    // Cap. 12: o último quadro precisa mostrar o braço de Miriam acendendo.
-    if (this.stage.id === 12 && this.phase === 'intro' && globalIndex === 4) {
+    // Cap. 14 (finale do Arco II): o último quadro mostra o braço de Miriam acendendo.
+    if (this.stage.arc === 2 && this.stage.chapter === CHAPTERS_PER_ARC && this.phase === 'intro' && globalIndex === 4) {
       this.drawMiriamIgnitionPanel(ctx, rect);
+      return;
+    }
+    // Cap. 27 (crônica do Arco IV): os três Despertos quebram a última corrente de Ozric.
+    if (this.stage.id === 27 && this.phase === 'intro' && globalIndex === 2) {
+      this.drawOzricRescuePanel(ctx, rect);
+      return;
+    }
+    // Cap. 41 (crônica do Arco VI): a mesa das seis cadeiras, a memória que o Ferrato não digeriu.
+    if (this.stage.id === 41 && this.phase === 'intro' && globalIndex === 2) {
+      this.drawSixChairsPanel(ctx, rect);
       return;
     }
     this.drawGenericPanel(ctx, rect, beat, globalIndex);
@@ -544,6 +562,58 @@ export class ComicScene implements Scene {
       ctx.shadowBlur = 16;
     }
     ctx.strokeRect(rect.x - 1, rect.y - 1, rect.w + 2, rect.h + 2);
+    ctx.restore();
+  }
+
+  /**
+   * Passe de textura compartilhado por todos os quadros: retícula de impressão,
+   * grão, riscos de tinta e vinheta. Mantém os painéis especiais e os genéricos
+   * com a mesma linguagem visual de HQ.
+   */
+  private drawComicFx(ctx: CanvasRenderingContext2D, rect: Rect, seed: number): void {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(rect.x, rect.y, rect.w, rect.h);
+    ctx.clip();
+
+    const pattern = halftonePattern(ctx, '#f2e7c9');
+    if (pattern) {
+      ctx.globalAlpha = 0.035;
+      ctx.fillStyle = pattern;
+      ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+      ctx.globalAlpha = 1;
+    }
+
+    // Grão e riscos de impressão, determinísticos por quadro.
+    for (let i = 0; i < 22; i++) {
+      const n = seed * 37 + i * 13;
+      const x = rect.x + comicNoise(n) * rect.w;
+      const y = rect.y + comicNoise(n + 5) * rect.h;
+      const w = 6 + comicNoise(n + 9) * 34;
+      ctx.strokeStyle = `rgba(242,231,201,${0.018 + comicNoise(n + 2) * 0.04})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + w, y + (comicNoise(n + 4) - 0.5) * 2);
+      ctx.stroke();
+    }
+
+    // Vinheta de papel impresso.
+    const cx = rect.x + rect.w / 2;
+    const cy = rect.y + rect.h / 2;
+    const vignette = ctx.createRadialGradient(
+      cx,
+      cy,
+      Math.min(rect.w, rect.h) * 0.28,
+      cx,
+      cy,
+      Math.max(rect.w, rect.h) * 0.72,
+    );
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(0.72, 'rgba(0,0,0,0.06)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.3)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
     ctx.restore();
   }
 
@@ -2584,6 +2654,526 @@ export class ComicScene implements Scene {
     ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
   }
 
+  /** Crônica do Arco IV: três Despertos quebram a última corrente de Ozric. */
+  private drawOzricRescuePanel(ctx: CanvasRenderingContext2D, rect: Rect): void {
+    const time = this.t;
+    const camera = (this.stage.width - this.game.width) * 0.78;
+    this.drawBackgroundIn(ctx, rect, camera, 1.16);
+
+    // O Abismo respira em vermelho.
+    const hell = ctx.createLinearGradient(rect.x, rect.y, rect.x, rect.y + rect.h);
+    hell.addColorStop(0, 'rgba(8,1,4,0.82)');
+    hell.addColorStop(0.45, 'rgba(62,5,10,0.42)');
+    hell.addColorStop(1, 'rgba(6,1,3,0.9)');
+    ctx.fillStyle = hell;
+    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+
+    // Portão de ossos: pilar, arco e runas.
+    ctx.save();
+    ctx.fillStyle = 'rgba(4,2,4,0.94)';
+    ctx.fillRect(rect.x - 8, rect.y + rect.h * 0.06, rect.w * 0.16, rect.h * 0.94);
+    ctx.beginPath();
+    ctx.moveTo(rect.x + rect.w * 0.16, rect.y + rect.h * 0.06);
+    ctx.quadraticCurveTo(rect.x + rect.w * 0.27, rect.y - rect.h * 0.08, rect.x + rect.w * 0.39, rect.y + rect.h * 0.1);
+    ctx.lineTo(rect.x + rect.w * 0.33, rect.y + rect.h * 0.16);
+    ctx.quadraticCurveTo(rect.x + rect.w * 0.26, rect.y + rect.h * 0.04, rect.x + rect.w * 0.16, rect.y + rect.h * 0.18);
+    ctx.closePath();
+    ctx.fill();
+    for (let i = 0; i < 7; i++) {
+      const bx = rect.x + 8 + (i % 2) * 34;
+      const by = rect.y + rect.h * (0.24 + i * 0.09);
+      ctx.save();
+      ctx.translate(bx, by);
+      ctx.rotate((i % 2 === 0 ? 0.3 : -0.4) + Math.sin(time + i) * 0.02);
+      ctx.strokeStyle = 'rgba(214,198,170,0.2)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(-14, 0);
+      ctx.lineTo(14, 0);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(214,198,170,0.24)';
+      ctx.beginPath();
+      ctx.arc(-14, 0, 4.5, 0, TAU);
+      ctx.arc(14, 0, 4.5, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 6; i++) {
+      ctx.strokeStyle = hexToRgba('#ff3357', 0.3 + Math.sin(time * 2 + i) * 0.12);
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(rect.x + rect.w * 0.22, rect.y + rect.h * 0.08, 24 + i * 9, Math.PI * 0.8, Math.PI * 1.9);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    const ozricX = rect.x + rect.w * 0.56;
+    const ozricY = rect.y + rect.h * 0.53;
+    const chainY = rect.y + rect.h * 0.64;
+    const gateX = rect.x + rect.w * 0.12;
+    const pullX = rect.x + rect.w * 0.83;
+
+    // Corrente: do portão ao peito de Ozric e do peito aos três resgatadores.
+    this.drawChainRun(ctx, gateX, chainY + 24, ozricX - 52, chainY, 12, 34, 16, 'rgba(5,3,6,0.98)', '#ff3357', 0.8);
+    this.drawChainRun(ctx, ozricX + 46, chainY, pullX, chainY - 14, 9, 30, 14, 'rgba(5,3,6,0.98)', '#ffd166', 0.95);
+
+    // Chamas negras atrás do carrasco.
+    this.drawBlackFlames(ctx, ozricX, rect.y + rect.h * 0.88, '#ff3357');
+
+    // Ozric, ainda acorrentado, mas com a mão estendida.
+    const size = Math.min(rect.w * 0.34, rect.h * 0.92);
+    ctx.save();
+    const aura = ctx.createRadialGradient(ozricX, ozricY - 20, 10, ozricX, ozricY - 20, size * 0.85);
+    aura.addColorStop(0, 'rgba(255,51,87,0.24)');
+    aura.addColorStop(0.55, 'rgba(120,10,40,0.12)');
+    aura.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = aura;
+    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+    ctx.restore();
+    drawCharacterPortrait(ctx, CHARACTERS.ozric, ozricX, ozricY + 8, size, time, false);
+
+    // A corrente atravessa o peito dele.
+    this.drawChainRun(ctx, ozricX - 72, chainY + 2, ozricX + 70, chainY - 4, 5, 28, 13, 'rgba(5,3,6,0.98)', '#ffd166', 0.9);
+
+    // Os três resgatadores puxando o último elo.
+    const feetY = rect.y + rect.h * 0.9;
+    const pullBuild: Build = {
+      ...BASE,
+      lean: -0.52,
+      armFront: -1.16,
+      armFrontElbow: 0.34,
+      armBack: -0.92,
+      armBackElbow: 0.26,
+      legFront: 0.56,
+      legBack: -0.38,
+      crouch: 0.22,
+      bob: Math.sin(time * 6) * 1.2,
+    };
+    const rescuers: Array<[CharacterId, number, number]> = [
+      ['ravi', 0.775, 0.76],
+      ['miriam', 0.86, 0.84],
+      ['kael', 0.945, 0.72],
+    ];
+    for (const [id, xRatio, scale] of rescuers) {
+      const def = CHARACTERS[id];
+      const x = rect.x + rect.w * xRatio;
+      const glowG = ctx.createRadialGradient(x, feetY - 42, 4, x, feetY - 42, 74);
+      glowG.addColorStop(0, hexToRgba(def.colors.aura, 0.24));
+      glowG.addColorStop(1, hexToRgba(def.colors.aura, 0));
+      ctx.fillStyle = glowG;
+      ctx.fillRect(x - 80, feetY - 130, 160, 140);
+      drawCharacterFigure(ctx, def, x, feetY, -1, scale, time + xRatio * 3, pullBuild);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = hexToRgba(def.colors.accent, 0.3 + Math.sin(time * 4 + xRatio) * 0.08);
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(x - 24, feetY - 54);
+      ctx.lineTo(ozricX + 46, chainY);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Fagulhas e brasas do elo quebrando.
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 30; i++) {
+      const p = (time * (0.2 + (i % 5) * 0.04) + i * 0.07) % 1;
+      const bx = ozricX + 20 + Math.sin(i * 2.3 + time) * (40 + p * 110);
+      const by = chainY - p * (60 + (i % 4) * 34);
+      ctx.fillStyle = i % 3 === 0 ? hexToRgba('#fff3c4', (1 - p) * 0.7) : hexToRgba('#ff6a3c', (1 - p) * 0.55);
+      ctx.beginPath();
+      ctx.arc(bx, by, 1 + (i % 3) * 0.8, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    this.drawSpeedLines(ctx, ozricX + 20, chainY, rect, 'rgba(255,51,87,0.1)', 26);
+  }
+
+  /** Desenha uma corrente de elos alternados ao longo de um segmento. */
+  private drawChainRun(
+    ctx: CanvasRenderingContext2D,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    count: number,
+    linkW: number,
+    linkH: number,
+    color: string,
+    glowColor: string,
+    glowAlpha: number,
+  ): void {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len;
+    const ny = dx / len;
+    const baseAngle = Math.atan2(dy, dx);
+    ctx.save();
+    for (let i = 0; i < count; i++) {
+      const t = (i + 0.5) / count;
+      const sag = Math.sin(t * Math.PI) * 12;
+      const x = x1 + dx * t + nx * sag;
+      const y = y1 + dy * t + ny * sag;
+      const angle = baseAngle + (i % 2 === 0 ? 0 : Math.PI / 2);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 5.5;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, linkW * 0.5, linkH * 0.5, 0, 0, TAU);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(242,231,201,0.16)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, linkW * 0.4, linkH * 0.38, 0, 0, TAU);
+      ctx.stroke();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = hexToRgba(glowColor, glowAlpha * (0.35 + (i % 4) * 0.1));
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(-linkW * 0.22, -linkH * 0.16);
+      ctx.lineTo(0, 0);
+      ctx.lineTo(linkW * 0.2, linkH * 0.18);
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  /** Crônica do Arco VI: a mesa que o Ferrato não conseguiu devorar. */
+  private drawSixChairsPanel(ctx: CanvasRenderingContext2D, rect: Rect): void {
+    const time = this.t;
+    const camera = (this.stage.width - this.game.width) * 0.54;
+    this.drawBackgroundIn(ctx, rect, camera, 1.14);
+
+    const memory = ctx.createLinearGradient(rect.x, rect.y, rect.x, rect.y + rect.h);
+    memory.addColorStop(0, 'rgba(12,5,24,0.82)');
+    memory.addColorStop(0.55, 'rgba(32,14,42,0.48)');
+    memory.addColorStop(1, 'rgba(6,3,10,0.9)');
+    ctx.fillStyle = memory;
+    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+
+    const lampX = rect.x + rect.w * 0.72;
+    const lampY = rect.y + rect.h * 0.08;
+    const tableX = rect.x + rect.w * 0.46;
+    const tableY = rect.y + rect.h * 0.72;
+    const tableW = rect.w * 0.55;
+    const tableH = rect.h * 0.11;
+
+    // Luz quente da lâmpada: a memória que não esfria.
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const cone = ctx.createLinearGradient(lampX, lampY, lampX, tableY);
+    cone.addColorStop(0, 'rgba(255,209,102,0.34)');
+    cone.addColorStop(0.65, 'rgba(255,174,90,0.12)');
+    cone.addColorStop(1, 'rgba(255,138,61,0)');
+    ctx.fillStyle = cone;
+    ctx.beginPath();
+    ctx.moveTo(lampX - 24, lampY + 22);
+    ctx.lineTo(lampX + 24, lampY + 22);
+    ctx.lineTo(lampX + 190, tableY + 20);
+    ctx.lineTo(lampX - 190, tableY + 20);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // Lâmpada pendurada.
+    ctx.save();
+    ctx.strokeStyle = 'rgba(242,231,201,0.32)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(lampX, rect.y);
+    ctx.lineTo(lampX, lampY + 10);
+    ctx.stroke();
+    ctx.fillStyle = '#2a1c20';
+    ctx.beginPath();
+    ctx.moveTo(lampX - 36, lampY + 28);
+    ctx.quadraticCurveTo(lampX, lampY - 14, lampX + 36, lampY + 28);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,209,102,0.8)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,230,163,0.9)';
+    ctx.beginPath();
+    ctx.arc(lampX, lampY + 34, 7 + Math.sin(time * 3) * 0.8, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+
+    // Cadeiras: seis lugares, nenhum vazio.
+    const chars: CharacterId[] = ['ravi', 'miriam', 'kael', 'ozric', 'elodie', 'thryc'];
+    const seatY = tableY - rect.h * 0.16;
+    for (let i = 0; i < 6; i++) {
+      const x = rect.x + rect.w * (0.52 + i * 0.083);
+      ctx.save();
+      ctx.translate(x, seatY);
+      ctx.fillStyle = 'rgba(24,13,16,0.9)';
+      roundRectPath(ctx, -20, 0, 40, rect.h * 0.22, 5);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,209,102,0.14)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Os seis Despertos, sentados à mesa.
+    for (let i = 0; i < 6; i++) {
+      const def = CHARACTERS[chars[i]];
+      const x = rect.x + rect.w * (0.52 + i * 0.083);
+      const scale = 0.78 + (i % 2) * 0.03;
+      const sitBuild: Build = {
+        ...BASE,
+        crouch: 0.42,
+        armFront: 0.55,
+        armFrontElbow: 0.2,
+        armBack: 0.3,
+        armBackElbow: 0.18,
+        legFront: 0.42,
+        legBack: 0.18,
+        bob: Math.sin(time * 1.4 + i) * 0.8,
+        alpha: 1,
+      };
+      const halo = ctx.createRadialGradient(x, tableY - 58, 2, x, tableY - 58, 62);
+      halo.addColorStop(0, hexToRgba(def.colors.aura, 0.2));
+      halo.addColorStop(1, hexToRgba(def.colors.aura, 0));
+      ctx.fillStyle = halo;
+      ctx.fillRect(x - 70, tableY - 130, 140, 140);
+      drawCharacterFigure(ctx, def, x, tableY + 4, i < 3 ? 1 : -1, scale, time + i * 0.7, sitBuild);
+    }
+
+    // Mesa de madeira.
+    ctx.save();
+    const wood = ctx.createLinearGradient(tableX, tableY, tableX, tableY + tableH);
+    wood.addColorStop(0, '#6b4428');
+    wood.addColorStop(0.35, '#4a2c1b');
+    wood.addColorStop(1, '#2a1710');
+    ctx.fillStyle = wood;
+    roundRectPath(ctx, tableX, tableY, tableW, tableH, 4);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(8,4,6,0.92)';
+    ctx.lineWidth = 2.4;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,209,102,0.18)';
+    ctx.fillRect(tableX + 8, tableY + 2, tableW - 16, 2);
+    ctx.fillStyle = 'rgba(18,9,7,0.95)';
+    ctx.fillRect(tableX + 14, tableY + tableH, 14, rect.h * 0.12);
+    ctx.fillRect(tableX + tableW - 30, tableY + tableH, 14, rect.h * 0.12);
+    ctx.restore();
+
+    // Caixa de pizza aberta no centro.
+    const boxX = tableX + tableW * 0.44;
+    const boxY = tableY - 2;
+    ctx.save();
+    ctx.translate(boxX, boxY);
+    ctx.fillStyle = '#d8b56a';
+    ctx.beginPath();
+    ctx.moveTo(-62, 0);
+    ctx.lineTo(62, 0);
+    ctx.lineTo(54, 16);
+    ctx.lineTo(-54, 16);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(70,40,20,0.8)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.fillStyle = '#f0d089';
+    ctx.beginPath();
+    ctx.ellipse(0, 1, 50, 8, 0, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = '#e8843c';
+    ctx.beginPath();
+    ctx.arc(0, 1, 42, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = '#ffcf6a';
+    for (let i = 0; i < 7; i++) {
+      const a = i * 0.9;
+      ctx.beginPath();
+      ctx.arc(Math.cos(a) * 20, 1 + Math.sin(a) * 4, 2.4, 0, TAU);
+      ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(216,181,106,0.9)';
+    ctx.beginPath();
+    ctx.moveTo(-62, 0);
+    ctx.lineTo(-96, -54);
+    ctx.lineTo(26, -54);
+    ctx.lineTo(62, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(70,40,20,0.7)';
+    ctx.stroke();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 4; i++) {
+      const p = (time * 0.24 + i * 0.25) % 1;
+      ctx.strokeStyle = `rgba(255,240,200,${(1 - p) * 0.26})`;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(-16 + i * 12, -8 - p * 48);
+      ctx.bezierCurveTo(-28 + i * 12, -22 - p * 58, 4 + i * 12, -32 - p * 66, -10 + i * 12, -52 - p * 78);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Seis lembranças flutuando à esquerda: o que cada um trouxe para a mesa.
+    const tokens: Array<[string, CharacterId, number, number]> = [
+      ['pizza', 'ravi', 0.09, 0.22],
+      ['helmet', 'miriam', 0.2, 0.32],
+      ['radio', 'kael', 0.31, 0.2],
+      ['chain', 'ozric', 0.12, 0.5],
+      ['feather', 'elodie', 0.23, 0.56],
+      ['seed', 'thryc', 0.34, 0.42],
+    ];
+    for (const [kind, id, xr, yr] of tokens) {
+      this.drawMemoryToken(
+        ctx,
+        kind,
+        rect.x + rect.w * xr,
+        rect.y + rect.h * yr,
+        22,
+        CHARACTERS[id].colors.aura,
+      );
+    }
+
+    // Motes de memória.
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 24; i++) {
+      const x = rect.x + comicNoise(i * 3 + 1) * rect.w;
+      const y = rect.y + comicNoise(i * 7 + 2) * rect.h;
+      const a = 0.12 + Math.sin(time * 1.6 + i) * 0.08;
+      ctx.fillStyle = i % 4 === 0 ? hexToRgba('#ffd166', a) : hexToRgba('#ff8ae2', a * 0.7);
+      ctx.beginPath();
+      ctx.arc(x, y, 1 + (i % 3) * 0.7, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /** Pequenos ícones das lembranças que cada Desperto leva para a mesa. */
+  private drawMemoryToken(
+    ctx: CanvasRenderingContext2D,
+    kind: string,
+    x: number,
+    y: number,
+    r: number,
+    color: string,
+  ): void {
+    ctx.save();
+    ctx.translate(x, y);
+    const halo = ctx.createRadialGradient(0, 0, 2, 0, 0, r * 2.6);
+    halo.addColorStop(0, hexToRgba(color, 0.28));
+    halo.addColorStop(1, hexToRgba(color, 0));
+    ctx.fillStyle = halo;
+    ctx.fillRect(-r * 2.8, -r * 2.8, r * 5.6, r * 5.6);
+    ctx.strokeStyle = hexToRgba(color, 0.7);
+    ctx.fillStyle = 'rgba(6,4,10,0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, TAU);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = hexToRgba('#f2e7c9', 0.9);
+    ctx.fillStyle = hexToRgba(color, 0.9);
+    ctx.lineWidth = 1.8;
+
+    switch (kind) {
+      case 'pizza': {
+        ctx.beginPath();
+        ctx.moveTo(-9, 8);
+        ctx.lineTo(9, 8);
+        ctx.lineTo(0, -10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(6,4,10,0.75)';
+        ctx.beginPath();
+        ctx.arc(-2, 3, 1.6, 0, TAU);
+        ctx.arc(4, 4, 1.4, 0, TAU);
+        ctx.fill();
+        break;
+      }
+      case 'helmet': {
+        ctx.beginPath();
+        ctx.arc(0, 2, 9, Math.PI, TAU);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillRect(-12, 1, 24, 4);
+        ctx.strokeRect(-12, 1, 24, 4);
+        ctx.beginPath();
+        ctx.moveTo(0, -7);
+        ctx.lineTo(0, 1);
+        ctx.stroke();
+        break;
+      }
+      case 'radio': {
+        roundRectPath(ctx, -10, -6, 20, 14, 3);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-5, -6);
+        ctx.lineTo(-8, -13);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(6,4,10,0.8)';
+        ctx.beginPath();
+        ctx.arc(4, 1, 3, 0, TAU);
+        ctx.fill();
+        ctx.fillRect(-7, 5, 14, 2);
+        break;
+      }
+      case 'chain': {
+        ctx.beginPath();
+        ctx.ellipse(-4, 0, 7, 4, -0.5, 0, TAU);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(4, 0, 7, 4, 0.5, 0, TAU);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-8, 6);
+        ctx.lineTo(-4, 3);
+        ctx.stroke();
+        break;
+      }
+      case 'feather': {
+        ctx.beginPath();
+        ctx.moveTo(0, 11);
+        ctx.bezierCurveTo(-9, 3, -5, -7, 2, -11);
+        ctx.bezierCurveTo(7, -5, 5, 4, 0, 11);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, 10);
+        ctx.lineTo(1, -8);
+        ctx.stroke();
+        break;
+      }
+      case 'seed': {
+        ctx.beginPath();
+        ctx.moveTo(0, -11);
+        ctx.bezierCurveTo(9, -4, 8, 5, 0, 10);
+        ctx.bezierCurveTo(-8, 5, -9, -4, 0, -11);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, 10);
+        ctx.quadraticCurveTo(2, 14, 6, 15);
+        ctx.stroke();
+        break;
+      }
+      default:
+        ctx.beginPath();
+        ctx.arc(0, 0, 5, 0, TAU);
+        ctx.fill();
+        break;
+    }
+    ctx.restore();
+  }
+
   private drawGenericPanel(
     ctx: CanvasRenderingContext2D,
     rect: Rect,
@@ -2596,24 +3186,67 @@ export class ComicScene implements Scene {
     ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
 
     const color = SPEAKER_COLOR[beat.who] ?? '#ffd166';
-    const cx = rect.x + rect.w * (beat.who === 'narrator' ? 0.5 : 0.63);
-    const cy = rect.y + rect.h * 0.56;
+    const flip = globalIndex % 2 === 1;
+    const cx = rect.x + rect.w * (beat.who === 'narrator' ? 0.5 : flip ? 0.38 : 0.64);
+    const cy = rect.y + rect.h * (beat.who === 'narrator' ? 0.5 : 0.58);
+
+    // Lavagem de cor do orador: cada painel tem a temperatura de quem fala.
+    const wash = ctx.createLinearGradient(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h);
+    wash.addColorStop(0, hexToRgba(color, 0.04));
+    wash.addColorStop(0.55, hexToRgba(color, 0.02));
+    wash.addColorStop(1, hexToRgba(color, 0.13));
+    ctx.fillStyle = wash;
+    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
 
     if (beat.who === 'narrator') {
+      // Horizonte de ruínas: o mundo continua existindo atrás da narração.
+      const horizon = rect.y + rect.h * 0.72;
+      const hg = ctx.createLinearGradient(rect.x, horizon - 46, rect.x, rect.y + rect.h);
+      hg.addColorStop(0, 'rgba(4,5,10,0)');
+      hg.addColorStop(1, 'rgba(4,5,10,0.88)');
+      ctx.fillStyle = hg;
+      ctx.fillRect(rect.x, horizon - 46, rect.w, rect.h - (horizon - 46));
+      for (let i = 0; i < 11; i++) {
+        const bw = 24 + comicNoise(globalIndex * 11 + i) * 76;
+        const bh = 18 + comicNoise(globalIndex * 17 + i * 3) * 96;
+        const bx = rect.x + (i / 11) * rect.w + comicNoise(i * 5) * 26;
+        ctx.fillStyle = 'rgba(3,4,8,0.74)';
+        ctx.fillRect(bx, horizon - bh, bw, bh + 14);
+        ctx.fillStyle = hexToRgba(color, 0.1);
+        for (let w = 0; w < 3; w++) {
+          if (comicNoise(globalIndex * 23 + i * 7 + w) > 0.5) {
+            ctx.fillRect(bx + 7 + w * 12, horizon - bh + 10, 3, 5);
+          }
+        }
+      }
+
       ctx.save();
       ctx.translate(cx, cy);
       ctx.globalCompositeOperation = 'lighter';
-      const g = ctx.createRadialGradient(0, 0, 2, 0, 0, 140);
+      const g = ctx.createRadialGradient(0, 0, 2, 0, 0, 150);
       g.addColorStop(0, hexToRgba(color, 0.32));
       g.addColorStop(1, hexToRgba(color, 0));
       ctx.fillStyle = g;
-      ctx.fillRect(-140, -140, 280, 280);
+      ctx.fillRect(-150, -150, 300, 300);
       for (let i = 0; i < 4; i++) {
         ctx.strokeStyle = hexToRgba(color, 0.34 - i * 0.06);
         ctx.lineWidth = 1.6;
         ctx.beginPath();
         ctx.ellipse(0, 0, 30 + i * 18, 16 + i * 10, this.t * 0.2 + i * 0.4, 0, TAU);
         ctx.stroke();
+      }
+      // Fragmentos de memória girando ao redor da narração.
+      for (let i = 0; i < 7; i++) {
+        const a = this.t * 0.24 + (i / 7) * TAU;
+        const rr = 74 + (i % 3) * 24;
+        const x = Math.cos(a) * rr;
+        const y = Math.sin(a) * rr * 0.56;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(a + i);
+        ctx.fillStyle = hexToRgba(color, 0.08 + (i % 3) * 0.03);
+        ctx.fillRect(-9, -5, 18, 10);
+        ctx.restore();
       }
       ctx.restore();
       return;
@@ -2622,13 +3255,46 @@ export class ComicScene implements Scene {
     if (beat.who === 'ferrato' || beat.who === 'boss') {
       ctx.save();
       ctx.translate(cx, cy);
+
+      // Tentáculos de fome saindo do escuro.
       ctx.globalCompositeOperation = 'lighter';
-      const g = ctx.createRadialGradient(0, 0, 2, 0, 0, 150);
+      ctx.rotate(this.t * 0.05);
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * TAU;
+        const len = 90 + (i % 4) * 36;
+        ctx.strokeStyle = hexToRgba(color, 0.08 + (i % 3) * 0.04);
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * 30, Math.sin(a) * 22);
+        ctx.quadraticCurveTo(
+          Math.cos(a + 0.4) * len * 0.7,
+          Math.sin(a + 0.4) * len * 0.5,
+          Math.cos(a) * len,
+          Math.sin(a) * len * 0.72,
+        );
+        ctx.stroke();
+      }
+      ctx.rotate(-this.t * 0.05);
+
+      const g = ctx.createRadialGradient(0, 0, 2, 0, 0, 160);
       g.addColorStop(0, hexToRgba('#ffffff', 0.34));
       g.addColorStop(0.35, hexToRgba(color, 0.34));
       g.addColorStop(1, hexToRgba(color, 0));
       ctx.fillStyle = g;
-      ctx.fillRect(-150, -150, 300, 300);
+      ctx.fillRect(-170, -170, 340, 340);
+
+      // Coroa de espinhos.
+      ctx.fillStyle = 'rgba(5,3,11,0.96)';
+      for (let i = 0; i < 7; i++) {
+        const a = -Math.PI * 0.9 + (i / 6) * Math.PI * 0.8;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * 46, Math.sin(a) * 30 - 18);
+        ctx.lineTo(Math.cos(a) * 76, Math.sin(a) * 48 - 42);
+        ctx.lineTo(Math.cos(a + 0.09) * 48, Math.sin(a + 0.09) * 32 - 14);
+        ctx.closePath();
+        ctx.fill();
+      }
+
       ctx.fillStyle = '#05030b';
       ctx.beginPath();
       ctx.ellipse(0, 0, 74, 31, 0, 0, TAU);
@@ -2641,6 +3307,10 @@ export class ComicScene implements Scene {
       ctx.beginPath();
       ctx.ellipse(Math.sin(this.t * 0.4) * 8, 0, 5, 18, 0, 0, TAU);
       ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.beginPath();
+      ctx.arc(-7, -5, 3, 0, TAU);
+      ctx.fill();
       ctx.restore();
       return;
     }
@@ -2648,11 +3318,60 @@ export class ComicScene implements Scene {
     const def = CHARACTERS[beat.who as keyof typeof CHARACTERS];
     if (def) {
       const size = Math.min(rect.w * 0.64, rect.h * 0.92);
+
+      // Luz do Desperto atrás do retrato.
+      const halo = ctx.createRadialGradient(cx, cy + 4, 8, cx, cy + 4, size * 0.72);
+      halo.addColorStop(0, hexToRgba(color, 0.22));
+      halo.addColorStop(0.55, hexToRgba(color, 0.07));
+      halo.addColorStop(1, hexToRgba(color, 0));
+      ctx.fillStyle = halo;
+      ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+
+      // Sombra no chão do quadro.
+      ctx.save();
+      ctx.fillStyle = 'rgba(2,3,7,0.5)';
+      ctx.beginPath();
+      ctx.ellipse(cx, rect.y + rect.h * 0.94, size * 0.36, size * 0.06, 0, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+
+      this.drawSpeedLines(ctx, cx, cy, rect, hexToRgba(color, 0.08), 20);
+
       drawCharacterPortrait(ctx, def, cx, cy + 8, size, this.t, false);
+
+      // Luz de contorno separando o herói do fundo.
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = hexToRgba(def.colors.accent, 0.26);
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.arc(cx, cy + 4, size * 0.33, -Math.PI * 0.78, -Math.PI * 0.22);
+      ctx.stroke();
+      ctx.strokeStyle = hexToRgba(def.colors.secondary, 0.14);
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(cx, cy + 4, size * 0.4, Math.PI * 0.08, Math.PI * 0.7);
+      ctx.stroke();
+      // Poeira de luz.
+      for (let i = 0; i < 12; i++) {
+        const a = this.t * 0.5 + i * 2.1;
+        const rr = size * (0.24 + (i % 4) * 0.08);
+        ctx.fillStyle = hexToRgba(color, 0.1 + (i % 3) * 0.05);
+        ctx.beginPath();
+        ctx.arc(
+          cx + Math.cos(a) * rr,
+          cy + Math.sin(a * 0.7) * rr * 0.72,
+          1.2 + (i % 3) * 0.6,
+          0,
+          TAU,
+        );
+        ctx.fill();
+      }
+      ctx.restore();
 
       // Antes do despertar, o herói aparece em silhueta. O quadro seguinte
       // é quem revela a forma desperta em cores.
-      if (this.phase === 'intro' && AWAKENING_STAGES.has(this.stage.id) && this.page === 0) {
+      if (this.phase === 'intro' && this.stage.chapter === 1 && this.page === 0) {
         ctx.save();
         ctx.fillStyle = 'rgba(3,5,12,0.68)';
         ctx.fillRect(rect.x, rect.y, rect.w, rect.h);

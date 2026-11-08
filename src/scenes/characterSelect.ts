@@ -237,7 +237,7 @@ export class CharacterSelectScene implements Scene {
       spacing: 5,
       glow: 'rgba(180,139,255,0.35)',
     });
-    label(ctx, 'SEIS HISTÓRIAS · TRINTA E SEIS CAPÍTULOS · UM VÉU FAMINTO', 82, 75, 9.5, 'rgba(190,198,220,0.66)', {
+    label(ctx, 'SEIS HISTÓRIAS · QUARENTA E DOIS CAPÍTULOS · UM VÉU FAMINTO', 82, 75, 9.5, 'rgba(190,198,220,0.66)', {
       font: FONTS.mono,
       spacing: 1.35,
     });
@@ -262,10 +262,11 @@ export class CharacterSelectScene implements Scene {
     // ------------------------------------------------------------ abas de capítulo
     this.stageRects = [];
     const arcStages = getArcStages(stage.arc);
-    const tabW = 176;
-    const tabGap = 10;
+    // Sete capítulos por arco: as abas encolhem para caber na mesma faixa.
+    const tabW = 152;
+    const tabGap = 8;
     const tabY = 100;
-    const tabX = 87;
+    const tabX = 84;
     arcStages.forEach((chapter, i) => {
       const x = tabX + i * (tabW + tabGap);
       const r: Box = { x, y: tabY, w: tabW, h: 34 };

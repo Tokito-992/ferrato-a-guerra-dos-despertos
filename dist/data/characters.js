@@ -13,6 +13,8 @@ export const CHARACTERS = {
         lore: [
             'Entregador de pizza em New Haven. Impulsivo, otimista e teimoso: protege os outros antes mesmo de entender o que está acontecendo.',
             'Cresceu ouvindo Dona Célia, sua mãe, dizer que comida quente resolve quase tudo. A pizza que carregava virou símbolo de tudo o que ele quer salvar.',
+            'Decora o nome de todo mundo na rua. Entrega pizza sem cobrar de quem está com fome e mente dizendo que sobrou no balcão.',
+            'Assobia baixinho quando está com medo. Diz que é para o inimigo achar que ele está calmo; Dona Célia diz que é para ele mesmo.',
             'O Ferrato acendeu a bioeletricidade em seu sangue. Quanto mais rápido luta, mais forte fica — mas a pressa também cobra seu preço.',
             'Depois de perder um vizinho no metrô, prometeu nunca mais correr sem olhar para trás. A culpa é o motor silencioso do seu ritmo.',
         ],
@@ -58,7 +60,10 @@ export const CHARACTERS = {
         lore: [
             'Ex-bombeira do Corpo de Bombeiros de Brasília. Estava em New Haven num treinamento quando a capital caiu; pragmática, estoica e durona, guarda a gentileza para civis e para os mais jovens do grupo.',
             'Liderou 43 sobreviventes de New Haven pela Rodovia dos Imortais de volta a Brasília. Carrega o capacete do Capitão Duarte e o nome de cada pessoa que não conseguiu salvar.',
+            'Guarda um caderno com os nomes de quem salvou e de quem não conseguiu. Nunca mostra para ninguém; só Ravi já viu a capa.',
+            'Canta baixinho as músicas que o Capitão Duarte cantava no caminhão. Diz que é para manter a equipe acordada, mas ninguém mais está no caminhão.',
             'As queimaduras do braço esquerdo brilham em magma. O calor que acumula vira arma, e o medo de perder o controle, combustível.',
+            'Tem medo de que o magma um dia não distinga mais amigos de inimigos. Por isso treina todos os dias até as mãos tremerem.',
             'Entrou no fogo quando todos corriam para fora. Agora entra no Ferrato pelo mesmo motivo: alguém precisa abrir a porta.',
         ],
         colors: {
@@ -103,7 +108,10 @@ export const CHARACTERS = {
         lore: [
             'Cresceu no orfanato da Plataforma Amanhecer. De temperamento reservado, analítico e sarcástico, demonstra afeto consertando as coisas dos outros.',
             'A Dra. Sora, sua mentora, ficou em SOLACE para selar o núcleo. Kael carrega o último registro dela como uma promessa e uma acusação.',
+            'Conserta rádios antigos nas horas vagas. O primeiro foi o da Dra. Sora; até hoje ele o liga para ouvir o chiado.',
+            'Não gosta de abraços, mas deixa Ravi encostar o ombro no dele quando o grupo está cansado. Chama isso de “manutenção de equipe”.',
             'Manipula a gravidade ao redor do corpo: flutua, dobra o espaço curto e esmaga com singularidades.',
+            'Tem medo de que consertar o mundo seja só uma forma de fugir do luto. Por isso conserta a Aurora antes de dormir, todas as noites.',
             'Consertar o universo, para Kael, é apenas um problema de engenharia maior — e ninguém mais qualificado para tentar.',
         ],
         colors: {
@@ -148,7 +156,11 @@ export const CHARACTERS = {
         lore: [
             'Ex-Carrasco Infernal do Abismo Rubro. Melancólico, honorável e rígido, carrega culpa pelas almas que não conseguiu salvar.',
             'No Tribunal de Ossos, recusou-se a corromper uma criança que protegera o irmão. O Barão Acheron o acorrentou no Poço das Correntes por isso.',
+            'Quando o grupo caiu no Abismo, Ravi, Miriam e Kael desceram atrás dele e quebraram a última corrente nos Portões. Ozric não se libertou sozinho: foi resgatado por quem ele ainda não sabia que tinha.',
+            'Lembra do nome de cada alma que julgou. Recita os nomes baixinho quando acha que ninguém está ouvindo.',
+            'A criança que ele salvou chamava-se Nara. Ele nunca contou isso a ninguém; guarda o nome como quem guarda uma vela acesa.',
             'Suas chamas negras não queimam carne: queimam corrupção. A foice bebe a vida de quem a merece.',
+            'Tem medo de que a foice ainda obedeça ao Barão, não a ele. Por isso a carrega com as duas mãos quando está cansado.',
             'Agora mede justiça pelos próprios erros. Não busca perdão; busca impedir que outra pessoa seja julgada pelo medo.',
         ],
         colors: {
@@ -193,7 +205,10 @@ export const CHARACTERS = {
         lore: [
             'Aprendiz da Ordem da Aurora. Idealista, compassiva e teimosa; é a voz da esperança em um exército de cínicos.',
             'Quebrou o voto de nunca lutar para salvar os noviços quando a Eclésia caiu. A Mestra Aurélia e o irmão Lucien foram as primeiras perdas.',
+            'Catalogava os nomes dos noviços em ordem alfabética. Ainda sabe recitá-los de cor, e faz isso antes de dormir para que o céu não os esqueça.',
+            'Guarda a pena que Lucien usava atrás da orelha. Não é uma relíquia: é uma promessa de que ele ainda está em algum lugar.',
             'Sua lâmina carrega luz estelar. Em vez de purificar, ela sela a corrupção para que não volte.',
+            'Tem medo de que a luz dela seja só uma forma mais bonita de queimar. Por isso pede a Miriam que a avise se ela começar a falar como Malakhim.',
             'Aprendeu que fé sem proteção é vazio. Luta para abrir espaço para o céu respirar — e para que ninguém mais precise ser sacrificado.',
         ],
         colors: {
@@ -238,8 +253,11 @@ export const CHARACTERS = {
         lore: [
             'Eco nascido das memórias de realidades consumidas pelo Ferrato. De temperamento calmo, enigmático e poeticamente direto.',
             'Elu carrega em si mundos que já não existem. Cada memória devorada deixou uma voz, e Thryc aprendeu a ouvir todas.',
+            'Aprendeu a gostar de pizza porque Ravi insistiu. Ainda não entende por que ela esfria; a memória da mesa, para elu, é a única coisa que não esfria.',
+            'Guarda uma semente de vidro do Jardim de Vidro. Não sabe se vai crescer, mas rega todos os dias com uma gota de memória.',
             'Tem curiosidade por coisas simples: comida, piadas, música. Foi a esperança dos Despertos que fez Thryc escolher um lado.',
             'Pode repetir ações recém-feitas como um eco. Não sabe se é uma pessoa ou uma canção; decidiu que a resposta importa menos do que o que faz com ela.',
+            'Tem medo de voltar a ser só um eco quando a guerra terminar. Por isso aprendeu a dizer “eu” antes de dizer “nós”.',
         ],
         colors: {
             primary: '#b48bff',

@@ -9,6 +9,7 @@ import { ParticleSystem } from '../core/particles.js';
 import { clamp, hexToRgba } from '../core/math.js';
 import { rankColor, rankFromPressure, rankValue } from '../core/rank.js';
 import type { Rank } from '../core/rank.js';
+import { MAX_HEARTS } from '../core/save.js';
 import type { CharacterId } from '../data/characters.js';
 import { MAX_STAGE } from '../data/stages.js';
 import type { StageDef, WaveDef } from '../data/stages.js';
@@ -120,7 +121,7 @@ export class GameplayScene implements Scene, World {
 
   // Sistema competitivo e de vidas extras.
   private hearts = 0;
-  private readonly maxHearts = 3;
+  private readonly maxHearts = MAX_HEARTS;
   private score = 0;
   private pressure = 0;
   private damageTaken = 0;
@@ -174,6 +175,9 @@ export class GameplayScene implements Scene, World {
     this.nextAnomalyPressure = clamp(this.pressure + 20, 58, 92);
     this.bonusAt = stage.width * 0.52;
     this.bonusRewardCap = this.heartRewardCap();
+    // Corações não são mais por capítulo: o que o jogador conquistou (e não
+    // gastou) acompanha a campanha e pode ser acumulado até MAX_HEARTS.
+    this.hearts = clamp(game.save.hearts, 0, this.maxHearts);
     this.record = this.game.save.bestScore;
     this.setBanner(stage.name, `${stage.subtitle} · ${stage.location}`, stage.palette.accent, 3.6);
   }
@@ -704,6 +708,7 @@ export class GameplayScene implements Scene, World {
 
   private persistRecord(): void {
     const save = this.game.save;
+    save.hearts = this.hearts;
     save.bestCombo = Math.max(save.bestCombo, this.maxCombo, this.player.bestCombo);
     save.bestScore = Math.max(save.bestScore, this.score);
     if (rankValue(this.rank) > rankValue(save.bestRank)) save.bestRank = this.rank;
@@ -717,6 +722,8 @@ export class GameplayScene implements Scene, World {
 
   private revivePlayer(): void {
     this.hearts = Math.max(0, this.hearts - 1);
+    this.game.save.hearts = this.hearts;
+    this.game.persist();
     const p = this.player;
     p.dead = false;
     p.hp = Math.max(1, Math.round(p.maxHp * 0.3));

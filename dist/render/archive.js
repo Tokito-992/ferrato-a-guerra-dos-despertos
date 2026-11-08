@@ -1,8 +1,8 @@
 /** Ícones procedurais do Arquivo do Véu. */
-import { CHARACTERS } from '../data/characters.js?v=be05988e5819';
-import { clamp, hexToRgba, TAU } from '../core/math.js?v=be05988e5819';
-import { drawCharacterPortrait } from './characters.js?v=be05988e5819';
-import { glow, roundRectPath } from './theme.js?v=be05988e5819';
+import { CHARACTERS } from '../data/characters.js?v=bf59b6c4844c';
+import { clamp, hexToRgba, TAU } from '../core/math.js?v=bf59b6c4844c';
+import { drawCharacterPortrait } from './characters.js?v=bf59b6c4844c';
+import { glow, roundRectPath } from './theme.js?v=bf59b6c4844c';
 function frame(ctx, size, color, active) {
     ctx.save();
     const r = size * 0.47;

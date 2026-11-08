@@ -1,8 +1,8 @@
 /** Jogador: movimentação, combos, dash, habilidades e passivas por personagem. */
-import { clamp, rand, rectsOverlap } from '../core/math.js?v=be05988e5819';
-import { Combatant } from './combatant.js?v=be05988e5819';
-import { getCharacter } from '../data/characters.js?v=be05988e5819';
-import { MOVESETS } from '../data/movesets.js?v=be05988e5819';
+import { clamp, rand, rectsOverlap } from '../core/math.js?v=bf59b6c4844c';
+import { Combatant } from './combatant.js?v=bf59b6c4844c';
+import { getCharacter } from '../data/characters.js?v=bf59b6c4844c';
+import { MOVESETS } from '../data/movesets.js?v=bf59b6c4844c';
 /** Cada Desperto tem uma assinatura sonora própria ao ativar a habilidade. */
 const ABILITY_SFX = {
     ravi: 'abilityRavi',

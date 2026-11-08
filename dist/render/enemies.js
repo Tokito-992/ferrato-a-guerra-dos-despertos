@@ -1,8 +1,8 @@
 /** Ilustração procedural de inimigos e chefes. */
-import { clamp, hexToRgba, mixColor, TAU } from '../core/math.js?v=be05988e5819';
-import { getStage } from '../data/stages.js?v=be05988e5819';
-import { visualStyle } from './style.js?v=be05988e5819';
-import { glow, joint, limb, roundRectPath } from './theme.js?v=be05988e5819';
+import { clamp, hexToRgba, mixColor, TAU } from '../core/math.js?v=bf59b6c4844c';
+import { CHAPTERS_PER_ARC, getStage } from '../data/stages.js?v=bf59b6c4844c';
+import { visualStyle } from './style.js?v=bf59b6c4844c';
+import { glow, joint, limb, roundRectPath } from './theme.js?v=bf59b6c4844c';
 function tint(color, flash) {
     return flash > 0 ? mixColor(color, '#ffffff', clamp(flash * 4.5, 0, 0.9)) : color;
 }
@@ -2476,7 +2476,7 @@ function drawBossGroundPresence(ctx, b, time, floor, accent) {
     ctx.restore();
 }
 function getFloorFromBoss(b) {
-    return getStage(b.def.stage).floor;
+    return getStage(b.def.arc * CHAPTERS_PER_ARC).floor;
 }
 function colossusCrack(ctx, points, color, width, glowColor) {
     if (points.length < 2)

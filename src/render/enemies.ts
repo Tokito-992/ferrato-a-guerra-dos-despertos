@@ -3,7 +3,7 @@
 import { clamp, hexToRgba, mixColor, TAU } from '../core/math.js';
 import type { Enemy } from '../entities/enemy.js';
 import type { Boss } from '../entities/boss.js';
-import { getStage } from '../data/stages.js';
+import { CHAPTERS_PER_ARC, getStage } from '../data/stages.js';
 import { visualStyle } from './style.js';
 import { glow, joint, limb, roundRectPath } from './theme.js';
 
@@ -2818,7 +2818,7 @@ function drawBossGroundPresence(
 }
 
 function getFloorFromBoss(b: Boss): number {
-  return getStage(b.def.stage).floor;
+  return getStage(b.def.arc * CHAPTERS_PER_ARC).floor;
 }
 
 function colossusCrack(

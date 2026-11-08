@@ -5,12 +5,12 @@
  * Tudo nasce selado e só é revelado quando o jogador avista a criatura,
  * enfrenta o chefe, visita o capítulo ou encontra a relíquia.
  */
-import { TITLE_THEME_INDEX } from '../core/audio.js?v=be05988e5819';
-import { clamp, hexToRgba, TAU } from '../core/math.js?v=be05988e5819';
-import { drawArchiveBackground } from '../render/backgrounds.js?v=be05988e5819';
-import { drawArchiveIcon } from '../render/archive.js?v=be05988e5819';
-import { ARCHIVE_SECTIONS, archiveEntriesForSection, archiveEntryUnlocked, archiveSectionProgress, archiveTotalProgress, } from '../data/archive.js?v=be05988e5819';
-import { FONTS, label, roundRectPath } from '../render/theme.js?v=be05988e5819';
+import { TITLE_THEME_INDEX } from '../core/audio.js?v=bf59b6c4844c';
+import { clamp, hexToRgba, TAU } from '../core/math.js?v=bf59b6c4844c';
+import { drawArchiveBackground } from '../render/backgrounds.js?v=bf59b6c4844c';
+import { drawArchiveIcon } from '../render/archive.js?v=bf59b6c4844c';
+import { ARCHIVE_SECTIONS, archiveEntriesForSection, archiveEntryUnlocked, archiveSectionProgress, archiveTotalProgress, } from '../data/archive.js?v=bf59b6c4844c';
+import { FONTS, label, roundRectPath } from '../render/theme.js?v=bf59b6c4844c';
 const BOOK_X = 56;
 const BOOK_Y = 142;
 const BOOK_W = 1168;

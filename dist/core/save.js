@@ -1,8 +1,8 @@
-/** Persistência local de progresso (localStorage) — campanha de 36 capítulos. */
-import { CHARACTER_ORDER } from '../data/characters.js?v=be05988e5819';
-import { CHAPTERS_PER_ARC, MAX_STAGE } from '../data/stages.js?v=be05988e5819';
-import { ARCHIVE_ENTRY_IDS, backfillArchiveIds } from '../data/archive.js?v=be05988e5819';
-import { isRank } from './rank.js?v=be05988e5819';
+/** Persistência local de progresso (localStorage) — campanha de 42 capítulos. */
+import { CHARACTER_ORDER } from '../data/characters.js?v=bf59b6c4844c';
+import { ARC_COUNT, CHAPTERS_PER_ARC, MAX_STAGE } from '../data/stages.js?v=bf59b6c4844c';
+import { ARCHIVE_ENTRY_IDS, backfillArchiveIds } from '../data/archive.js?v=bf59b6c4844c';
+import { isRank } from './rank.js?v=bf59b6c4844c';
 export const TOUCH_BUTTON_IDS = [
     'left',
     'right',
@@ -18,7 +18,15 @@ export const TOUCH_BUTTON_IDS = [
 const KEY = 'ferrato_guerra_dos_despertos_save_v1';
 const UPDATED_KEY = 'ferrato_guerra_dos_despertos_save_updated_v1';
 const LEGACY_MAX_STAGE = 6;
-const VERSION = 2;
+const VERSION = 3;
+/** Teto de corações extras que podem ser acumulados entre capítulos. */
+export const MAX_HEARTS = 3;
+const sanitizeHearts = (value) => {
+    const hearts = Math.round(Number(value));
+    if (!Number.isFinite(hearts))
+        return 0;
+    return Math.max(0, Math.min(MAX_HEARTS, hearts));
+};
 const clampStage = (value, fallback = 1) => {
     if (typeof value !== 'number' || !Number.isFinite(value))
         return fallback;
@@ -81,6 +89,7 @@ function sanitize(data) {
         maxStage,
         cleared,
         selected: selected && unlocked.includes(selected) ? selected : heroForStage(maxStage),
+        hearts: sanitizeHearts(data.hearts),
         kills: typeof data.kills === 'number' && data.kills > 0 ? Math.round(data.kills) : 0,
         deaths: typeof data.deaths === 'number' && data.deaths > 0 ? Math.round(data.deaths) : 0,
         bestCombo: typeof data.bestCombo === 'number' && data.bestCombo > 0 ? Math.round(data.bestCombo) : 0,
@@ -140,6 +149,7 @@ function migrateLegacy(data) {
         maxStage,
         cleared: migratedCleared,
         selected: selected && unlocked.includes(selected) ? selected : heroForStage(maxStage),
+        hearts: sanitizeHearts(data.hearts),
         kills: typeof data.kills === 'number' && data.kills > 0 ? Math.round(data.kills) : 0,
         deaths: typeof data.deaths === 'number' && data.deaths > 0 ? Math.round(data.deaths) : 0,
         bestCombo: typeof data.bestCombo === 'number' && data.bestCombo > 0 ? Math.round(data.bestCombo) : 0,
@@ -159,6 +169,7 @@ export function defaultSave() {
         maxStage: 1,
         cleared: [],
         selected: 'ravi',
+        hearts: 0,
         kills: 0,
         deaths: 0,
         bestCombo: 0,
@@ -171,13 +182,75 @@ export function defaultSave() {
         archive: [],
     };
 }
+/**
+ * Saves v2 tinham 36 capítulos (6 por arco). O v3 tem 42 (7 por arco): o
+ * sexto capítulo de cada arco é novo. Mapeia o progresso antigo para o novo
+ * layout sem apagar nada e preserva os corações acumulados.
+ */
+function migrateV2(data) {
+    const oldCleared = new Set((Array.isArray(data.cleared) ? data.cleared : [])
+        .map((id) => Math.round(Number(id)))
+        .filter((id) => Number.isFinite(id) && id >= 1 && id <= ARC_COUNT * 6));
+    const mapOldStage = (oldId) => {
+        const oldArc = Math.max(1, Math.min(ARC_COUNT, Math.ceil(oldId / 6)));
+        const oldChapter = ((oldId - 1) % 6) + 1;
+        const newChapter = oldChapter === 6 ? CHAPTERS_PER_ARC : oldChapter;
+        return (oldArc - 1) * CHAPTERS_PER_ARC + newChapter;
+    };
+    const cleared = Array.from(new Set(Array.from(oldCleared).map(mapOldStage))).sort((a, b) => a - b);
+    const oldMaxRaw = Math.round(Number(data.maxStage) || 1);
+    const oldMax = Math.max(1, Math.min(ARC_COUNT * 6, oldMaxRaw));
+    const oldMaxArc = Math.max(1, Math.min(ARC_COUNT, Math.ceil(oldMax / 6)));
+    const oldMaxChapter = ((oldMax - 1) % 6) + 1;
+    // Se o chefe antigo estava liberado mas ainda não tinha sido vencido, o
+    // jogador deve passar pelo novo capítulo de crônica antes de enfrentá-lo.
+    let maxStage = oldMaxChapter === 6 && !oldCleared.has(oldMax)
+        ? (oldMaxArc - 1) * CHAPTERS_PER_ARC + (CHAPTERS_PER_ARC - 1)
+        : mapOldStage(oldMax);
+    for (const id of cleared)
+        maxStage = Math.max(maxStage, Math.min(MAX_STAGE, id + 1));
+    maxStage = Math.max(1, Math.min(MAX_STAGE, maxStage));
+    const unlocked = Array.from(new Set((Array.isArray(data.unlocked) ? data.unlocked : [])
+        .map(validHero)
+        .filter((id) => id !== null)));
+    if (!unlocked.includes('ravi'))
+        unlocked.unshift('ravi');
+    const arc = Math.max(1, Math.min(ARC_COUNT, Math.ceil(maxStage / CHAPTERS_PER_ARC)));
+    for (let i = 0; i < arc; i++) {
+        const hero = CHARACTER_ORDER[i];
+        if (!unlocked.includes(hero))
+            unlocked.push(hero);
+    }
+    const selected = validHero(data.selected);
+    return {
+        version: VERSION,
+        unlocked,
+        maxStage,
+        cleared,
+        selected: selected && unlocked.includes(selected) ? selected : heroForStage(maxStage),
+        hearts: sanitizeHearts(data.hearts),
+        kills: typeof data.kills === 'number' && data.kills > 0 ? Math.round(data.kills) : 0,
+        deaths: typeof data.deaths === 'number' && data.deaths > 0 ? Math.round(data.deaths) : 0,
+        bestCombo: typeof data.bestCombo === 'number' && data.bestCombo > 0 ? Math.round(data.bestCombo) : 0,
+        bestScore: typeof data.bestScore === 'number' && data.bestScore > 0 ? Math.round(data.bestScore) : 0,
+        bestRank: isRank(data.bestRank) ? data.bestRank : 'D',
+        muted: Boolean(data.muted),
+        touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
+        touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
+        touchPositions: sanitizeTouchPositions(data.touchPositions),
+        archive: backfillArchiveIds(cleared, maxStage),
+    };
+}
 /** Valida e normaliza um save vindo do localStorage ou da nuvem. */
 export function sanitizeSave(value) {
     if (!value || typeof value !== 'object')
         return defaultSave();
     const parsed = value;
-    const isCurrent = parsed.version === VERSION;
-    return isCurrent ? sanitize(parsed) : migrateLegacy(parsed);
+    if (parsed.version === VERSION)
+        return sanitize(parsed);
+    if (parsed.version === 2)
+        return migrateV2(parsed);
+    return migrateLegacy(parsed);
 }
 /** Timestamp local do último save; 0 quando o arquivo é anterior a este recurso. */
 export function localSaveUpdatedAt() {

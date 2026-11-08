@@ -1,9 +1,9 @@
 /** Créditos finais com rolagem cinematográfica. */
-import { TITLE_THEME_INDEX } from '../core/audio.js?v=be05988e5819';
-import { CREDITS, TITLE_QUOTE } from '../data/story.js?v=be05988e5819';
-import { clamp, hexToRgba } from '../core/math.js?v=be05988e5819';
-import { drawTitleBackground } from '../render/backgrounds.js?v=be05988e5819';
-import { FONTS, label } from '../render/theme.js?v=be05988e5819';
+import { TITLE_THEME_INDEX } from '../core/audio.js?v=bf59b6c4844c';
+import { CREDITS, TITLE_QUOTE } from '../data/story.js?v=bf59b6c4844c';
+import { clamp, hexToRgba } from '../core/math.js?v=bf59b6c4844c';
+import { drawTitleBackground } from '../render/backgrounds.js?v=bf59b6c4844c';
+import { FONTS, label } from '../render/theme.js?v=bf59b6c4844c';
 const LINE_H = 78;
 export class CreditsScene {
     constructor(game) {
@@ -59,7 +59,7 @@ export class CreditsScene {
             spacing: 8,
             glow: 'rgba(255,230,163,0.42)',
         });
-        label(ctx, 'FERRATO · A GUERRA DOS DESPERTOS · 36 CAPÍTULOS', width / 2, 74, 9.5, 'rgba(255,230,163,0.62)', {
+        label(ctx, 'FERRATO · A GUERRA DOS DESPERTOS · 42 CAPÍTULOS', width / 2, 74, 9.5, 'rgba(255,230,163,0.62)', {
             align: 'center',
             font: FONTS.mono,
             spacing: 2.4,
@@ -81,7 +81,7 @@ export class CreditsScene {
         this.drawLine(base, 0, 'UMA HISTÓRIA DE', '', 'rgba(190,198,220,0.55)', 9.5);
         this.drawLine(base + 48, 0, 'FERRATO', '', '#ffe6a3', 46, true);
         this.drawLine(base + 82, 0, 'A GUERRA DOS DESPERTOS', '', 'rgba(235,238,250,0.82)', 14);
-        this.drawLine(base + 110, 0, 'SEIS ARCOS. TRINTA E SEIS CAPÍTULOS. UMA ESCOLHA.', '', 'rgba(190,198,220,0.5)', 9.5);
+        this.drawLine(base + 110, 0, 'SEIS ARCOS. QUARENTA E DOIS CAPÍTULOS. UMA ESCOLHA.', '', 'rgba(190,198,220,0.5)', 9.5);
         const listTop = 178;
         CREDITS.forEach((line, i) => {
             const y = base + listTop + i * LINE_H;

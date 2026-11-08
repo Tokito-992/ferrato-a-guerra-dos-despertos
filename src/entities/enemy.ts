@@ -35,6 +35,10 @@ export class Enemy extends Combatant {
   comboStep = 0;
   aimX = 0;
   aimY = 0;
+  /** Direção e velocidade horizontal travadas no início do mergulho do Serafim. */
+  diveDirX = 1;
+  diveSpeedX = 0;
+  diveTargetX = 0;
 
   constructor(stage: StageDef, kind: EnemyKind, x: number, elite = false) {
     const base = ENEMY_BASE[kind];
@@ -154,7 +158,10 @@ export class Enemy extends Combatant {
     if (this.isHovering) {
       this.hoverMovement(dt, world);
     } else {
-      this.applyPhysics(dt, this.stage.floor, 10);
+      // O mergulho do Serafim precisa manter a velocidade rumo ao alvo;
+      // a fricção normal freava o ataque e fazia o anjo cair curto demais.
+      const friction = this.def.ai === 'diver' && this.state === 'attack' ? 0.8 : 10;
+      this.applyPhysics(dt, this.stage.floor, friction);
     }
     this.x = clamp(this.x, world.camera.x + 10, world.camera.x + world.viewW - 10);
     this.applyStatuses(dt, world);
@@ -519,23 +526,35 @@ export class Enemy extends Combatant {
       case 'diver': {
         if (this.state === 'hover' || this.state === 'chase') {
           this.state = 'chase';
-          const targetX = player.x - Math.sign(dx) * 120;
-          this.vx = clamp((targetX - this.x) * 1.3, -this.moveSpeed, this.moveSpeed);
+          const dirToPlayer = Math.sign(dx) || this.facing;
+          const targetX = player.x - dirToPlayer * 100;
+          this.vx = clamp((targetX - this.x) * 1.6, -this.moveSpeed, this.moveSpeed);
           this.faceToward(player.x);
-          if (this.cooldown <= 0) this.beginWindup();
+          // Só inicia o bote quando está perto o bastante para o mergulho alcançar.
+          if (this.cooldown <= 0 && adx < 230) this.beginWindup();
         } else if (this.state === 'windup' && this.stateTime >= this.def.windup) {
           this.state = 'attack';
           this.stateTime = 0;
           this.didHit = false;
           this.isHovering = false;
-          this.vy = 300;
-          this.vx = Math.sign(dx) * 380;
           this.onGround = false;
+          this.vy = 300;
+          const height = Math.max(12, this.stage.floor - this.y);
+          const tGround = (-this.vy + Math.sqrt(this.vy * this.vy + 2 * this.gravity * height)) / this.gravity;
+          this.diveDirX = Math.sign(dx) || this.facing;
+          this.diveTargetX = player.x;
+          // Calcula a velocidade horizontal para cruzar a posição do jogador antes de pousar.
+          this.diveSpeedX = clamp((Math.abs(dx) / Math.max(0.08, tGround) + 150) * 1.06, 420, 1250);
+          this.vx = this.diveDirX * this.diveSpeedX;
           world.audio.sfx('dash');
         } else if (this.state === 'attack') {
+          // Reafirma a velocidade a cada quadro e para no ponto marcado, sem atravessar o alvo.
+          const reachedTarget =
+            this.diveDirX > 0 ? this.x >= this.diveTargetX : this.x <= this.diveTargetX;
+          this.vx = reachedTarget ? 0 : this.diveDirX * this.diveSpeedX;
           if (!this.didHit) {
-            const box: Rect = { x: this.x - 40, y: this.y - 80, w: 80, h: 78 };
-            if (rectsOverlap(box, player.hurtbox)) this.hitPlayer(world, 1, 260);
+            const box: Rect = { x: this.x - 44, y: this.y - 84, w: 88, h: 82 };
+            if (rectsOverlap(box, player.hurtbox)) this.hitPlayer(world, 1, 280);
           }
           if (this.onGround || this.stateTime > 0.9) {
             this.state = 'recover';

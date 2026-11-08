@@ -1,11 +1,11 @@
 /** Seleção de arcos e capítulos: história, lore, dificuldade e chefe de cada fase. */
-import { CHARACTERS, CHARACTER_ORDER } from '../data/characters.js?v=be05988e5819';
-import { BOSSES } from '../data/bosses.js?v=be05988e5819';
-import { arcFinaleStage, arcFirstStage, ARC_COUNT, CHAPTERS_PER_ARC, getArcStages, getStage, MAX_STAGE, STAGE_ROMAN, } from '../data/stages.js?v=be05988e5819';
-import { clamp, hexToRgba } from '../core/math.js?v=be05988e5819';
-import { drawStageBackground } from '../render/backgrounds.js?v=be05988e5819';
-import { drawCharacterPortrait, drawCharacterSilhouette } from '../render/characters.js?v=be05988e5819';
-import { FONTS, bar, glow, label, panel, roundRectPath } from '../render/theme.js?v=be05988e5819';
+import { CHARACTERS, CHARACTER_ORDER } from '../data/characters.js?v=bf59b6c4844c';
+import { BOSSES } from '../data/bosses.js?v=bf59b6c4844c';
+import { arcFinaleStage, arcFirstStage, ARC_COUNT, CHAPTERS_PER_ARC, getArcStages, getStage, MAX_STAGE, STAGE_ROMAN, } from '../data/stages.js?v=bf59b6c4844c';
+import { clamp, hexToRgba } from '../core/math.js?v=bf59b6c4844c';
+import { drawStageBackground } from '../render/backgrounds.js?v=bf59b6c4844c';
+import { drawCharacterPortrait, drawCharacterSilhouette } from '../render/characters.js?v=bf59b6c4844c';
+import { FONTS, bar, glow, label, panel, roundRectPath } from '../render/theme.js?v=bf59b6c4844c';
 function inside(box, x, y) {
     return x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h;
 }
@@ -192,7 +192,7 @@ export class CharacterSelectScene {
             spacing: 5,
             glow: 'rgba(180,139,255,0.35)',
         });
-        label(ctx, 'SEIS HISTÓRIAS · TRINTA E SEIS CAPÍTULOS · UM VÉU FAMINTO', 82, 75, 9.5, 'rgba(190,198,220,0.66)', {
+        label(ctx, 'SEIS HISTÓRIAS · QUARENTA E DOIS CAPÍTULOS · UM VÉU FAMINTO', 82, 75, 9.5, 'rgba(190,198,220,0.66)', {
             font: FONTS.mono,
             spacing: 1.35,
         });
@@ -215,10 +215,11 @@ export class CharacterSelectScene {
         // ------------------------------------------------------------ abas de capítulo
         this.stageRects = [];
         const arcStages = getArcStages(stage.arc);
-        const tabW = 176;
-        const tabGap = 10;
+        // Sete capítulos por arco: as abas encolhem para caber na mesma faixa.
+        const tabW = 152;
+        const tabGap = 8;
         const tabY = 100;
-        const tabX = 87;
+        const tabX = 84;
         arcStages.forEach((chapter, i) => {
             const x = tabX + i * (tabW + tabGap);
             const r = { x, y: tabY, w: tabW, h: 34 };

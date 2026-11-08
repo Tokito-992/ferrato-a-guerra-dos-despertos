@@ -5,7 +5,7 @@ import type { HitOptions, Rect, World } from '../core/types.js';
 import { Combatant } from './combatant.js';
 import { BOSSES } from '../data/bosses.js';
 import type { BossDef, BossId } from '../data/bosses.js';
-import { getStage } from '../data/stages.js';
+import { CHAPTERS_PER_ARC, getStage } from '../data/stages.js';
 
 type BossState = 'intro' | 'idle' | 'windup' | 'execute' | 'recover' | 'phase' | 'dead';
 
@@ -231,7 +231,7 @@ export class Boss extends Combatant {
       this.y += (this.baseY + Math.sin(this.animPhase * 1.8 + this.hoverPhase) * 12 - this.y) * Math.min(1, dt * 3);
     } else {
       this.vx = target;
-      this.applyPhysics(dt, getStage(this.def.stage).floor, 8);
+      this.applyPhysics(dt, getStage(this.def.arc * CHAPTERS_PER_ARC).floor, 8);
     }
     this.x = clamp(this.x, world.camera.x + 80, world.camera.x + world.viewW - 80);
   }
@@ -1072,7 +1072,7 @@ export class Boss extends Combatant {
     p.invuln = Math.max(p.invuln, 1.1);
     // Reforços na transição (exceto no primeiro chefe).
     if (this.def.id !== 'colossus') {
-      this.summon(world, this.def.stage >= 4 ? 'shade' : 'drone', 2);
+      this.summon(world, this.def.arc >= 4 ? 'shade' : 'drone', 2);
     }
   }
 

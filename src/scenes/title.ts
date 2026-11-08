@@ -9,7 +9,7 @@ import type { Game, Scene } from '../core/game.js';
 import { TITLE_THEME_INDEX } from '../core/audio.js';
 import { CHARACTER_ORDER, CHARACTERS } from '../data/characters.js';
 import type { CharacterId } from '../data/characters.js';
-import { ARC_COUNT, getArcStages, getStage, MAX_STAGE } from '../data/stages.js';
+import { ARC_COUNT, CHAPTERS_PER_ARC, getArcStages, getStage, MAX_STAGE } from '../data/stages.js';
 import { TITLE_QUOTE } from '../data/story.js';
 import { archiveTotalProgress } from '../data/archive.js';
 import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js';
@@ -108,7 +108,7 @@ function drawBrackets(
   ctx.restore();
 }
 
-/** Barra de 36 segmentos, agrupada por arco. */
+/** Barra de 42 segmentos, agrupada por arco. */
 function drawProgressPips(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -123,7 +123,7 @@ function drawProgressPips(
   const segW = (w - gap * (MAX_STAGE - 1) - groupGap * (ARC_COUNT - 1)) / MAX_STAGE;
   let cx = x;
   for (let stage = 1; stage <= MAX_STAGE; stage++) {
-    const arc = Math.ceil(stage / 6);
+    const arc = Math.ceil(stage / CHAPTERS_PER_ARC);
     const hero = CHARACTER_ORDER[arc - 1];
     const col = CHARACTERS[hero].colors.accent;
     const done = cleared.has(stage);
@@ -141,7 +141,7 @@ function drawProgressPips(
     ctx.fill();
     ctx.restore();
     cx += segW + gap;
-    if (stage % 6 === 0) cx += groupGap;
+    if (stage % CHAPTERS_PER_ARC === 0) cx += groupGap;
   }
 }
 

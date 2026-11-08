@@ -1,23 +1,24 @@
 /** Cena principal: arena lateral, ondas, chefe, pausa, troca de herói e game over. */
-import { Camera } from '../core/camera.js?v=be05988e5819';
-import { ParticleSystem } from '../core/particles.js?v=be05988e5819';
-import { clamp, hexToRgba } from '../core/math.js?v=be05988e5819';
-import { rankColor, rankFromPressure, rankValue } from '../core/rank.js?v=be05988e5819';
-import { MAX_STAGE } from '../data/stages.js?v=be05988e5819';
-import { archiveBossId, archiveCreatureId, archivePhenomenonId, archivePlaceId, archiveRelicId, stageRelicKinds, } from '../data/archive.js?v=be05988e5819';
-import { Player } from '../entities/player.js?v=be05988e5819';
-import { Enemy } from '../entities/enemy.js?v=be05988e5819';
-import { Boss } from '../entities/boss.js?v=be05988e5819';
-import { Hazard, Projectile } from '../entities/projectiles.js?v=be05988e5819';
-import { StageObstacle, buildStageObstacles } from '../entities/obstacles.js?v=be05988e5819';
-import { drawStageBackground } from '../render/backgrounds.js?v=be05988e5819';
-import { drawCharacterPortrait, drawPlayer } from '../render/characters.js?v=be05988e5819';
-import { drawBoss, drawEnemy } from '../render/enemies.js?v=be05988e5819';
-import { drawHeart } from '../render/hearts.js?v=be05988e5819';
-import { visualStyle } from '../render/style.js?v=be05988e5819';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=be05988e5819';
-import { drawHud } from '../ui/hud.js?v=be05988e5819';
-import { Menu } from '../ui/menu.js?v=be05988e5819';
+import { Camera } from '../core/camera.js?v=bf59b6c4844c';
+import { ParticleSystem } from '../core/particles.js?v=bf59b6c4844c';
+import { clamp, hexToRgba } from '../core/math.js?v=bf59b6c4844c';
+import { rankColor, rankFromPressure, rankValue } from '../core/rank.js?v=bf59b6c4844c';
+import { MAX_HEARTS } from '../core/save.js?v=bf59b6c4844c';
+import { MAX_STAGE } from '../data/stages.js?v=bf59b6c4844c';
+import { archiveBossId, archiveCreatureId, archivePhenomenonId, archivePlaceId, archiveRelicId, stageRelicKinds, } from '../data/archive.js?v=bf59b6c4844c';
+import { Player } from '../entities/player.js?v=bf59b6c4844c';
+import { Enemy } from '../entities/enemy.js?v=bf59b6c4844c';
+import { Boss } from '../entities/boss.js?v=bf59b6c4844c';
+import { Hazard, Projectile } from '../entities/projectiles.js?v=bf59b6c4844c';
+import { StageObstacle, buildStageObstacles } from '../entities/obstacles.js?v=bf59b6c4844c';
+import { drawStageBackground } from '../render/backgrounds.js?v=bf59b6c4844c';
+import { drawCharacterPortrait, drawPlayer } from '../render/characters.js?v=bf59b6c4844c';
+import { drawBoss, drawEnemy } from '../render/enemies.js?v=bf59b6c4844c';
+import { drawHeart } from '../render/hearts.js?v=bf59b6c4844c';
+import { visualStyle } from '../render/style.js?v=bf59b6c4844c';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=bf59b6c4844c';
+import { drawHud } from '../ui/hud.js?v=bf59b6c4844c';
+import { Menu } from '../ui/menu.js?v=bf59b6c4844c';
 function insideRect(rect, x, y) {
     return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
 }
@@ -76,7 +77,7 @@ export class GameplayScene {
         this.gameOverHomeRect = { x: 0, y: 0, w: 0, h: 0 };
         // Sistema competitivo e de vidas extras.
         this.hearts = 0;
-        this.maxHearts = 3;
+        this.maxHearts = MAX_HEARTS;
         this.score = 0;
         this.pressure = 0;
         this.damageTaken = 0;
@@ -121,6 +122,9 @@ export class GameplayScene {
         this.nextAnomalyPressure = clamp(this.pressure + 20, 58, 92);
         this.bonusAt = stage.width * 0.52;
         this.bonusRewardCap = this.heartRewardCap();
+        // Corações não são mais por capítulo: o que o jogador conquistou (e não
+        // gastou) acompanha a campanha e pode ser acumulado até MAX_HEARTS.
+        this.hearts = clamp(game.save.hearts, 0, this.maxHearts);
         this.record = this.game.save.bestScore;
         this.setBanner(stage.name, `${stage.subtitle} · ${stage.location}`, stage.palette.accent, 3.6);
     }
@@ -583,6 +587,7 @@ export class GameplayScene {
     }
     persistRecord() {
         const save = this.game.save;
+        save.hearts = this.hearts;
         save.bestCombo = Math.max(save.bestCombo, this.maxCombo, this.player.bestCombo);
         save.bestScore = Math.max(save.bestScore, this.score);
         if (rankValue(this.rank) > rankValue(save.bestRank))
@@ -595,6 +600,8 @@ export class GameplayScene {
     }
     revivePlayer() {
         this.hearts = Math.max(0, this.hearts - 1);
+        this.game.save.hearts = this.hearts;
+        this.game.persist();
         const p = this.player;
         p.dead = false;
         p.hp = Math.max(1, Math.round(p.maxHp * 0.3));

@@ -4,15 +4,15 @@
  * Composição em três zonas — identidade/ações à esquerda, arquivo da campanha
  * à direita e rodapé de estado — para separar leitura, navegação e progresso.
  */
-import { TITLE_THEME_INDEX } from '../core/audio.js?v=be05988e5819';
-import { CHARACTER_ORDER, CHARACTERS } from '../data/characters.js?v=be05988e5819';
-import { ARC_COUNT, getArcStages, getStage, MAX_STAGE } from '../data/stages.js?v=be05988e5819';
-import { archiveTotalProgress } from '../data/archive.js?v=be05988e5819';
-import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js?v=be05988e5819';
-import { drawTitleBackground } from '../render/backgrounds.js?v=be05988e5819';
-import { drawCharacterPortrait } from '../render/characters.js?v=be05988e5819';
-import { FONTS, glow, label, panel, roundRectPath } from '../render/theme.js?v=be05988e5819';
-import { Menu } from '../ui/menu.js?v=be05988e5819';
+import { TITLE_THEME_INDEX } from '../core/audio.js?v=bf59b6c4844c';
+import { CHARACTER_ORDER, CHARACTERS } from '../data/characters.js?v=bf59b6c4844c';
+import { ARC_COUNT, CHAPTERS_PER_ARC, getArcStages, getStage, MAX_STAGE } from '../data/stages.js?v=bf59b6c4844c';
+import { archiveTotalProgress } from '../data/archive.js?v=bf59b6c4844c';
+import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js?v=bf59b6c4844c';
+import { drawTitleBackground } from '../render/backgrounds.js?v=bf59b6c4844c';
+import { drawCharacterPortrait } from '../render/characters.js?v=bf59b6c4844c';
+import { FONTS, glow, label, panel, roundRectPath } from '../render/theme.js?v=bf59b6c4844c';
+import { Menu } from '../ui/menu.js?v=bf59b6c4844c';
 /** Anel arcano usado como marca d'água e como emblema de canto. */
 function drawSigil(ctx, x, y, radius, time, colorA, colorB, alpha) {
     ctx.save();
@@ -82,14 +82,14 @@ function drawBrackets(ctx, x, y, w, h, color, size = 13) {
     ctx.stroke();
     ctx.restore();
 }
-/** Barra de 36 segmentos, agrupada por arco. */
+/** Barra de 42 segmentos, agrupada por arco. */
 function drawProgressPips(ctx, x, y, w, cleared, current, time) {
     const gap = 2.2;
     const groupGap = 6;
     const segW = (w - gap * (MAX_STAGE - 1) - groupGap * (ARC_COUNT - 1)) / MAX_STAGE;
     let cx = x;
     for (let stage = 1; stage <= MAX_STAGE; stage++) {
-        const arc = Math.ceil(stage / 6);
+        const arc = Math.ceil(stage / CHAPTERS_PER_ARC);
         const hero = CHARACTER_ORDER[arc - 1];
         const col = CHARACTERS[hero].colors.accent;
         const done = cleared.has(stage);
@@ -108,7 +108,7 @@ function drawProgressPips(ctx, x, y, w, cleared, current, time) {
         ctx.fill();
         ctx.restore();
         cx += segW + gap;
-        if (stage % 6 === 0)
+        if (stage % CHAPTERS_PER_ARC === 0)
             cx += groupGap;
     }
 }

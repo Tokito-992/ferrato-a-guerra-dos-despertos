@@ -68,7 +68,7 @@ export class CreditsScene implements Scene {
       spacing: 8,
       glow: 'rgba(255,230,163,0.42)',
     });
-    label(ctx, 'FERRATO · A GUERRA DOS DESPERTOS · 36 CAPÍTULOS', width / 2, 74, 9.5, 'rgba(255,230,163,0.62)', {
+    label(ctx, 'FERRATO · A GUERRA DOS DESPERTOS · 42 CAPÍTULOS', width / 2, 74, 9.5, 'rgba(255,230,163,0.62)', {
       align: 'center',
       font: FONTS.mono,
       spacing: 2.4,
@@ -93,7 +93,7 @@ export class CreditsScene implements Scene {
     this.drawLine(base, 0, 'UMA HISTÓRIA DE', '', 'rgba(190,198,220,0.55)', 9.5);
     this.drawLine(base + 48, 0, 'FERRATO', '', '#ffe6a3', 46, true);
     this.drawLine(base + 82, 0, 'A GUERRA DOS DESPERTOS', '', 'rgba(235,238,250,0.82)', 14);
-    this.drawLine(base + 110, 0, 'SEIS ARCOS. TRINTA E SEIS CAPÍTULOS. UMA ESCOLHA.', '', 'rgba(190,198,220,0.5)', 9.5);
+    this.drawLine(base + 110, 0, 'SEIS ARCOS. QUARENTA E DOIS CAPÍTULOS. UMA ESCOLHA.', '', 'rgba(190,198,220,0.5)', 9.5);
 
     const listTop = 178;
     CREDITS.forEach((line, i) => {

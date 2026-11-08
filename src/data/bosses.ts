@@ -24,7 +24,8 @@ export interface BossDef {
   id: BossId;
   name: string;
   title: string;
-  stage: number;
+  /** Arco a que o chefe pertence (1–6); ele fecha o sétimo capítulo. */
+  arc: number;
   hp: number;
   w: number;
   h: number;
@@ -35,6 +36,8 @@ export interface BossDef {
   colors: BossColors;
   phases: BossPhaseDef[];
   intro: string;
+  /** Origem e motivo do chefe, usado pelo Arquivo do Véu. */
+  lore: string[];
   defeat: string;
 }
 
@@ -43,7 +46,7 @@ export const BOSSES: Record<BossId, BossDef> = {
     id: 'colossus',
     name: 'Colosso de Carne-Ferrato',
     title: 'A cidade digerida',
-    stage: 1,
+    arc: 1,
     hp: 680,
     w: 176,
     h: 226,
@@ -63,13 +66,17 @@ export const BOSSES: Record<BossId, BossDef> = {
       { name: 'Fúria Asfáltica', threshold: 0.5, attacks: ['rageSlam', 'charge', 'debris', 'summon'], pace: 1.3 },
     ],
     intro: 'Carne e concreto fundidos em uma coisa só. O subúrbio virou estômago.',
+    lore: [
+      'Era o subúrbio de New Haven. O Ferrato misturou casas, pessoas e asfalto em um único corpo faminto. Ainda tem ruas dentro dele.',
+      'O Colosso não persegue por maldade: ele digere. Cada passo é uma rua sendo engolida. Cada rugido é o barulho de uma família que não conseguiu sair.',
+    ],
     defeat: 'A massa desaba, digerida pela própria fome.',
   },
   vekthar: {
     id: 'vekthar',
     name: 'General Vek\'thar',
     title: 'Vanguarda do Ferrato',
-    stage: 2,
+    arc: 2,
     hp: 820,
     w: 104,
     h: 196,
@@ -89,13 +96,17 @@ export const BOSSES: Record<BossId, BossDef> = {
       { name: 'Canhão Descorrigido', threshold: 0.45, attacks: ['barrage', 'dashSlash', 'grenade', 'cannon'], pace: 1.35 },
     ],
     intro: 'Ele queimou Brasília duas vezes: uma com fogo, outra com fé.',
+    lore: [
+      'General Khar’uun que entregou a própria civilização ao Ferrato para salvar os sobreviventes. O Ferrato aceitou a oferta e transformou os sobreviventes em soldados.',
+      'Vek’thar chama isso de vitória até hoje. O canhão fundido à armadura é a prova de que ele não sabe mais onde termina o soldado e onde começa a arma.',
+    ],
     defeat: 'O general cai de joelhos, ainda apontando o canhão para um céu vazio.',
   },
   xalmor: {
     id: 'xalmor',
     name: 'Núcleo-Orbitário Xal\'mor',
     title: 'Satélite devorado',
-    stage: 3,
+    arc: 3,
     hp: 900,
     w: 210,
     h: 190,
@@ -115,13 +126,17 @@ export const BOSSES: Record<BossId, BossDef> = {
       { name: 'Colapso Orbital', threshold: 0.5, attacks: ['beamSweep', 'orbital', 'pull', 'missiles'], pace: 1.4 },
     ],
     intro: 'Um deus de metal gira em silêncio, cuspindo fogo entre as estrelas.',
+    lore: [
+      'Satélite de defesa de SOLACE, transformado no coração do portal. A tripulação ainda vive dentro dos anéis; Kael reconhece as vozes.',
+      'Xal’mor não sabe mais onde termina o satélite e onde começa a fome. Ele ainda tenta proteger a estação — mas o protocolo de defesa agora se chama devorar.',
+    ],
     defeat: 'Os anéis se desfazem. Pela primeira vez, o satélite fica quieto.',
   },
   acheron: {
     id: 'acheron',
     name: 'Barão Acheron',
     title: 'Senhor do Abismo Rubro',
-    stage: 4,
+    arc: 4,
     hp: 1050,
     w: 124,
     h: 214,
@@ -141,13 +156,17 @@ export const BOSSES: Record<BossId, BossDef> = {
       { name: 'Deus do Abismo', threshold: 0.45, attacks: ['hellRain', 'chainWhip', 'teleportSlash', 'firePillars'], pace: 1.4 },
     ],
     intro: 'Ele trocou a coroa por chifres e a alma por um trono de cinzas.',
+    lore: [
+      'O Barão que trocou a coroa por chifres para governar o Abismo em nome do Ferrato. Acorrentou Ozric por desobediência.',
+      'Acheron não é o Abismo: é o medo que o Abismo usa para manter as almas em fila. Tem medo de que as almas descubram que ele também é uma alma.',
+    ],
     defeat: 'O trono derrete. Acheron descobre que ninguém implora por ele.',
   },
   malakhim: {
     id: 'malakhim',
     name: 'Arcanjo Malakhim',
     title: 'Aurora Caída',
-    stage: 5,
+    arc: 5,
     hp: 1180,
     w: 136,
     h: 200,
@@ -167,13 +186,17 @@ export const BOSSES: Record<BossId, BossDef> = {
       { name: 'Asas Partidas', threshold: 0.5, attacks: ['wingStorm', 'lightBeam', 'diveSlash', 'featherFan'], pace: 1.4 },
     ],
     intro: 'Ainda acredita que está purificando o céu. Talvez seja a parte mais triste.',
+    lore: [
+      'Arcanjo que viu o Ferrato devorar o Céu e concluiu que a única misericórdia era purificar tudo antes que a fome chegasse.',
+      'Malakhim não quer destruir o Céu: quer purificá-lo até não sobrar ninguém para sentir dor. Ainda acredita que está salvando alguém.',
+    ],
     defeat: 'As asas se apagam. Ele pede desculpas a alguém que não está mais lá.',
   },
   ferrato: {
     id: 'ferrato',
     name: 'Ferrato',
     title: 'Consciência do Véu',
-    stage: 6,
+    arc: 6,
     hp: 1650,
     w: 250,
     h: 270,
@@ -194,6 +217,10 @@ export const BOSSES: Record<BossId, BossDef> = {
       { name: 'O Véu Rasgado', threshold: 0.33, attacks: ['blackHole', 'allPlanes', 'timeStop', 'finalJudgment'], pace: 1.5 },
     ],
     intro: 'Não é um deus. É uma fome com consciência — e ela conhece cada um pelo nome.',
+    lore: [
+      'Não é um deus. É a fome que restou quando os deuses se calaram. Devora mundos, memórias e nomes; o que não consegue digerir vira eco, monstro ou Desperto.',
+      'O Ferrato não entende escolhas. Ele entende fome. É por isso que uma mesa compartilhada, uma piada ou um nome lembrado em voz alta são armas contra ele.',
+    ],
     defeat: 'Pela primeira vez, o Véu sente algo que não é fome. E se desfaz.',
   },
 };

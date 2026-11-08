@@ -1,5 +1,5 @@
 /** Helpers visuais: painéis, tipografia, brilhos e barras. */
-import { clamp, hexToRgba, mixColor } from '../core/math.js?v=be05988e5819';
+import { clamp, hexToRgba, mixColor } from '../core/math.js?v=bf59b6c4844c';
 export const FONTS = {
     title: '"Cinzel", "Times New Roman", serif',
     ui: '"Rajdhani", "Segoe UI", system-ui, sans-serif',
