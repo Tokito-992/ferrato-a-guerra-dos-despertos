@@ -1,5 +1,5 @@
 /** Projéteis e zonas de perigo (magma, singularidade, raios, fendas...). */
-import { clamp, rectsOverlap, TAU } from '../core/math.js?v=4f75418098ef';
+import { clamp, rectsOverlap, TAU } from '../core/math.js?v=2287ee03d2bc';
 export class Projectile {
     constructor(def) {
         this.spinAngle = 0;

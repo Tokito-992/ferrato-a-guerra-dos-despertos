@@ -3,6 +3,7 @@
 import { clamp, rand, rectsOverlap, TAU } from '../core/math.js';
 import type { SfxName } from '../core/audio.js';
 import type { HitOptions, Rect, World } from '../core/types.js';
+import type { PlayerIndex } from '../core/input.js';
 import { Combatant } from './combatant.js';
 import { getCharacter } from '../data/characters.js';
 import type { CharacterDef, CharacterId } from '../data/characters.js';
@@ -36,6 +37,7 @@ interface ActiveAttack {
 export class Player extends Combatant {
   readonly def: CharacterDef;
   readonly charId: CharacterId;
+  readonly playerIndex: PlayerIndex;
 
   attack: ActiveAttack | null = null;
   queued: MoveSlot | null = null;
@@ -75,11 +77,12 @@ export class Player extends Combatant {
   landSquash = 0;
   wasAir = false;
 
-  constructor(x: number, charId: CharacterId, floor: number) {
+  constructor(x: number, charId: CharacterId, floor: number, playerIndex: PlayerIndex = 0) {
     const def = getCharacter(charId);
     super(x, floor, 44, 100, def.maxHp);
     this.def = def;
     this.charId = def.id;
+    this.playerIndex = playerIndex;
     this.scale = def.scale;
     this.gravity = 1950;
     this.maxJumps = def.id === 'thryc' ? 3 : def.id === 'ravi' || def.id === 'elodie' || def.id === 'kael' ? 2 : 1;
@@ -157,20 +160,27 @@ export class Player extends Combatant {
     }
 
     const input = world.input;
-    this.moveInput = (input.isDown('right') ? 1 : 0) - (input.isDown('left') ? 1 : 0);
+    this.moveInput =
+      (input.isDown('right', this.playerIndex) ? 1 : 0) -
+      (input.isDown('left', this.playerIndex) ? 1 : 0);
 
-    if (input.pressed('ability') && this.abilityReady && this.dashTime <= 0) {
+    if (input.pressed('ability', this.playerIndex) && this.abilityReady && this.dashTime <= 0) {
       this.useAbility(world);
     }
-    if (input.pressed('dash') && this.dashCd <= 0 && this.dashTime <= 0) {
+    if (input.pressed('dash', this.playerIndex) && this.dashCd <= 0 && this.dashTime <= 0) {
       this.startDash(world);
     }
-    if (input.pressed('jump')) this.tryJump(world);
-    if (input.pressed('attack')) this.tryAttack('light', world);
-    if (input.pressed('heavy')) this.tryAttack('heavy', world);
+    if (input.pressed('jump', this.playerIndex)) this.tryJump(world);
+    if (input.pressed('attack', this.playerIndex)) this.tryAttack('light', world);
+    if (input.pressed('heavy', this.playerIndex)) this.tryAttack('heavy', world);
 
     // Pulo variável / planeio do Kael.
-    if (this.charId === 'kael' && !this.onGround && input.isDown('jump') && this.vy > 40) {
+    if (
+      this.charId === 'kael' &&
+      !this.onGround &&
+      input.isDown('jump', this.playerIndex) &&
+      this.vy > 40
+    ) {
       this.vy = Math.min(this.vy, 90);
       if (Math.random() < 0.4) {
         world.particles.spawn({
@@ -184,7 +194,7 @@ export class Player extends Combatant {
         });
       }
     }
-    if (this.vy < -140 && !input.isDown('jump')) this.vy += this.gravity * 0.9 * dt;
+    if (this.vy < -140 && !input.isDown('jump', this.playerIndex)) this.vy += this.gravity * 0.9 * dt;
 
     this.wasAir = !this.onGround;
 

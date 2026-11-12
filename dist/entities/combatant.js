@@ -1,5 +1,5 @@
 /** Base compartilhada por jogador, inimigos e chefes. */
-import { clamp, TAU } from '../core/math.js?v=4f75418098ef';
+import { clamp, TAU } from '../core/math.js?v=2287ee03d2bc';
 export class Combatant {
     constructor(x, y, w, h, maxHp) {
         this.vx = 0;

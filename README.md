@@ -36,6 +36,23 @@ No GitHub Pages, publique a raiz do repositório (mantendo `index.html`, `styles
 
 Menus também aceitam mouse (clique e hover).
 
+### No controle (Gamepad API)
+
+O primeiro controle conectado assume o jogador 1 automaticamente; o segundo fica reservado para o futuro co-op local. O navegador precisa reconhecer o controle como **Standard Gamepad** (Xbox, PlayStation e Switch Pro são compatíveis).
+
+| Botão | Ação |
+| --- | --- |
+| Analógico esquerdo / D-pad | Mover e navegar nos menus |
+| `A` / Cruz | Pular e confirmar |
+| `X` / Quadrado | Ataque leve |
+| `Y` / Triângulo | Ataque pesado |
+| `B` / Círculo | Dash em combate; voltar nos menus e na pausa |
+| `RB` / `RT` / `LB` / `LT` | Habilidade especial |
+| `START` | Pausar / continuar |
+| `SELECT` / Back | Voltar / pausar |
+
+Segurar o direcional nos menus repete a navegação depois de um pequeno atraso. O suporte a dois jogadores já existe na camada de entrada, mas o modo co-op local ainda não foi implementado.
+
 ### No celular e no tablet
 
 O jogo funciona em navegadores móveis e ocupa a tela inteira no modo horizontal. Os controles virtuais aparecem apenas durante o combate, com ícones e rótulos no estilo de jogos mobile:

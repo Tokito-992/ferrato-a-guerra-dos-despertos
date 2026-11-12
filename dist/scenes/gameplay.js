@@ -1,24 +1,24 @@
 /** Cena principal: arena lateral, ondas, chefe, pausa, troca de herói e game over. */
-import { Camera } from '../core/camera.js?v=4f75418098ef';
-import { ParticleSystem } from '../core/particles.js?v=4f75418098ef';
-import { clamp, hexToRgba } from '../core/math.js?v=4f75418098ef';
-import { rankColor, rankFromPressure, rankValue } from '../core/rank.js?v=4f75418098ef';
-import { MAX_HEARTS } from '../core/save.js?v=4f75418098ef';
-import { MAX_STAGE } from '../data/stages.js?v=4f75418098ef';
-import { archiveBossId, archiveCreatureId, archivePhenomenonId, archivePlaceId, archiveRelicId, stageRelicKinds, } from '../data/archive.js?v=4f75418098ef';
-import { Player } from '../entities/player.js?v=4f75418098ef';
-import { Enemy } from '../entities/enemy.js?v=4f75418098ef';
-import { Boss } from '../entities/boss.js?v=4f75418098ef';
-import { Hazard, Projectile } from '../entities/projectiles.js?v=4f75418098ef';
-import { StageObstacle, buildStageObstacles } from '../entities/obstacles.js?v=4f75418098ef';
-import { drawStageBackground } from '../render/backgrounds.js?v=4f75418098ef';
-import { drawCharacterPortrait, drawPlayer } from '../render/characters.js?v=4f75418098ef';
-import { drawBoss, drawEnemy } from '../render/enemies.js?v=4f75418098ef';
-import { drawHeart } from '../render/hearts.js?v=4f75418098ef';
-import { visualStyle } from '../render/style.js?v=4f75418098ef';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=4f75418098ef';
-import { drawHud } from '../ui/hud.js?v=4f75418098ef';
-import { Menu } from '../ui/menu.js?v=4f75418098ef';
+import { Camera } from '../core/camera.js?v=2287ee03d2bc';
+import { ParticleSystem } from '../core/particles.js?v=2287ee03d2bc';
+import { clamp, hexToRgba } from '../core/math.js?v=2287ee03d2bc';
+import { rankColor, rankFromPressure, rankValue } from '../core/rank.js?v=2287ee03d2bc';
+import { MAX_HEARTS } from '../core/save.js?v=2287ee03d2bc';
+import { MAX_STAGE } from '../data/stages.js?v=2287ee03d2bc';
+import { archiveBossId, archiveCreatureId, archivePhenomenonId, archivePlaceId, archiveRelicId, stageRelicKinds, } from '../data/archive.js?v=2287ee03d2bc';
+import { Player } from '../entities/player.js?v=2287ee03d2bc';
+import { Enemy } from '../entities/enemy.js?v=2287ee03d2bc';
+import { Boss } from '../entities/boss.js?v=2287ee03d2bc';
+import { Hazard, Projectile } from '../entities/projectiles.js?v=2287ee03d2bc';
+import { StageObstacle, buildStageObstacles } from '../entities/obstacles.js?v=2287ee03d2bc';
+import { drawStageBackground } from '../render/backgrounds.js?v=2287ee03d2bc';
+import { drawCharacterPortrait, drawPlayer } from '../render/characters.js?v=2287ee03d2bc';
+import { drawBoss, drawEnemy } from '../render/enemies.js?v=2287ee03d2bc';
+import { drawHeart } from '../render/hearts.js?v=2287ee03d2bc';
+import { visualStyle } from '../render/style.js?v=2287ee03d2bc';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=2287ee03d2bc';
+import { drawHud } from '../ui/hud.js?v=2287ee03d2bc';
+import { Menu } from '../ui/menu.js?v=2287ee03d2bc';
 function insideRect(rect, x, y) {
     return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
 }
@@ -114,7 +114,7 @@ export class GameplayScene {
         this.camera = new Camera(game.width, game.height);
         this.camera.setBounds(0, Math.max(0, stage.width - this.viewW));
         this.camera.snapTo(0);
-        this.player = new Player(170, charId, stage.floor);
+        this.player = new Player(170, charId, stage.floor, 0);
         this.pauseMenu = new Menu([]);
         this.gameOverMenu = new Menu([]);
         this.obstacles = buildStageObstacles(stage);
@@ -804,7 +804,7 @@ export class GameplayScene {
         this.audio.sfx('ui');
     }
     updatePauseMenu() {
-        if (this.input.pressed('pause') || this.input.pressed('back')) {
+        if (this.input.pressed('pause') || this.input.pressed('back') || this.input.pressed('cancel')) {
             this.paused = false;
             this.game.setTouchControlsVisible(true);
             this.audio.sfx('ui');
@@ -846,7 +846,7 @@ export class GameplayScene {
         this.audio.sfx('gameover');
     }
     updateGameOverMenu() {
-        if (this.input.pressed('back')) {
+        if (this.input.pressed('back') || this.input.pressed('cancel')) {
             this.game.gotoTitle();
             return;
         }

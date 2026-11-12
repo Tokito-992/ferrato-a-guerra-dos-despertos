@@ -167,7 +167,7 @@ export class GameplayScene implements Scene, World {
     this.camera.setBounds(0, Math.max(0, stage.width - this.viewW));
     this.camera.snapTo(0);
 
-    this.player = new Player(170, charId, stage.floor);
+    this.player = new Player(170, charId, stage.floor, 0);
     this.pauseMenu = new Menu([]);
     this.gameOverMenu = new Menu([]);
     this.obstacles = buildStageObstacles(stage);
@@ -974,7 +974,7 @@ export class GameplayScene implements Scene, World {
   }
 
   private updatePauseMenu(): void {
-    if (this.input.pressed('pause') || this.input.pressed('back')) {
+    if (this.input.pressed('pause') || this.input.pressed('back') || this.input.pressed('cancel')) {
       this.paused = false;
       this.game.setTouchControlsVisible(true);
       this.audio.sfx('ui');
@@ -1020,7 +1020,7 @@ export class GameplayScene implements Scene, World {
   }
 
   private updateGameOverMenu(): void {
-    if (this.input.pressed('back')) {
+    if (this.input.pressed('back') || this.input.pressed('cancel')) {
       this.game.gotoTitle();
       return;
     }

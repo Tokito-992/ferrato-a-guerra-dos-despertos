@@ -136,6 +136,9 @@ export class Game {
       this.audio.init();
       this.audio.setMuted(this.save.muted);
     };
+    this.input.onGamepadConnected = () => {
+      this.setNotice('CONTROLE CONECTADO', '#56e3ff');
+    };
     cloudSync.attach({
       getSave: () => this.save,
       applyCloudSave: (save, clientUpdatedAt) => this.applyCloudSave(save, clientUpdatedAt),
@@ -658,6 +661,7 @@ export class Game {
     this.slowScale = 1;
     this.flashAlpha = 0;
     this.input.clear();
+    this.input.setGameplayContext(scene instanceof GameplayScene);
     this.uiParticles.clear();
     scene.enter?.();
   }
@@ -729,6 +733,7 @@ export class Game {
     this.time += raw;
     this.sceneTime += raw;
 
+    this.input.poll(raw);
     this.update(raw);
     this.draw();
 

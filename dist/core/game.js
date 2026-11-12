@@ -1,28 +1,28 @@
 /** Núcleo do jogo: loop, troca de cenas, transições, hitstop e persistência. */
-import { CHARACTERS } from '../data/characters.js?v=4f75418098ef';
-import { getStage, MAX_STAGE } from '../data/stages.js?v=4f75418098ef';
-import { STORY } from '../data/story.js?v=4f75418098ef';
-import { AudioEngine } from './audio.js?v=4f75418098ef';
-import { Input } from './input.js?v=4f75418098ef';
-import { ParticleSystem } from './particles.js?v=4f75418098ef';
-import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=4f75418098ef';
-import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=4f75418098ef';
-import { needsIOSInstallGuide } from './platform.js?v=4f75418098ef';
-import { cloudSync } from './cloud-sync.js?v=4f75418098ef';
-import { showInstallGuide } from '../ui/install-guide.js?v=4f75418098ef';
-import { showAccountPanel } from '../ui/account-panel.js?v=4f75418098ef';
-import { clamp, hexToRgba } from './math.js?v=4f75418098ef';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=4f75418098ef';
-import { TitleScene } from '../scenes/title.js?v=4f75418098ef';
-import { CharacterSelectScene } from '../scenes/characterSelect.js?v=4f75418098ef';
-import { GameplayScene } from '../scenes/gameplay.js?v=4f75418098ef';
-import { ComicScene } from '../scenes/comic.js?v=4f75418098ef';
-import { VictoryScene } from '../scenes/victory.js?v=4f75418098ef';
-import { CreditsScene } from '../scenes/credits.js?v=4f75418098ef';
-import { SettingsScene } from '../scenes/settings.js?v=4f75418098ef';
-import { TutorialScene } from '../scenes/tutorial.js?v=4f75418098ef';
-import { ArchiveScene } from '../scenes/archive.js?v=4f75418098ef';
-import { ARCHIVE_ENTRY_IDS } from '../data/archive.js?v=4f75418098ef';
+import { CHARACTERS } from '../data/characters.js?v=2287ee03d2bc';
+import { getStage, MAX_STAGE } from '../data/stages.js?v=2287ee03d2bc';
+import { STORY } from '../data/story.js?v=2287ee03d2bc';
+import { AudioEngine } from './audio.js?v=2287ee03d2bc';
+import { Input } from './input.js?v=2287ee03d2bc';
+import { ParticleSystem } from './particles.js?v=2287ee03d2bc';
+import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=2287ee03d2bc';
+import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=2287ee03d2bc';
+import { needsIOSInstallGuide } from './platform.js?v=2287ee03d2bc';
+import { cloudSync } from './cloud-sync.js?v=2287ee03d2bc';
+import { showInstallGuide } from '../ui/install-guide.js?v=2287ee03d2bc';
+import { showAccountPanel } from '../ui/account-panel.js?v=2287ee03d2bc';
+import { clamp, hexToRgba } from './math.js?v=2287ee03d2bc';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=2287ee03d2bc';
+import { TitleScene } from '../scenes/title.js?v=2287ee03d2bc';
+import { CharacterSelectScene } from '../scenes/characterSelect.js?v=2287ee03d2bc';
+import { GameplayScene } from '../scenes/gameplay.js?v=2287ee03d2bc';
+import { ComicScene } from '../scenes/comic.js?v=2287ee03d2bc';
+import { VictoryScene } from '../scenes/victory.js?v=2287ee03d2bc';
+import { CreditsScene } from '../scenes/credits.js?v=2287ee03d2bc';
+import { SettingsScene } from '../scenes/settings.js?v=2287ee03d2bc';
+import { TutorialScene } from '../scenes/tutorial.js?v=2287ee03d2bc';
+import { ArchiveScene } from '../scenes/archive.js?v=2287ee03d2bc';
+import { ARCHIVE_ENTRY_IDS } from '../data/archive.js?v=2287ee03d2bc';
 /** Posições normalizadas usadas quando não há layout livre salvo. */
 function presetTouchPositions(layout, dock) {
     const y = dock === 'top' ? 0.1 : 0.9;
@@ -95,6 +95,7 @@ export class Game {
             this.lastTimestamp = timestamp;
             this.time += raw;
             this.sceneTime += raw;
+            this.input.poll(raw);
             this.update(raw);
             this.draw();
             this.input.endFrame();
@@ -112,6 +113,9 @@ export class Game {
         this.input.onFirstGesture = () => {
             this.audio.init();
             this.audio.setMuted(this.save.muted);
+        };
+        this.input.onGamepadConnected = () => {
+            this.setNotice('CONTROLE CONECTADO', '#56e3ff');
         };
         cloudSync.attach({
             getSave: () => this.save,
@@ -583,6 +587,7 @@ export class Game {
         this.slowScale = 1;
         this.flashAlpha = 0;
         this.input.clear();
+        this.input.setGameplayContext(scene instanceof GameplayScene);
         this.uiParticles.clear();
         scene.enter?.();
     }

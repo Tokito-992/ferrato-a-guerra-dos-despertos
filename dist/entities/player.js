@@ -1,8 +1,8 @@
 /** Jogador: movimentação, combos, dash, habilidades e passivas por personagem. */
-import { clamp, rand, rectsOverlap } from '../core/math.js?v=4f75418098ef';
-import { Combatant } from './combatant.js?v=4f75418098ef';
-import { getCharacter } from '../data/characters.js?v=4f75418098ef';
-import { MOVESETS } from '../data/movesets.js?v=4f75418098ef';
+import { clamp, rand, rectsOverlap } from '../core/math.js?v=2287ee03d2bc';
+import { Combatant } from './combatant.js?v=2287ee03d2bc';
+import { getCharacter } from '../data/characters.js?v=2287ee03d2bc';
+import { MOVESETS } from '../data/movesets.js?v=2287ee03d2bc';
 /** Cada Desperto tem uma assinatura sonora própria ao ativar a habilidade. */
 const ABILITY_SFX = {
     ravi: 'abilityRavi',
@@ -13,7 +13,7 @@ const ABILITY_SFX = {
     thryc: 'abilityThryc',
 };
 export class Player extends Combatant {
-    constructor(x, charId, floor) {
+    constructor(x, charId, floor, playerIndex = 0) {
         const def = getCharacter(charId);
         super(x, floor, 44, 100, def.maxHp);
         this.attack = null;
@@ -51,6 +51,7 @@ export class Player extends Combatant {
         this.wasAir = false;
         this.def = def;
         this.charId = def.id;
+        this.playerIndex = playerIndex;
         this.scale = def.scale;
         this.gravity = 1950;
         this.maxJumps = def.id === 'thryc' ? 3 : def.id === 'ravi' || def.id === 'elodie' || def.id === 'kael' ? 2 : 1;
@@ -121,21 +122,26 @@ export class Player extends Combatant {
             return;
         }
         const input = world.input;
-        this.moveInput = (input.isDown('right') ? 1 : 0) - (input.isDown('left') ? 1 : 0);
-        if (input.pressed('ability') && this.abilityReady && this.dashTime <= 0) {
+        this.moveInput =
+            (input.isDown('right', this.playerIndex) ? 1 : 0) -
+                (input.isDown('left', this.playerIndex) ? 1 : 0);
+        if (input.pressed('ability', this.playerIndex) && this.abilityReady && this.dashTime <= 0) {
             this.useAbility(world);
         }
-        if (input.pressed('dash') && this.dashCd <= 0 && this.dashTime <= 0) {
+        if (input.pressed('dash', this.playerIndex) && this.dashCd <= 0 && this.dashTime <= 0) {
             this.startDash(world);
         }
-        if (input.pressed('jump'))
+        if (input.pressed('jump', this.playerIndex))
             this.tryJump(world);
-        if (input.pressed('attack'))
+        if (input.pressed('attack', this.playerIndex))
             this.tryAttack('light', world);
-        if (input.pressed('heavy'))
+        if (input.pressed('heavy', this.playerIndex))
             this.tryAttack('heavy', world);
         // Pulo variável / planeio do Kael.
-        if (this.charId === 'kael' && !this.onGround && input.isDown('jump') && this.vy > 40) {
+        if (this.charId === 'kael' &&
+            !this.onGround &&
+            input.isDown('jump', this.playerIndex) &&
+            this.vy > 40) {
             this.vy = Math.min(this.vy, 90);
             if (Math.random() < 0.4) {
                 world.particles.spawn({
@@ -149,7 +155,7 @@ export class Player extends Combatant {
                 });
             }
         }
-        if (this.vy < -140 && !input.isDown('jump'))
+        if (this.vy < -140 && !input.isDown('jump', this.playerIndex))
             this.vy += this.gravity * 0.9 * dt;
         this.wasAir = !this.onGround;
         if (this.dashTime > 0) {
