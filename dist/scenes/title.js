@@ -4,15 +4,15 @@
  * Composição em três zonas — identidade/ações à esquerda, arquivo da campanha
  * à direita e rodapé de estado — para separar leitura, navegação e progresso.
  */
-import { TITLE_THEME_INDEX } from '../core/audio.js?v=6ccbb66fdb55';
-import { CHARACTER_ORDER, CHARACTERS } from '../data/characters.js?v=6ccbb66fdb55';
-import { ARC_COUNT, CHAPTERS_PER_ARC, getArcStages, getStage, MAX_STAGE } from '../data/stages.js?v=6ccbb66fdb55';
-import { archiveTotalProgress } from '../data/archive.js?v=6ccbb66fdb55';
-import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js?v=6ccbb66fdb55';
-import { drawTitleBackground } from '../render/backgrounds.js?v=6ccbb66fdb55';
-import { drawCharacterPortrait } from '../render/characters.js?v=6ccbb66fdb55';
-import { FONTS, glow, label, panel, roundRectPath } from '../render/theme.js?v=6ccbb66fdb55';
-import { Menu } from '../ui/menu.js?v=6ccbb66fdb55';
+import { TITLE_THEME_INDEX } from '../core/audio.js?v=876088114997';
+import { CHARACTER_ORDER, CHARACTERS } from '../data/characters.js?v=876088114997';
+import { ARC_COUNT, CHAPTERS_PER_ARC, getArcStages, getStage, MAX_STAGE } from '../data/stages.js?v=876088114997';
+import { archiveTotalProgress } from '../data/archive.js?v=876088114997';
+import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js?v=876088114997';
+import { drawTitleBackground } from '../render/backgrounds.js?v=876088114997';
+import { drawCharacterPortrait } from '../render/characters.js?v=876088114997';
+import { FONTS, glow, label, panel, roundRectPath } from '../render/theme.js?v=876088114997';
+import { Menu } from '../ui/menu.js?v=876088114997';
 /** Anel arcano usado como marca d'água e como emblema de canto. */
 function drawSigil(ctx, x, y, radius, time, colorA, colorB, alpha) {
     ctx.save();
@@ -189,7 +189,7 @@ export class TitleScene {
         const arcsDone = Array.from({ length: ARC_COUNT }, (_, index) => index + 1).filter((arc) => getArcStages(arc).every((chapter) => save.cleared.includes(chapter.id))).length;
         const archive = archiveTotalProgress(save);
         const items = [
-            { id: 'new', badge: '01', label: 'NOVO JOGO', detail: 'ARCO I · CAP. 1', accent: '#ff8a3d', height: 46 },
+            { id: 'new', badge: '01', label: 'NOVO JOGO', detail: 'ARCO I · CAP. 1', accent: '#ff8a3d', height: 40 },
             {
                 id: 'continue',
                 badge: '02',
@@ -197,25 +197,33 @@ export class TitleScene {
                 detail: hasProgress ? stage.subtitle.toUpperCase() : 'SEM PROGRESSO',
                 disabled: !hasProgress,
                 accent: '#56e3ff',
-                height: 46,
+                height: 40,
+            },
+            {
+                id: 'multiplayer',
+                badge: '03',
+                label: 'MULTIJOGADOR',
+                detail: 'CO-OP LOCAL · 2 JOGADORES',
+                accent: '#8df4a8',
+                height: 40,
             },
             {
                 id: 'select',
-                badge: '03',
+                badge: '04',
                 label: 'DESPERTOS & ARCOS',
                 detail: `${arcsDone} / ${ARC_COUNT} ARCOS`,
                 accent: '#b48bff',
-                height: 46,
+                height: 40,
             },
             {
                 id: 'archive',
-                badge: '04',
+                badge: '05',
                 label: 'ARQUIVO DO VÉU',
                 detail: `${archive.unlocked} / ${archive.total} REGISTROS`,
                 accent: '#ffd166',
-                height: 46,
+                height: 40,
             },
-            { id: 'settings', badge: '05', label: 'CONFIGURAÇÕES', detail: 'CONTROLES · ÁUDIO · TELA', accent: '#56e3ff', height: 46 },
+            { id: 'settings', badge: '06', label: 'CONFIGURAÇÕES', detail: 'CONTROLES · ÁUDIO · TELA', accent: '#56e3ff', height: 40 },
         ];
         const cloud = this.game.cloudSnapshot;
         if (cloud.configured) {
@@ -235,7 +243,7 @@ export class TitleScene {
                 detail,
                 accent: '#ffd166',
                 minor: true,
-                height: 28,
+                height: 26,
             });
         }
         items.push({
@@ -245,7 +253,7 @@ export class TitleScene {
             detail: 'O VÉU',
             accent: '#ffe6a3',
             minor: true,
-            height: 28,
+            height: 26,
         });
         this.menu.setItems(items, keepIndex);
     }
@@ -262,6 +270,9 @@ export class TitleScene {
                 break;
             case 'continue':
                 this.game.gotoCharacterSelect(this.game.save.maxStage, this.game.save.selected);
+                break;
+            case 'multiplayer':
+                this.game.gotoMultiplayer();
                 break;
             case 'select':
                 this.game.gotoCharacterSelect(this.game.save.maxStage, this.game.save.selected);
@@ -399,9 +410,9 @@ export class TitleScene {
         });
         // Menu principal + ações secundárias.
         this.menu.draw(ctx, 80, 348, 470, {
-            itemHeight: 46,
-            gap: 4,
-            size: 16,
+            itemHeight: 40,
+            gap: 3,
+            size: 15,
             accent: '#ff8a3d',
         });
         ctx.restore();

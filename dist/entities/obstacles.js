@@ -1,7 +1,7 @@
 /** Obstáculos de arena: fraturas hostis, santuários, âncoras e sobrecargas. */
-import { clamp, rand, TAU } from '../core/math.js?v=6ccbb66fdb55';
-import { drawHeart } from '../render/hearts.js?v=6ccbb66fdb55';
-import { FONTS, glow, label } from '../render/theme.js?v=6ccbb66fdb55';
+import { clamp, rand, TAU } from '../core/math.js?v=876088114997';
+import { drawHeart } from '../render/hearts.js?v=876088114997';
+import { FONTS, glow, label } from '../render/theme.js?v=876088114997';
 const VISUALS = {
     fracture: { name: 'FRATURA', color: '#ff5a3c', accent: '#ffd166' },
     sanctuary: { name: 'SANTUÁRIO', color: '#8df4a8', accent: '#fff4cd' },
@@ -57,19 +57,24 @@ export class StageObstacle {
             this.applyAnchor(dt, world);
             return;
         }
-        const p = world.player;
-        if (p.dead)
-            return;
-        const distance = Math.hypot(p.x - this.x, p.centerY - (this.y - 64));
-        if (distance > this.radius + 30)
+        const nearby = world.players.filter((player) => {
+            if (player.dead)
+                return false;
+            const distance = Math.hypot(player.x - this.x, player.centerY - (this.y - 64));
+            return distance <= this.radius + 30;
+        });
+        if (nearby.length === 0)
             return;
         if (this.kind === 'sanctuary') {
-            if (p.hpRatio >= 0.995)
+            const hurt = nearby.filter((player) => player.hpRatio < 0.995);
+            if (hurt.length === 0)
                 return;
             this.used = true;
             this.flash = 1;
-            world.healPlayer(p.maxHp * 0.09 + 3);
-            p.invuln = Math.max(p.invuln, 1);
+            for (const player of hurt) {
+                world.healPlayer(player.maxHp * 0.09 + 3, player);
+                player.invuln = Math.max(player.invuln, 1);
+            }
             world.particles.ring(this.x, this.y - 54, '#8df4a8', 96, 0.55, 4);
             world.particles.burst(this.x, this.y - 54, 18, '#8df4a8', {
                 speed: 190,
@@ -85,9 +90,11 @@ export class StageObstacle {
         else if (this.kind === 'overcharge') {
             this.used = true;
             this.flash = 1;
-            p.abilityCd = 0;
-            p.empowerTime = Math.max(p.empowerTime, 5);
-            p.invuln = Math.max(p.invuln, 0.45);
+            for (const player of nearby) {
+                player.abilityCd = 0;
+                player.empowerTime = Math.max(player.empowerTime, 5);
+                player.invuln = Math.max(player.invuln, 0.45);
+            }
             world.particles.ring(this.x, this.y - 54, '#56e3ff', 90, 0.45, 4);
             world.particles.burst(this.x, this.y - 54, 20, '#56e3ff', {
                 speed: 220,
@@ -103,16 +110,13 @@ export class StageObstacle {
     }
     erupt(world) {
         const damage = 8 + this.stage.arc * 2;
-        const p = world.player;
-        if (!p.dead && Math.abs(p.x - this.x) < this.radius + 22 && p.y > this.y - 120) {
-            world.damagePlayer(damage, {
-                fromX: this.x,
-                knockback: 150,
-                launch: 85,
-                hitstun: 0.24,
-                color: this.visual.color,
-            });
-        }
+        world.damagePlayers(this.x, this.y - 40, this.radius + 22, damage, {
+            fromX: this.x,
+            knockback: 150,
+            launch: 85,
+            hitstun: 0.24,
+            color: this.visual.color,
+        });
         const enemyDamage = 18 + this.stage.arc * 5;
         for (const enemy of world.enemies) {
             if (enemy.dead)
@@ -155,8 +159,9 @@ export class StageObstacle {
     }
     applyAnchor(dt, world) {
         const step = clamp(dt, 0, 0.05);
-        const p = world.player;
-        if (!p.dead) {
+        for (const p of world.players) {
+            if (p.dead)
+                continue;
             const dx = this.x - p.x;
             const distance = Math.abs(dx);
             if (distance < this.radius * 2.4 && distance > 8) {

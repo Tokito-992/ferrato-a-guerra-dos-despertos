@@ -20,6 +20,7 @@ import { clamp, hexToRgba } from './math.js';
 import { FONTS, label, panel, roundRectPath } from '../render/theme.js';
 import { TitleScene } from '../scenes/title.js';
 import { CharacterSelectScene } from '../scenes/characterSelect.js';
+import { MultiplayerScene } from '../scenes/multiplayer.js';
 import { GameplayScene } from '../scenes/gameplay.js';
 import { ComicScene } from '../scenes/comic.js';
 import { VictoryScene } from '../scenes/victory.js';
@@ -576,8 +577,24 @@ export class Game {
     this.setScene(new GameplayScene(this, getStage(stageId), charId));
   }
 
+  /** Abre o lobby de multijogador. */
+  gotoMultiplayer(): void {
+    this.transitionTo(() => this.showMultiplayer());
+  }
+
+  showMultiplayer(): void {
+    this.setScene(new MultiplayerScene(this));
+  }
+
+  /** Inicia um capítulo em co-op local; P2 usa o segundo controle. */
+  showCoopGameplay(stageId: number, p1: CharacterId, p2: CharacterId): void {
+    this.finishing = false;
+    this.save.selected = p1;
+    this.setScene(new GameplayScene(this, getStage(stageId), p1, p2));
+  }
+
   /** Chamado pela cena de combate quando o chefe cai. */
-  finishStage(stageId: number, charId: CharacterId): void {
+  finishStage(stageId: number, charId: CharacterId, returnToLobby = false): void {
     if (this.finishing) return;
     this.finishing = true;
     const stage = getStage(stageId);
@@ -601,6 +618,20 @@ export class Game {
       this.save.selected = nextChar;
     }
     this.persist();
+
+    // Co-op local: sem cutscene de transição de arco — a dupla volta ao lobby
+    // para escolher o próximo capítulo junto.
+    if (returnToLobby) {
+      const next = Math.min(MAX_STAGE, stageId + 1);
+      this.setNotice(
+        stageId >= MAX_STAGE
+          ? 'CAMPANHA CO-OP CONCLUÍDA — O VÉU FOI ROMPIDO'
+          : `CAPÍTULO ${stageId} CONCLUÍDO — CAP. ${next} LIBERADO`,
+        '#8df4a8',
+      );
+      this.transitionTo(() => this.showMultiplayer());
+      return;
+    }
 
     const outro = STORY[stageId]?.outro;
     const finish = () => {

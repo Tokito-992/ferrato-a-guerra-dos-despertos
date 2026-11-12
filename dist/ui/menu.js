@@ -1,6 +1,6 @@
 /** Menu navegável por teclado e mouse, usado em todas as telas. */
-import { hexToRgba } from '../core/math.js?v=6ccbb66fdb55';
-import { FONTS, label, roundRectPath } from '../render/theme.js?v=6ccbb66fdb55';
+import { hexToRgba } from '../core/math.js?v=876088114997';
+import { FONTS, label, roundRectPath } from '../render/theme.js?v=876088114997';
 export class Menu {
     constructor(items) {
         this.index = 0;
@@ -41,13 +41,13 @@ export class Menu {
             audio.sfx('select');
         }
     }
-    update(input, audio) {
+    update(input, audio, player = 0) {
         if (!this.items.length)
             return null;
         this.ensureEnabled();
-        if (input.pressed('up'))
+        if (input.pressed('up', player))
             this.move(-1, audio);
-        if (input.pressed('down'))
+        if (input.pressed('down', player))
             this.move(1, audio);
         if (input.mouse.moved) {
             this.hover = this.rects.findIndex((r) => input.mouse.x >= r.x && input.mouse.x <= r.x + r.w && input.mouse.y >= r.y && input.mouse.y <= r.y + r.h);
@@ -68,7 +68,9 @@ export class Menu {
                 audio.sfx('ui');
             }
         }
-        if (input.pressed('confirm') || input.pressed('attack') || input.pressed('jump')) {
+        if (input.pressed('confirm', player) ||
+            input.pressed('attack', player) ||
+            input.pressed('jump', player)) {
             const item = this.items[this.index];
             if (item && !item.disabled) {
                 audio.sfx('confirm');
@@ -151,7 +153,7 @@ export class Menu {
                 label(ctx, item.detail, x + w - 18, y0 + height / 2 + (minor ? 4 : 6), Math.max(minor ? 9 : 11, labelSize * 0.62), disabled ? 'rgba(160,166,184,0.3)' : active ? hexToRgba(col, 0.9) : 'rgba(160,166,184,0.65)', { align: 'right', weight: 600, font: FONTS.mono });
             }
             if (disabled) {
-                label(ctx, 'BLOQUEADO', x + w - 18, y0 + height / 2 + 6, 10, 'rgba(160,166,184,0.35)', {
+                label(ctx, item.disabledTag ?? 'BLOQUEADO', x + w - 18, y0 + height / 2 + 6, 10, 'rgba(160,166,184,0.35)', {
                     align: 'right',
                     font: FONTS.mono,
                     spacing: 1,

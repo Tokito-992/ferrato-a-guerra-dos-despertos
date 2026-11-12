@@ -1,9 +1,9 @@
 /** HUD de combate: vida, habilidade, combo, ondas e chefe. */
-import { clamp, hexToRgba } from '../core/math.js?v=6ccbb66fdb55';
-import { rankColor } from '../core/rank.js?v=6ccbb66fdb55';
-import { FONTS, bar, glow, label, panel, roundRectPath } from '../render/theme.js?v=6ccbb66fdb55';
-import { drawCharacterPortrait } from '../render/characters.js?v=6ccbb66fdb55';
-import { drawHeart } from '../render/hearts.js?v=6ccbb66fdb55';
+import { clamp, hexToRgba } from '../core/math.js?v=876088114997';
+import { rankColor } from '../core/rank.js?v=876088114997';
+import { FONTS, bar, glow, label, panel, roundRectPath } from '../render/theme.js?v=876088114997';
+import { drawCharacterPortrait } from '../render/characters.js?v=876088114997';
+import { drawHeart } from '../render/hearts.js?v=876088114997';
 const VIEW_W = 1280;
 const VIEW_H = 720;
 function bannerAlpha(b) {
@@ -16,13 +16,95 @@ function abilityLabel(p) {
         return 'PRONTA';
     return `${p.abilityCd.toFixed(1)}s`;
 }
+/** Painel compacto do jogador 2, logo abaixo do painel principal. */
+function drawPartnerPanel(ctx, partner, revive, viewTime) {
+    const accent = partner.dead ? '#ff5a72' : partner.def.colors.accent;
+    const x = 20;
+    const y = 200;
+    const w = 392;
+    const h = 88;
+    panel(ctx, x, y, w, h, {
+        fill: 'rgba(5, 8, 16, 0.72)',
+        border: hexToRgba(accent, partner.dead ? 0.5 : 0.3),
+        glow: partner.dead ? 'rgba(255,51,87,0.16)' : hexToRgba(accent, 0.14),
+        cut: 12,
+    });
+    ctx.fillStyle = hexToRgba(accent, 0.9);
+    ctx.fillRect(x, y, 3, h);
+    // Retrato pequeno.
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(72, y + 46, 27, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fill();
+    ctx.strokeStyle = hexToRgba(accent, partner.dead ? 0.35 : 0.5);
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.clip();
+    ctx.translate(72, y + 46);
+    ctx.scale(0.56, 0.56);
+    ctx.translate(-72, -(y + 46));
+    drawCharacterPortrait(ctx, partner.def, 72, y + 46, 100, viewTime);
+    ctx.restore();
+    label(ctx, 'P2', 34, y + 24, 13, hexToRgba(accent, 0.95), {
+        font: FONTS.mono,
+        weight: 800,
+        spacing: 1.2,
+    });
+    label(ctx, partner.def.name.toUpperCase(), 108, y + 27, 17, '#f2f5ff', {
+        weight: 800,
+        spacing: 1,
+        glow: partner.dead ? 'rgba(255,51,87,0.3)' : hexToRgba(accent, 0.3),
+    });
+    const hpW = 274;
+    bar(ctx, 108, y + 38, hpW, 12, partner.hpRatio, partner.hpRatio < 0.3 ? '#ff3357' : accent, 'rgba(255,255,255,0.08)');
+    label(ctx, `${Math.ceil(partner.hp)} / ${partner.maxHp}`, 382, y + 48.5, 9.5, '#ffffff', {
+        align: 'right',
+        font: FONTS.mono,
+        weight: 700,
+        outline: 'rgba(0,0,0,0.8)',
+        outlineWidth: 3,
+    });
+    if (partner.dead) {
+        const progress = clamp(revive, 0, 1);
+        label(ctx, progress > 0.001 ? `REANIMANDO ${Math.round(progress * 100)}%` : 'CAÍDO · APROXIME-SE PARA REANIMAR', 108, y + 68, 9.5, '#ff9bb8', { font: FONTS.mono, spacing: 0.8 });
+        bar(ctx, 108, y + 76, hpW, 4, progress, '#ff6a9a', 'rgba(255,255,255,0.1)');
+    }
+    else {
+        const ready = partner.abilityReady;
+        ctx.save();
+        ctx.fillStyle = ready ? hexToRgba(accent, 0.22) : 'rgba(255,255,255,0.05)';
+        roundRectPath(ctx, 108, y + 58, 17, 17, 3);
+        ctx.fill();
+        ctx.strokeStyle = ready ? accent : 'rgba(130,140,165,0.6)';
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
+        ctx.restore();
+        label(ctx, 'E', 116.5, y + 70.5, 10, ready ? '#ffffff' : 'rgba(190,196,214,0.55)', {
+            align: 'center',
+            weight: 800,
+            font: FONTS.mono,
+        });
+        label(ctx, partner.def.ability.name.toUpperCase(), 132, y + 70, 9.5, ready ? '#e8edf9' : 'rgba(180,188,208,0.55)', {
+            weight: 700,
+            spacing: 0.4,
+        });
+        label(ctx, partner.abilityReady ? 'PRONTA' : `${partner.abilityCd.toFixed(1)}s`, 382, y + 70, 9, ready ? hexToRgba(accent, 0.9) : 'rgba(180,188,208,0.5)', {
+            align: 'right',
+            font: FONTS.mono,
+            spacing: 0.5,
+        });
+    }
+}
 export function drawHud(ctx, data, viewTime) {
     const p = data.player;
     const def = p.def;
     const c = def.colors;
     const accent = c.accent;
-    // Vinheta de perigo.
-    if (p.hpRatio < 0.32 && !p.dead) {
+    // Vinheta de perigo (considera os dois jogadores no co-op).
+    const partner = data.partner ?? null;
+    const danger = Math.max(p.dead ? 0 : 1 - p.hpRatio, partner && !partner.dead ? 1 - partner.hpRatio : 0);
+    if (danger > 0.68) {
         const pulse = 0.5 + Math.sin(viewTime * 5) * 0.2;
         const g = ctx.createRadialGradient(VIEW_W / 2, VIEW_H / 2, VIEW_H * 0.34, VIEW_W / 2, VIEW_H / 2, VIEW_W * 0.68);
         g.addColorStop(0, 'rgba(255,20,50,0)');
@@ -136,39 +218,49 @@ export function drawHud(ctx, data, viewTime) {
         font: FONTS.mono,
         spacing: 0.6,
     });
-    // Dash.
-    const dashReady = p.dashCd <= 0.01;
-    label(ctx, 'DASH', 128, 166, 9, dashReady ? hexToRgba(c.glow, 0.8) : 'rgba(160,168,190,0.35)', {
-        font: FONTS.mono,
-        spacing: 1,
-    });
-    for (let i = 0; i < 4; i++) {
-        const filled = dashReady || (1 - p.dashCd / Math.max(0.01, p.dashCd + 0.9)) * 4 > i;
-        ctx.fillStyle = filled ? hexToRgba(c.glow, 0.8) : 'rgba(255,255,255,0.1)';
-        ctx.fillRect(164 + i * 13, 160, 9, 5);
+    // Dash ou estado de reanimação quando o P1 cai.
+    if (p.dead) {
+        const progress = clamp(data.playerRevive ?? 0, 0, 1);
+        label(ctx, progress > 0.001 ? `CAÍDO · REANIMANDO ${Math.round(progress * 100)}%` : 'CAÍDO · P2 DEVE SE APROXIMAR', 128, 166, 9.5, '#ff9bb8', { font: FONTS.mono, spacing: 0.9 });
+        bar(ctx, 128, 174, hpW, 4, progress, '#ff6a9a', 'rgba(255,255,255,0.1)');
     }
-    // Estado de combo passivo.
-    if (p.empowerTime > 0) {
-        label(ctx, `SOBRECARGA ${p.empowerTime.toFixed(1)}s`, 390, 166, 9, '#56e3ff', { align: 'right', font: FONTS.mono });
+    else {
+        const dashReady = p.dashCd <= 0.01;
+        label(ctx, 'DASH', 128, 166, 9, dashReady ? hexToRgba(c.glow, 0.8) : 'rgba(160,168,190,0.35)', {
+            font: FONTS.mono,
+            spacing: 1,
+        });
+        for (let i = 0; i < 4; i++) {
+            const filled = dashReady || (1 - p.dashCd / Math.max(0.01, p.dashCd + 0.9)) * 4 > i;
+            ctx.fillStyle = filled ? hexToRgba(c.glow, 0.8) : 'rgba(255,255,255,0.1)';
+            ctx.fillRect(164 + i * 13, 160, 9, 5);
+        }
+        // Estado de combo passivo.
+        if (p.empowerTime > 0) {
+            label(ctx, `SOBRECARGA ${p.empowerTime.toFixed(1)}s`, 390, 166, 9, '#56e3ff', { align: 'right', font: FONTS.mono });
+        }
+        else if (p.charId === 'miriam') {
+            label(ctx, `CALOR ${Math.round(p.heat)}%`, 390, 166, 9, '#ff9b3c', { align: 'right', font: FONTS.mono });
+        }
+        else if (p.charId === 'ravi') {
+            label(ctx, `RITMO x${(p.damageMultiplier()).toFixed(2)}`, 390, 166, 9, c.accent, { align: 'right', font: FONTS.mono });
+        }
+        else if (p.charId === 'ozric') {
+            label(ctx, `DRENADO ${Math.round(p.drained)}`, 390, 166, 9, '#ff6a7a', { align: 'right', font: FONTS.mono });
+        }
+        else if (p.charId === 'elodie') {
+            label(ctx, p.auraWindow > 0 ? 'LAMPEJO ATIVO' : 'LÂMINA SERENA', 390, 166, 9, '#fff4cd', { align: 'right', font: FONTS.mono });
+        }
+        else if (p.charId === 'kael') {
+            label(ctx, 'GRAVIDADE ESTÁVEL', 390, 166, 9, '#9d8bff', { align: 'right', font: FONTS.mono });
+        }
+        else if (p.charId === 'thryc') {
+            label(ctx, 'MEMÓRIA ECOADA', 390, 166, 9, '#b48bff', { align: 'right', font: FONTS.mono });
+        }
     }
-    else if (p.charId === 'miriam') {
-        label(ctx, `CALOR ${Math.round(p.heat)}%`, 390, 166, 9, '#ff9b3c', { align: 'right', font: FONTS.mono });
-    }
-    else if (p.charId === 'ravi') {
-        label(ctx, `RITMO x${(p.damageMultiplier()).toFixed(2)}`, 390, 166, 9, c.accent, { align: 'right', font: FONTS.mono });
-    }
-    else if (p.charId === 'ozric') {
-        label(ctx, `DRENADO ${Math.round(p.drained)}`, 390, 166, 9, '#ff6a7a', { align: 'right', font: FONTS.mono });
-    }
-    else if (p.charId === 'elodie') {
-        label(ctx, p.auraWindow > 0 ? 'LAMPEJO ATIVO' : 'LÂMINA SERENA', 390, 166, 9, '#fff4cd', { align: 'right', font: FONTS.mono });
-    }
-    else if (p.charId === 'kael') {
-        label(ctx, 'GRAVIDADE ESTÁVEL', 390, 166, 9, '#9d8bff', { align: 'right', font: FONTS.mono });
-    }
-    else if (p.charId === 'thryc') {
-        label(ctx, 'MEMÓRIA ECOADA', 390, 166, 9, '#b48bff', { align: 'right', font: FONTS.mono });
-    }
+    // Painel do jogador 2 no co-op local.
+    if (partner)
+        drawPartnerPanel(ctx, partner, data.partnerRevive ?? 0, viewTime);
     // ------------------------------------------------------------ fase / onda
     const cx = VIEW_W / 2;
     ctx.save();
@@ -364,25 +456,28 @@ export function drawHud(ctx, data, viewTime) {
     if (banner) {
         const a = bannerAlpha(banner);
         if (a > 0.01) {
+            // No co-op, o painel do P2 ocupa a faixa superior esquerda: o anúncio
+            // desce para não cobrir vida, habilidade e estado de reanimação.
+            const bannerTop = partner ? 300 : 176;
             ctx.save();
             ctx.globalAlpha = a;
-            const bg = ctx.createLinearGradient(0, 188, VIEW_W, 188);
+            const bg = ctx.createLinearGradient(0, bannerTop + 12, VIEW_W, bannerTop + 12);
             bg.addColorStop(0, 'rgba(5,8,16,0)');
             bg.addColorStop(0.25, 'rgba(5,8,16,0.72)');
             bg.addColorStop(0.75, 'rgba(5,8,16,0.72)');
             bg.addColorStop(1, 'rgba(5,8,16,0)');
             ctx.fillStyle = bg;
-            ctx.fillRect(0, 176, VIEW_W, 104);
+            ctx.fillRect(0, bannerTop, VIEW_W, 104);
             ctx.strokeStyle = hexToRgba(banner.color, 0.4);
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(340, 176);
-            ctx.lineTo(940, 176);
-            ctx.moveTo(340, 280);
-            ctx.lineTo(940, 280);
+            ctx.moveTo(340, bannerTop);
+            ctx.lineTo(940, bannerTop);
+            ctx.moveTo(340, bannerTop + 104);
+            ctx.lineTo(940, bannerTop + 104);
             ctx.stroke();
             ctx.restore();
-            label(ctx, banner.text.toUpperCase(), cx, 233, 42, '#ffffff', {
+            label(ctx, banner.text.toUpperCase(), cx, bannerTop + 57, 42, '#ffffff', {
                 align: 'center',
                 weight: 800,
                 spacing: 5,
@@ -391,7 +486,7 @@ export function drawHud(ctx, data, viewTime) {
                 outlineWidth: 5,
                 alpha: a,
             });
-            label(ctx, banner.sub.toUpperCase(), cx, 260, 12, hexToRgba(banner.color, 0.95), {
+            label(ctx, banner.sub.toUpperCase(), cx, bannerTop + 84, 12, hexToRgba(banner.color, 0.95), {
                 align: 'center',
                 font: FONTS.mono,
                 spacing: 2.2,

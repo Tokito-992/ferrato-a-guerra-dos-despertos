@@ -1,8 +1,8 @@
 /** Jogador: movimentação, combos, dash, habilidades e passivas por personagem. */
-import { clamp, rand, rectsOverlap } from '../core/math.js?v=6ccbb66fdb55';
-import { Combatant } from './combatant.js?v=6ccbb66fdb55';
-import { getCharacter } from '../data/characters.js?v=6ccbb66fdb55';
-import { MOVESETS } from '../data/movesets.js?v=6ccbb66fdb55';
+import { clamp, rand, rectsOverlap } from '../core/math.js?v=876088114997';
+import { Combatant } from './combatant.js?v=876088114997';
+import { getCharacter } from '../data/characters.js?v=876088114997';
+import { MOVESETS } from '../data/movesets.js?v=876088114997';
 /** Cada Desperto tem uma assinatura sonora própria ao ativar a habilidade. */
 const ABILITY_SFX = {
     ravi: 'abilityRavi',
@@ -837,7 +837,7 @@ export class Player extends Combatant {
                 world.shake(0.45);
                 world.flash('#fff4cd', 0.24);
                 const radius = 330;
-                world.sealEnemies(radius, 2.6);
+                world.sealEnemies(radius, 2.6, this.x, this.centerY);
                 world.clearEnemyProjectiles(this.x, this.centerY, radius);
                 world.particles.ring(this.x, this.centerY, '#fff4cd', radius, 0.8, 6);
                 world.particles.ring(this.x, this.centerY, c.accent, radius * 0.7, 0.6, 3);

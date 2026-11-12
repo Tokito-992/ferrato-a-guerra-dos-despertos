@@ -1,11 +1,11 @@
 /** Configurações: layout dos controles de toque, dock, áudio e tutorial. */
-import { TITLE_THEME_INDEX } from '../core/audio.js?v=6ccbb66fdb55';
-import { hexToRgba } from '../core/math.js?v=6ccbb66fdb55';
-import { drawTitleBackground } from '../render/backgrounds.js?v=6ccbb66fdb55';
-import { drawCharacterSilhouette } from '../render/characters.js?v=6ccbb66fdb55';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=6ccbb66fdb55';
-import { Menu } from '../ui/menu.js?v=6ccbb66fdb55';
-import { needsIOSInstallGuide } from '../core/platform.js?v=6ccbb66fdb55';
+import { TITLE_THEME_INDEX } from '../core/audio.js?v=876088114997';
+import { hexToRgba } from '../core/math.js?v=876088114997';
+import { drawTitleBackground } from '../render/backgrounds.js?v=876088114997';
+import { drawCharacterSilhouette } from '../render/characters.js?v=876088114997';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=876088114997';
+import { Menu } from '../ui/menu.js?v=876088114997';
+import { needsIOSInstallGuide } from '../core/platform.js?v=876088114997';
 export class SettingsScene {
     constructor(game) {
         this.game = game;

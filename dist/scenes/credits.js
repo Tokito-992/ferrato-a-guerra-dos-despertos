@@ -1,9 +1,9 @@
 /** Créditos finais com rolagem cinematográfica. */
-import { TITLE_THEME_INDEX } from '../core/audio.js?v=6ccbb66fdb55';
-import { CREDITS, TITLE_QUOTE } from '../data/story.js?v=6ccbb66fdb55';
-import { clamp, hexToRgba } from '../core/math.js?v=6ccbb66fdb55';
-import { drawTitleBackground } from '../render/backgrounds.js?v=6ccbb66fdb55';
-import { FONTS, label } from '../render/theme.js?v=6ccbb66fdb55';
+import { TITLE_THEME_INDEX } from '../core/audio.js?v=876088114997';
+import { CREDITS, TITLE_QUOTE } from '../data/story.js?v=876088114997';
+import { clamp, hexToRgba } from '../core/math.js?v=876088114997';
+import { drawTitleBackground } from '../render/backgrounds.js?v=876088114997';
+import { FONTS, label } from '../render/theme.js?v=876088114997';
 const LINE_H = 78;
 export class CreditsScene {
     constructor(game) {

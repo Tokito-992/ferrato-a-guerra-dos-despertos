@@ -1,9 +1,9 @@
 /** Tela de personalização dos botões de teclado e mouse. */
-import { TITLE_THEME_INDEX } from '../core/audio.js?v=6ccbb66fdb55';
-import { ACTION_LABELS, BINDABLE_ACTIONS, assignKeyboardBinding, assignMouseBinding, defaultBindings, isReservedKey, keyLabel, mouseLabel, } from '../core/bindings.js?v=6ccbb66fdb55';
-import { hexToRgba } from '../core/math.js?v=6ccbb66fdb55';
-import { drawTitleBackground } from '../render/backgrounds.js?v=6ccbb66fdb55';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=6ccbb66fdb55';
+import { TITLE_THEME_INDEX } from '../core/audio.js?v=876088114997';
+import { ACTION_LABELS, BINDABLE_ACTIONS, assignKeyboardBinding, assignMouseBinding, defaultBindings, isReservedKey, keyLabel, mouseLabel, } from '../core/bindings.js?v=876088114997';
+import { hexToRgba } from '../core/math.js?v=876088114997';
+import { drawTitleBackground } from '../render/backgrounds.js?v=876088114997';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=876088114997';
 function inside(box, x, y) {
     return x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h;
 }

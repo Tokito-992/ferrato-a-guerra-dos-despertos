@@ -1,29 +1,30 @@
 /** Núcleo do jogo: loop, troca de cenas, transições, hitstop e persistência. */
-import { CHARACTERS } from '../data/characters.js?v=6ccbb66fdb55';
-import { getStage, MAX_STAGE } from '../data/stages.js?v=6ccbb66fdb55';
-import { STORY } from '../data/story.js?v=6ccbb66fdb55';
-import { AudioEngine } from './audio.js?v=6ccbb66fdb55';
-import { Input } from './input.js?v=6ccbb66fdb55';
-import { ParticleSystem } from './particles.js?v=6ccbb66fdb55';
-import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=6ccbb66fdb55';
-import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=6ccbb66fdb55';
-import { needsIOSInstallGuide } from './platform.js?v=6ccbb66fdb55';
-import { cloudSync } from './cloud-sync.js?v=6ccbb66fdb55';
-import { showInstallGuide } from '../ui/install-guide.js?v=6ccbb66fdb55';
-import { showAccountPanel } from '../ui/account-panel.js?v=6ccbb66fdb55';
-import { clamp, hexToRgba } from './math.js?v=6ccbb66fdb55';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=6ccbb66fdb55';
-import { TitleScene } from '../scenes/title.js?v=6ccbb66fdb55';
-import { CharacterSelectScene } from '../scenes/characterSelect.js?v=6ccbb66fdb55';
-import { GameplayScene } from '../scenes/gameplay.js?v=6ccbb66fdb55';
-import { ComicScene } from '../scenes/comic.js?v=6ccbb66fdb55';
-import { VictoryScene } from '../scenes/victory.js?v=6ccbb66fdb55';
-import { CreditsScene } from '../scenes/credits.js?v=6ccbb66fdb55';
-import { SettingsScene } from '../scenes/settings.js?v=6ccbb66fdb55';
-import { ControlsScene } from '../scenes/controls.js?v=6ccbb66fdb55';
-import { TutorialScene } from '../scenes/tutorial.js?v=6ccbb66fdb55';
-import { ArchiveScene } from '../scenes/archive.js?v=6ccbb66fdb55';
-import { ARCHIVE_ENTRY_IDS } from '../data/archive.js?v=6ccbb66fdb55';
+import { CHARACTERS } from '../data/characters.js?v=876088114997';
+import { getStage, MAX_STAGE } from '../data/stages.js?v=876088114997';
+import { STORY } from '../data/story.js?v=876088114997';
+import { AudioEngine } from './audio.js?v=876088114997';
+import { Input } from './input.js?v=876088114997';
+import { ParticleSystem } from './particles.js?v=876088114997';
+import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=876088114997';
+import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=876088114997';
+import { needsIOSInstallGuide } from './platform.js?v=876088114997';
+import { cloudSync } from './cloud-sync.js?v=876088114997';
+import { showInstallGuide } from '../ui/install-guide.js?v=876088114997';
+import { showAccountPanel } from '../ui/account-panel.js?v=876088114997';
+import { clamp, hexToRgba } from './math.js?v=876088114997';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=876088114997';
+import { TitleScene } from '../scenes/title.js?v=876088114997';
+import { CharacterSelectScene } from '../scenes/characterSelect.js?v=876088114997';
+import { MultiplayerScene } from '../scenes/multiplayer.js?v=876088114997';
+import { GameplayScene } from '../scenes/gameplay.js?v=876088114997';
+import { ComicScene } from '../scenes/comic.js?v=876088114997';
+import { VictoryScene } from '../scenes/victory.js?v=876088114997';
+import { CreditsScene } from '../scenes/credits.js?v=876088114997';
+import { SettingsScene } from '../scenes/settings.js?v=876088114997';
+import { ControlsScene } from '../scenes/controls.js?v=876088114997';
+import { TutorialScene } from '../scenes/tutorial.js?v=876088114997';
+import { ArchiveScene } from '../scenes/archive.js?v=876088114997';
+import { ARCHIVE_ENTRY_IDS } from '../data/archive.js?v=876088114997';
 /** Posições normalizadas usadas quando não há layout livre salvo. */
 function presetTouchPositions(layout, dock) {
     const y = dock === 'top' ? 0.1 : 0.9;
@@ -510,8 +511,21 @@ export class Game {
     showGameplay(stageId, charId) {
         this.setScene(new GameplayScene(this, getStage(stageId), charId));
     }
+    /** Abre o lobby de multijogador. */
+    gotoMultiplayer() {
+        this.transitionTo(() => this.showMultiplayer());
+    }
+    showMultiplayer() {
+        this.setScene(new MultiplayerScene(this));
+    }
+    /** Inicia um capítulo em co-op local; P2 usa o segundo controle. */
+    showCoopGameplay(stageId, p1, p2) {
+        this.finishing = false;
+        this.save.selected = p1;
+        this.setScene(new GameplayScene(this, getStage(stageId), p1, p2));
+    }
     /** Chamado pela cena de combate quando o chefe cai. */
-    finishStage(stageId, charId) {
+    finishStage(stageId, charId, returnToLobby = false) {
         if (this.finishing)
             return;
         this.finishing = true;
@@ -536,6 +550,16 @@ export class Game {
             this.save.selected = nextChar;
         }
         this.persist();
+        // Co-op local: sem cutscene de transição de arco — a dupla volta ao lobby
+        // para escolher o próximo capítulo junto.
+        if (returnToLobby) {
+            const next = Math.min(MAX_STAGE, stageId + 1);
+            this.setNotice(stageId >= MAX_STAGE
+                ? 'CAMPANHA CO-OP CONCLUÍDA — O VÉU FOI ROMPIDO'
+                : `CAPÍTULO ${stageId} CONCLUÍDO — CAP. ${next} LIBERADO`, '#8df4a8');
+            this.transitionTo(() => this.showMultiplayer());
+            return;
+        }
         const outro = STORY[stageId]?.outro;
         const finish = () => {
             if (stageId >= MAX_STAGE) {

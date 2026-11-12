@@ -1,7 +1,7 @@
 /** Menu navegável por teclado e mouse, usado em todas as telas. */
 
 import type { AudioEngine } from '../core/audio.js';
-import type { Input } from '../core/input.js';
+import type { Input, PlayerIndex } from '../core/input.js';
 import { hexToRgba } from '../core/math.js';
 import { FONTS, label, roundRectPath } from '../render/theme.js';
 
@@ -17,6 +17,8 @@ export interface MenuItem {
   height?: number;
   /** Ação secundária, desenhada com menos peso visual. */
   minor?: boolean;
+  /** Texto exibido no lugar de "BLOQUEADO" quando o item está desabilitado. */
+  disabledTag?: string;
 }
 
 export interface MenuStyle {
@@ -73,12 +75,12 @@ export class Menu {
     }
   }
 
-  update(input: Input, audio: AudioEngine): string | null {
+  update(input: Input, audio: AudioEngine, player: PlayerIndex = 0): string | null {
     if (!this.items.length) return null;
     this.ensureEnabled();
 
-    if (input.pressed('up')) this.move(-1, audio);
-    if (input.pressed('down')) this.move(1, audio);
+    if (input.pressed('up', player)) this.move(-1, audio);
+    if (input.pressed('down', player)) this.move(1, audio);
 
     if (input.mouse.moved) {
       this.hover = this.rects.findIndex(
@@ -105,7 +107,11 @@ export class Menu {
       }
     }
 
-    if (input.pressed('confirm') || input.pressed('attack') || input.pressed('jump')) {
+    if (
+      input.pressed('confirm', player) ||
+      input.pressed('attack', player) ||
+      input.pressed('jump', player)
+    ) {
       const item = this.items[this.index];
       if (item && !item.disabled) {
         audio.sfx('confirm');
@@ -209,7 +215,7 @@ export class Menu {
       }
 
       if (disabled) {
-        label(ctx, 'BLOQUEADO', x + w - 18, y0 + height / 2 + 6, 10, 'rgba(160,166,184,0.35)', {
+        label(ctx, item.disabledTag ?? 'BLOQUEADO', x + w - 18, y0 + height / 2 + 6, 10, 'rgba(160,166,184,0.35)', {
           align: 'right',
           font: FONTS.mono,
           spacing: 1,

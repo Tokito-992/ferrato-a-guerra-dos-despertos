@@ -881,7 +881,7 @@ export class Player extends Combatant {
         world.shake(0.45);
         world.flash('#fff4cd', 0.24);
         const radius = 330;
-        world.sealEnemies(radius, 2.6);
+        world.sealEnemies(radius, 2.6, this.x, this.centerY);
         world.clearEnemyProjectiles(this.x, this.centerY, radius);
         world.particles.ring(this.x, this.centerY, '#fff4cd', radius, 0.8, 6);
         world.particles.ring(this.x, this.centerY, c.accent, radius * 0.7, 0.6, 3);

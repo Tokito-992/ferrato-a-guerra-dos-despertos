@@ -1,10 +1,10 @@
 /** Tutorial ilustrado de abertura: controles, combate, Câmara do Coração e celular. */
-import { TITLE_THEME_INDEX } from '../core/audio.js?v=6ccbb66fdb55';
-import { clamp, hexToRgba, TAU } from '../core/math.js?v=6ccbb66fdb55';
-import { drawTitleBackground } from '../render/backgrounds.js?v=6ccbb66fdb55';
-import { drawCharacterSilhouette } from '../render/characters.js?v=6ccbb66fdb55';
-import { drawHeart } from '../render/hearts.js?v=6ccbb66fdb55';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=6ccbb66fdb55';
+import { TITLE_THEME_INDEX } from '../core/audio.js?v=876088114997';
+import { clamp, hexToRgba, TAU } from '../core/math.js?v=876088114997';
+import { drawTitleBackground } from '../render/backgrounds.js?v=876088114997';
+import { drawCharacterSilhouette } from '../render/characters.js?v=876088114997';
+import { drawHeart } from '../render/hearts.js?v=876088114997';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=876088114997';
 function inside(box, x, y) {
     return x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h;
 }

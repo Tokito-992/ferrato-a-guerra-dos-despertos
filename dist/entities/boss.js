@@ -1,8 +1,8 @@
 /** Chefes com múltiplos estágios, telegrafia e padrões únicos por fase. */
-import { clamp, rand, rectsOverlap, TAU } from '../core/math.js?v=6ccbb66fdb55';
-import { Combatant } from './combatant.js?v=6ccbb66fdb55';
-import { BOSSES } from '../data/bosses.js?v=6ccbb66fdb55';
-import { CHAPTERS_PER_ARC, getStage } from '../data/stages.js?v=6ccbb66fdb55';
+import { clamp, rand, rectsOverlap, TAU } from '../core/math.js?v=876088114997';
+import { Combatant } from './combatant.js?v=876088114997';
+import { BOSSES } from '../data/bosses.js?v=876088114997';
+import { CHAPTERS_PER_ARC, getStage } from '../data/stages.js?v=876088114997';
 const ATTACK_LABELS = {
     slam: 'PISADA',
     charge: 'INVESTIDA',
@@ -100,7 +100,7 @@ export class Boss extends Combatant {
         }
         if (this.state === 'intro') {
             this.introTimer -= dt;
-            this.faceToward(world.player.x);
+            this.faceToward(this.target(world).x);
             this.hoverBob(dt);
             this.invuln = 999;
             if (this.introTimer <= 0) {
@@ -142,7 +142,7 @@ export class Boss extends Combatant {
             // Chefes resistem a atordoamento, mas ficam mais lentos.
             this.sealTime = Math.min(this.sealTime, 0.6);
         }
-        this.faceToward(world.player.x);
+        this.faceToward(this.target(world).x);
         if (this.state === 'idle') {
             this.moveIdle(dt, world);
             this.idleTimer -= dt * this.pace;
@@ -186,6 +186,10 @@ export class Boss extends Combatant {
     get pace() {
         return this.def.phases[this.phaseIndex]?.pace ?? 1;
     }
+    /** Alvo atual: o jogador vivo mais próximo do chefe. */
+    target(world) {
+        return world.nearestPlayer(this.x, this.centerY);
+    }
     hoverBob(dt) {
         if (!this.def.flying)
             return;
@@ -193,7 +197,7 @@ export class Boss extends Combatant {
         this.y += (this.baseY + bob - this.y) * Math.min(1, dt * 3);
     }
     moveIdle(dt, world) {
-        const p = world.player;
+        const p = this.target(world);
         const dx = p.x - this.x;
         const dist = Math.abs(dx);
         const preferred = this.def.preferredRange;
@@ -320,11 +324,12 @@ export class Boss extends Combatant {
                 this.summon(world, kinds[Math.floor(rand(0, kinds.length))], 1);
                 break;
             }
-            case 'gravityCrush':
+            case 'gravityCrush': {
+                const target = this.target(world);
                 world.spawnHazard({
                     kind: 'void',
-                    x: world.player.x,
-                    y: world.player.y,
+                    x: target.x,
+                    y: target.y,
                     radius: 200,
                     duration: 2.1,
                     damage: 7,
@@ -338,6 +343,7 @@ export class Boss extends Combatant {
                 world.audio.sfx('gravity');
                 world.shake(0.6);
                 break;
+            }
             case 'blackHole':
                 world.spawnHazard({
                     kind: 'void',
@@ -368,7 +374,7 @@ export class Boss extends Combatant {
     }
     tickAttack(dt, world) {
         const id = this.attackId;
-        const player = world.player;
+        const player = this.target(world);
         switch (id) {
             case 'slam': {
                 if (!this.didContact) {
@@ -799,33 +805,31 @@ export class Boss extends Combatant {
             owner: 'enemy',
             color: this.def.colors.accent,
         });
-        const p = world.player;
-        if (Math.abs(p.x - this.x) < radius && p.y > world.groundY - 120) {
-            world.damagePlayer(damage, {
-                fromX: this.x,
-                knockback: 400,
-                launch: 260,
-                hitstun: 0.4,
-                color: this.def.colors.accent,
-            });
-        }
+        world.damagePlayers(this.x, world.groundY - 40, radius, damage, {
+            fromX: this.x,
+            knockback: 400,
+            launch: 260,
+            hitstun: 0.4,
+            color: this.def.colors.accent,
+        });
     }
     contactDamage(world, width, damage) {
-        const p = world.player;
         const box = {
             x: this.x - width,
             y: this.y - this.h * this.scale,
             w: width * 2,
             h: this.h * this.scale,
         };
-        if (rectsOverlap(box, p.hurtbox)) {
+        for (const p of world.players) {
+            if (p.dead || !rectsOverlap(box, p.hurtbox))
+                continue;
             const dealt = world.damagePlayer(damage, {
                 fromX: this.x,
                 knockback: 360,
                 launch: 160,
                 hitstun: 0.3,
                 color: this.def.colors.accent,
-            });
+            }, p);
             if (dealt > 0) {
                 world.shake(0.5);
                 world.hitStop(0.05);
@@ -833,27 +837,28 @@ export class Boss extends Combatant {
         }
     }
     meleeArc(world, range, height, damage, fast = false) {
-        const p = world.player;
         const box = {
             x: this.x + (this.facing > 0 ? 0 : -range),
             y: this.y - height,
             w: range,
             h: height + 40,
         };
-        if (rectsOverlap(box, p.hurtbox)) {
+        for (const p of world.players) {
+            if (p.dead || !rectsOverlap(box, p.hurtbox))
+                continue;
             world.damagePlayer(damage, {
                 fromX: this.x,
                 knockback: fast ? 240 : 340,
                 launch: 140,
                 hitstun: 0.3,
                 color: this.def.colors.accent,
-            });
+            }, p);
             world.shake(0.35);
         }
         world.particles.slash(this.x + this.facing * range * 0.45, this.centerY, this.facing > 0 ? -0.15 : Math.PI + 0.15, this.def.colors.accent, range * 0.55, 0.24);
     }
     fireAimed(world, speed, damage, radius, style, spread = 0, homing = 0) {
-        const p = world.player;
+        const p = this.target(world);
         const angle = Math.atan2(p.centerY - this.centerY, p.x - this.x) + spread;
         world.spawnProjectile({
             x: this.x + Math.cos(angle) * 40,
@@ -916,9 +921,10 @@ export class Boss extends Combatant {
             kind: 'smoke',
         });
         const side = Math.random() < 0.5 ? -1 : 1;
-        const nx = clamp(world.player.x - side * 120, world.camera.x + 90, world.camera.x + world.viewW - 90);
+        const target = this.target(world);
+        const nx = clamp(target.x - side * 120, world.camera.x + 90, world.camera.x + world.viewW - 90);
         this.x = nx;
-        this.faceToward(world.player.x);
+        this.faceToward(target.x);
         world.particles.burst(this.x, this.centerY, 22, this.def.colors.accent, {
             speed: 260,
             gravity: -40,
@@ -1004,10 +1010,13 @@ export class Boss extends Combatant {
             life: 0.9,
         });
         world.text(this.phaseName.toUpperCase(), this.x, this.centerY - 130, this.def.colors.accent, 30);
-        const p = world.player;
-        p.vx = Math.sign(p.x - this.x || 1) * 520;
-        p.vy = -320;
-        p.invuln = Math.max(p.invuln, 1.1);
+        for (const player of world.players) {
+            if (player.dead)
+                continue;
+            player.vx = Math.sign(player.x - this.x || 1) * 520;
+            player.vy = -320;
+            player.invuln = Math.max(player.invuln, 1.1);
+        }
         // Reforços na transição (exceto no primeiro chefe).
         if (this.def.id !== 'colossus') {
             this.summon(world, this.def.arc >= 4 ? 'shade' : 'drone', 2);

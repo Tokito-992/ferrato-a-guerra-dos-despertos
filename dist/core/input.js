@@ -1,5 +1,5 @@
 /** Entrada de teclado, mouse, toque e controle com noções de "pressionado neste frame". */
-import { BINDABLE_ACTIONS, defaultBindings } from './bindings.js?v=6ccbb66fdb55';
+import { BINDABLE_ACTIONS, defaultBindings } from './bindings.js?v=876088114997';
 const DIRECTIONS = ['left', 'right', 'up', 'down'];
 /** Mapeamento do Gamepad API padrão (Xbox/PlayStation/Switch Pro). */
 const GAMEPAD_BUTTONS = [

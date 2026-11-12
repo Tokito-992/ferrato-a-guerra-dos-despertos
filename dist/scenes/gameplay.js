@@ -1,24 +1,24 @@
 /** Cena principal: arena lateral, ondas, chefe, pausa, troca de herói e game over. */
-import { Camera } from '../core/camera.js?v=6ccbb66fdb55';
-import { ParticleSystem } from '../core/particles.js?v=6ccbb66fdb55';
-import { clamp, hexToRgba } from '../core/math.js?v=6ccbb66fdb55';
-import { rankColor, rankFromPressure, rankValue } from '../core/rank.js?v=6ccbb66fdb55';
-import { MAX_HEARTS } from '../core/save.js?v=6ccbb66fdb55';
-import { MAX_STAGE } from '../data/stages.js?v=6ccbb66fdb55';
-import { archiveBossId, archiveCreatureId, archivePhenomenonId, archivePlaceId, archiveRelicId, stageRelicKinds, } from '../data/archive.js?v=6ccbb66fdb55';
-import { Player } from '../entities/player.js?v=6ccbb66fdb55';
-import { Enemy } from '../entities/enemy.js?v=6ccbb66fdb55';
-import { Boss } from '../entities/boss.js?v=6ccbb66fdb55';
-import { Hazard, Projectile } from '../entities/projectiles.js?v=6ccbb66fdb55';
-import { StageObstacle, buildStageObstacles } from '../entities/obstacles.js?v=6ccbb66fdb55';
-import { drawStageBackground } from '../render/backgrounds.js?v=6ccbb66fdb55';
-import { drawCharacterPortrait, drawPlayer } from '../render/characters.js?v=6ccbb66fdb55';
-import { drawBoss, drawEnemy } from '../render/enemies.js?v=6ccbb66fdb55';
-import { drawHeart } from '../render/hearts.js?v=6ccbb66fdb55';
-import { visualStyle } from '../render/style.js?v=6ccbb66fdb55';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=6ccbb66fdb55';
-import { drawHud } from '../ui/hud.js?v=6ccbb66fdb55';
-import { Menu } from '../ui/menu.js?v=6ccbb66fdb55';
+import { Camera } from '../core/camera.js?v=876088114997';
+import { ParticleSystem } from '../core/particles.js?v=876088114997';
+import { clamp, hexToRgba } from '../core/math.js?v=876088114997';
+import { rankColor, rankFromPressure, rankValue } from '../core/rank.js?v=876088114997';
+import { MAX_HEARTS } from '../core/save.js?v=876088114997';
+import { MAX_STAGE } from '../data/stages.js?v=876088114997';
+import { archiveBossId, archiveCreatureId, archivePhenomenonId, archivePlaceId, archiveRelicId, stageRelicKinds, } from '../data/archive.js?v=876088114997';
+import { Player } from '../entities/player.js?v=876088114997';
+import { Enemy } from '../entities/enemy.js?v=876088114997';
+import { Boss } from '../entities/boss.js?v=876088114997';
+import { Hazard, Projectile } from '../entities/projectiles.js?v=876088114997';
+import { StageObstacle, buildStageObstacles } from '../entities/obstacles.js?v=876088114997';
+import { drawStageBackground } from '../render/backgrounds.js?v=876088114997';
+import { drawCharacterPortrait, drawPlayer } from '../render/characters.js?v=876088114997';
+import { drawBoss, drawEnemy } from '../render/enemies.js?v=876088114997';
+import { drawHeart } from '../render/hearts.js?v=876088114997';
+import { visualStyle } from '../render/style.js?v=876088114997';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=876088114997';
+import { drawHud } from '../ui/hud.js?v=876088114997';
+import { Menu } from '../ui/menu.js?v=876088114997';
 function insideRect(rect, x, y) {
     return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
 }
@@ -48,7 +48,14 @@ function getGrainPattern(ctx) {
     return grainPattern;
 }
 export class GameplayScene {
-    constructor(game, stage, charId) {
+    /** Primeiro jogador; mantém compatibilidade com a lógica antiga. */
+    get player() {
+        return this.players[0];
+    }
+    get isCoop() {
+        return this.players.length > 1;
+    }
+    constructor(game, stage, charId, partnerId) {
         this.game = game;
         this.particles = new ParticleSystem();
         this.time = 0;
@@ -67,8 +74,10 @@ export class GameplayScene {
         this.waveSpawned = 0;
         this.kills = 0;
         this.maxCombo = 0;
-        this.deathTimer = 0;
-        this.deathHandled = false;
+        this.deathHandled = [];
+        this.downed = [];
+        this.reviveProgress = [];
+        this.partyDeathTimer = 0;
         this.gameOver = false;
         this.paused = false;
         this.bossCleared = false;
@@ -114,7 +123,14 @@ export class GameplayScene {
         this.camera = new Camera(game.width, game.height);
         this.camera.setBounds(0, Math.max(0, stage.width - this.viewW));
         this.camera.snapTo(0);
-        this.player = new Player(170, charId, stage.floor, 0);
+        const hero = new Player(170, charId, stage.floor, 0);
+        this.players = [hero];
+        if (partnerId !== undefined) {
+            this.players.push(new Player(250, partnerId, stage.floor, 1));
+        }
+        this.deathHandled = this.players.map(() => false);
+        this.downed = this.players.map(() => false);
+        this.reviveProgress = this.players.map(() => 0);
         this.pauseMenu = new Menu([]);
         this.gameOverMenu = new Menu([]);
         this.obstacles = buildStageObstacles(stage);
@@ -204,38 +220,68 @@ export class GameplayScene {
             this.animeImpactColor = color;
         }
     }
-    damagePlayer(damage, opts = {}) {
-        if (this.player.dead)
+    nearestPlayer(x, y) {
+        let best = this.players[0];
+        let bestDist = Number.POSITIVE_INFINITY;
+        for (const p of this.players) {
+            if (p.dead)
+                continue;
+            const dist = y === undefined ? Math.abs(p.x - x) : Math.hypot(p.x - x, p.centerY - y);
+            if (dist < bestDist) {
+                best = p;
+                bestDist = dist;
+            }
+        }
+        return best;
+    }
+    damagePlayer(damage, opts = {}, target = this.players[0]) {
+        if (target.dead)
             return 0;
-        const dealt = this.player.takeDamage(damage, opts, this);
+        const dealt = target.takeDamage(damage, opts, this);
         if (dealt > 0) {
             this.damageTaken += dealt;
             this.pressure = clamp(this.pressure - 9, 0, 100);
             if (visualStyle.anime) {
                 this.animeImpact = Math.max(this.animeImpact, 0.18);
-                this.animeImpactX = this.player.x;
-                this.animeImpactY = this.player.centerY;
+                this.animeImpactX = target.x;
+                this.animeImpactY = target.centerY;
                 this.animeImpactColor = '#ff3357';
             }
         }
         return dealt;
     }
-    healPlayer(amount) {
-        if (this.player.dead || amount <= 0)
+    damagePlayers(x, y, radius, damage, opts = {}) {
+        let total = 0;
+        for (const p of this.players) {
+            if (p.dead)
+                continue;
+            const reach = radius + Math.max(0, p.w * p.scale * 0.3);
+            if (Math.hypot(p.x - x, p.centerY - y) > reach)
+                continue;
+            total += this.damagePlayer(damage, { ...opts, fromX: opts.fromX ?? x }, p);
+        }
+        return total;
+    }
+    healPlayer(amount, target = this.players[0]) {
+        if (target.dead || amount <= 0)
             return;
-        const healed = this.player.heal(amount);
+        const healed = target.heal(amount);
         if (healed > 0.4) {
-            this.text(`+${Math.round(healed)}`, this.player.x, this.player.y - 122, '#8df4a8', 17);
+            this.text(`+${Math.round(healed)}`, target.x, target.y - 122, '#8df4a8', 17);
             this.particles.spawn({
                 kind: 'glow',
-                x: this.player.x,
-                y: this.player.centerY,
+                x: target.x,
+                y: target.centerY,
                 vy: -50,
                 life: 0.5,
                 size: 34,
                 color: '#8df4a8',
             });
         }
+    }
+    healParty(amount) {
+        for (const p of this.players)
+            this.healPlayer(amount, p);
     }
     shake(amount) {
         this.camera.addShake(amount);
@@ -253,7 +299,8 @@ export class GameplayScene {
         this.timers.push({ t: seconds, fn });
     }
     addCombo(count = 1) {
-        this.maxCombo = Math.max(this.maxCombo, this.player.comboHits + Math.max(0, count - 1));
+        const best = Math.max(...this.players.map((p) => p.comboHits));
+        this.maxCombo = Math.max(this.maxCombo, best + Math.max(0, count - 1));
         this.game.save.bestCombo = Math.max(this.game.save.bestCombo, this.maxCombo);
         this.pressure = clamp(this.pressure + 0.3, 0, 100);
         this.addScore(4);
@@ -266,13 +313,13 @@ export class GameplayScene {
         if (enemy === this.hunter) {
             this.hunter = null;
             this.addScore(1200);
-            this.healPlayer(8);
+            this.healParty(8);
             this.text('CAÇADOR DO VÉU ABATIDO', enemy.x, enemy.centerY - 44, '#ff9bb8', 16);
             this.game.flash('#ff6a9a', 0.12);
             this.audio.sfx('victory');
         }
         else if (enemy.elite) {
-            this.healPlayer(5);
+            this.healParty(5);
             this.text('ELITE ABATIDO', enemy.x, enemy.centerY - 40, '#ffe6a3', 15);
         }
     }
@@ -305,9 +352,9 @@ export class GameplayScene {
             color,
         });
     }
-    sealEnemies(radius, duration) {
-        const px = this.player.x;
-        const py = this.player.centerY;
+    sealEnemies(radius, duration, ox, oy) {
+        const px = ox ?? this.player.x;
+        const py = oy ?? this.player.centerY;
         for (const enemy of this.enemies) {
             if (enemy.dead)
                 continue;
@@ -351,7 +398,7 @@ export class GameplayScene {
             this.updatePauseMenu();
             return;
         }
-        if (this.input.pressed('pause') || this.input.pressed('back')) {
+        if (this.input.pressed('pause') || this.input.pressed('back') || this.input.pressed('pause', 1)) {
             this.openPause();
             return;
         }
@@ -370,21 +417,10 @@ export class GameplayScene {
                 this.audio.sfx('wave');
             }
         }
-        this.player.update(dt, this);
-        if (this.player.dead && !this.deathHandled) {
-            if (this.hearts > 0 && !this.gameOver) {
-                this.revivePlayer();
-            }
-            else {
-                this.deathHandled = true;
-                this.deathTimer = 0;
-                this.game.recordDeath();
-                this.audio.sfx('gameover');
-                this.game.slowMo(0.45, 1.1);
-            }
-        }
-        if (this.player.dead)
-            this.deathTimer += dt;
+        for (const player of this.players)
+            player.update(dt, this);
+        for (let i = 0; i < this.players.length; i++)
+            this.updatePlayerDeath(dt, i);
         for (const enemy of this.enemies)
             enemy.update(dt, this);
         if (this.boss) {
@@ -403,9 +439,68 @@ export class GameplayScene {
         this.enemies = this.enemies.filter((e) => !e.dead || e.deathTimer < 1.25);
         this.updateCamera(dt);
         this.updateFlow(dt);
-        if (this.player.dead && this.deathTimer > 1.75 && !this.gameOver) {
-            this.openGameOver();
+        if (this.players.every((p) => p.dead)) {
+            this.partyDeathTimer += dt;
+            if (this.partyDeathTimer > 1.75 && !this.gameOver)
+                this.openGameOver();
         }
+        else {
+            this.partyDeathTimer = 0;
+        }
+    }
+    /** Trata a queda de um jogador: coração, reanimação pelo parceiro ou game over. */
+    updatePlayerDeath(dt, index) {
+        const p = this.players[index];
+        if (!p.dead) {
+            this.downed[index] = false;
+            this.deathHandled[index] = false;
+            this.reviveProgress[index] = 0;
+            return;
+        }
+        if (!this.deathHandled[index]) {
+            this.deathHandled[index] = true;
+            if (this.hearts > 0 && !this.gameOver) {
+                this.revivePlayer(index, true);
+                return;
+            }
+            this.game.recordDeath();
+            this.downed[index] = true;
+            this.reviveProgress[index] = 0;
+            const partnerAlive = this.players.some((other, i) => i !== index && !other.dead);
+            this.setBanner(`${p.def.name.toUpperCase()} CAIU`, partnerAlive
+                ? 'APROXIME-SE DO PARCEIRO PARA REANIMAR · OU USE UM CORAÇÃO'
+                : 'SEM CORAÇÕES RESTANTES', '#ff6a9a', 3.2);
+            this.audio.sfx('gameover');
+            this.game.slowMo(0.45, 1.1);
+            return;
+        }
+        if (!this.downed[index])
+            return;
+        // Reanimação cooperativa: ficar próximo do corpo por alguns segundos.
+        const helper = this.players.find((other, i) => i !== index &&
+            !other.dead &&
+            Math.abs(other.x - p.x) < 125 &&
+            Math.abs(other.centerY - p.centerY) < 130);
+        if (helper) {
+            this.reviveProgress[index] = Math.min(1, this.reviveProgress[index] + dt / 2.2);
+            if (this.reviveProgress[index] >= 1)
+                this.revivePlayer(index, false);
+        }
+        else {
+            this.reviveProgress[index] = Math.max(0, this.reviveProgress[index] - dt / 3);
+        }
+    }
+    /** Centro horizontal da party (jogadores vivos), usado pela câmera e pelo fluxo. */
+    partyX() {
+        const alive = this.players.filter((p) => !p.dead);
+        const focus = alive.length > 0 ? alive : this.players;
+        let min = Number.POSITIVE_INFINITY;
+        let max = Number.NEGATIVE_INFINITY;
+        for (const p of focus) {
+            min = Math.min(min, p.x);
+            max = Math.max(max, p.x);
+        }
+        return (min + max) / 2;
     }
     updateCamera(dt) {
         if (this.locked) {
@@ -413,18 +508,21 @@ export class GameplayScene {
             return;
         }
         const maxCam = Math.max(0, this.stage.width - this.viewW);
-        const target = clamp(this.player.x - this.viewW * 0.42, 0, maxCam);
+        // A câmera enquadra o grupo: metade do caminho entre os jogadores vivos.
+        const target = clamp(this.partyX() - this.viewW * 0.5, 0, maxCam);
         this.camera.update(dt, target);
     }
     updateFlow(dt) {
+        const anyAlive = this.players.some((p) => !p.dead);
         if (this.phase === 'bonus') {
-            if (!this.player.dead)
+            if (anyAlive)
                 this.updateBonus(dt);
             return;
         }
-        if (this.player.dead || this.phase !== 'combat')
+        if (!anyAlive || this.phase !== 'combat')
             return;
         this.updatePressureEvents();
+        const partyX = this.partyX();
         // Fim de onda.
         if (this.waveActive) {
             const alive = this.enemies.some((e) => !e.dead);
@@ -437,14 +535,14 @@ export class GameplayScene {
             !this.bonusTriggered &&
             this.waveIndex >= 2 &&
             this.waveIndex < this.stage.waves.length &&
-            this.player.x >= this.bonusAt) {
+            partyX >= this.bonusAt) {
             this.startBonus();
             return;
         }
-        // Próxima onda por proximidade.
+        // Próxima onda por proximidade do grupo.
         if (this.waveIndex < this.stage.waves.length) {
             const wave = this.stage.waves[this.waveIndex];
-            if (this.player.x >= wave.at - 20)
+            if (partyX >= wave.at - 20)
                 this.startWave(wave);
             return;
         }
@@ -456,7 +554,7 @@ export class GameplayScene {
         // Arena do chefe.
         if (!this.boss) {
             const trigger = Math.max(this.stage.waves[this.stage.waves.length - 1].at + 160, this.stage.width - 760);
-            if (this.player.x >= trigger)
+            if (partyX >= trigger)
                 this.spawnBoss();
             return;
         }
@@ -477,7 +575,7 @@ export class GameplayScene {
             // O combate terminou: a tensão sai e o tema do plano volta para o finale.
             this.audio.playMusic(this.stage.music);
             this.persistRecord();
-            this.after(2.7, () => this.game.finishStage(this.stage.id, this.player.charId));
+            this.after(2.7, () => this.game.finishStage(this.stage.id, this.player.charId, this.isCoop));
         }
     }
     completeChapter() {
@@ -488,11 +586,11 @@ export class GameplayScene {
         this.audio.playMusic(this.stage.music);
         this.addScore(1500);
         this.setBanner('CAPÍTULO CONCLUÍDO', `${this.stage.subtitle.toUpperCase()} · RANK ${this.rank} · ${this.score} PTS`, '#8df4a8', 3.2);
-        this.particles.ring(this.player.x, this.stage.floor - 30, this.stage.palette.accent, 180, 0.7, 6);
+        this.particles.ring(this.partyX(), this.stage.floor - 30, this.stage.palette.accent, 180, 0.7, 6);
         this.game.flash(this.stage.palette.accent, 0.16);
         this.audio.sfx('victory');
         this.persistRecord();
-        this.after(2.4, () => this.game.finishStage(this.stage.id, this.player.charId));
+        this.after(2.4, () => this.game.finishStage(this.stage.id, this.player.charId, this.isCoop));
     }
     startWave(wave) {
         this.waveActive = true;
@@ -503,7 +601,7 @@ export class GameplayScene {
         this.waveKillStart = this.kills;
         this.discover(wave.spawns.map((group) => archiveCreatureId(this.stage.arc, group.kind)), 'CRIATURA AVISTADA');
         const maxCam = Math.max(0, this.stage.width - this.viewW);
-        const lock = clamp(this.player.x - this.viewW * 0.44, 0, maxCam);
+        const lock = clamp(this.partyX() - this.viewW * 0.44, 0, maxCam);
         this.camera.setBounds(lock, lock);
         this.camera.snapTo(lock);
         let index = 0;
@@ -511,7 +609,7 @@ export class GameplayScene {
             for (let i = 0; i < group.count; i++) {
                 const side = index % 2 === 0 ? 1 : -1;
                 const distance = 215 + Math.floor(index / 2) * 118 + Math.random() * 28;
-                const x = clamp(this.player.x + side * distance, this.camera.x + 92, this.camera.x + this.viewW - 92);
+                const x = clamp(this.partyX() + side * distance, this.camera.x + 92, this.camera.x + this.viewW - 92);
                 this.spawnEnemy(group.kind, x, group.elite);
                 this.waveSpawned++;
                 index++;
@@ -534,7 +632,12 @@ export class GameplayScene {
         this.waveIndex++;
         this.camera.setBounds(0, Math.max(0, this.stage.width - this.viewW));
         // Cura menor: as vidas extras vêm da Câmara do Coração, não de ondas fáceis.
-        this.healPlayer(this.player.maxHp * 0.07 + 2);
+        this.healParty(this.player.maxHp * 0.07 + 2);
+        // O fim da onda também levanta o parceiro caído.
+        for (let i = 0; i < this.players.length; i++) {
+            if (this.players[i].dead && this.downed[i])
+                this.revivePlayer(i, false, true);
+        }
         this.persistRecord();
         if (this.waveIndex >= this.stage.waves.length) {
             if (this.stage.boss) {
@@ -566,7 +669,7 @@ export class GameplayScene {
         this.boss.hp = this.boss.maxHp;
         this.bossWasIntro = true;
         this.bossCleared = false;
-        this.game.save.bestCombo = Math.max(this.game.save.bestCombo, this.maxCombo, this.player.bestCombo);
+        this.game.save.bestCombo = Math.max(this.game.save.bestCombo, this.maxCombo, ...this.players.map((p) => p.bestCombo));
         this.game.persist();
         this.setBanner(this.boss.def.name, this.boss.def.title, this.boss.def.colors.accent, 4.4);
         this.audio.playBossMusic(this.stage.arc);
@@ -587,8 +690,9 @@ export class GameplayScene {
     }
     persistRecord() {
         const save = this.game.save;
+        const bestCombo = Math.max(this.maxCombo, ...this.players.map((p) => p.bestCombo), ...this.players.map((p) => p.comboHits));
         save.hearts = this.hearts;
-        save.bestCombo = Math.max(save.bestCombo, this.maxCombo, this.player.bestCombo);
+        save.bestCombo = Math.max(save.bestCombo, bestCombo);
         save.bestScore = Math.max(save.bestScore, this.score);
         if (rankValue(this.rank) > rankValue(save.bestRank))
             save.bestRank = this.rank;
@@ -598,13 +702,15 @@ export class GameplayScene {
         // A Câmara é um desafio opcional, não uma fonte de vidas em série.
         return 1;
     }
-    revivePlayer() {
-        this.hearts = Math.max(0, this.hearts - 1);
-        this.game.save.hearts = this.hearts;
-        this.game.persist();
-        const p = this.player;
+    revivePlayer(index, spendHeart, fromWave = false) {
+        const p = this.players[index];
+        if (spendHeart) {
+            this.hearts = Math.max(0, this.hearts - 1);
+            this.game.save.hearts = this.hearts;
+            this.game.persist();
+        }
         p.dead = false;
-        p.hp = Math.max(1, Math.round(p.maxHp * 0.3));
+        p.hp = Math.max(1, Math.round(p.maxHp * (fromWave ? 0.4 : 0.3)));
         p.invuln = 1.8;
         p.hitstun = 0;
         p.stunTime = 0;
@@ -619,8 +725,9 @@ export class GameplayScene {
         p.attack = null;
         p.comboHits = 0;
         p.state = 'idle';
-        this.deathHandled = false;
-        this.deathTimer = 0;
+        this.deathHandled[index] = false;
+        this.downed[index] = false;
+        this.reviveProgress[index] = 0;
         this.pressure = clamp(this.pressure - 6, 0, 100);
         // O coração limpa o entorno para a segunda chance ser justa.
         this.hazards = this.hazards.filter((h) => h.owner !== 'enemy');
@@ -633,12 +740,21 @@ export class GameplayScene {
             enemy.vx = Math.sign(enemy.x - p.x || 1) * 340;
             enemy.stunTime = Math.max(enemy.stunTime, 0.45);
         }
-        this.setBanner('CORAÇÃO CONSUMIDO', `${this.hearts} RESTANTE(S) · 30% DE VIDA · INVULNERÁVEL`, '#ff6a9a', 3.2);
-        this.text('VIDA EXTRA', p.x, p.centerY - 70, '#ff9bb8', 22);
-        this.particles.ring(p.x, p.centerY, '#ff6a9a', 170, 0.7, 5);
-        this.game.flash('#ff6a9a', 0.22);
-        this.game.slowMo(0.45, 0.45);
-        this.audio.sfx('heal');
+        if (spendHeart) {
+            this.setBanner('CORAÇÃO CONSUMIDO', `${this.hearts} RESTANTE(S) · 30% DE VIDA · INVULNERÁVEL`, '#ff6a9a', 3.2);
+            this.text('VIDA EXTRA', p.x, p.centerY - 70, '#ff9bb8', 22);
+            this.particles.ring(p.x, p.centerY, '#ff6a9a', 170, 0.7, 5);
+            this.game.flash('#ff6a9a', 0.22);
+            this.game.slowMo(0.45, 0.45);
+            this.audio.sfx('heal');
+        }
+        else {
+            this.setBanner('PARCEIRO REANIMADO', `${p.def.name.toUpperCase()} VOLTOU À LUTA`, p.def.colors.accent, 3);
+            this.text('REANIMADO', p.x, p.centerY - 70, p.def.colors.accent, 20);
+            this.particles.ring(p.x, p.centerY, p.def.colors.accent, 130, 0.6, 4);
+            this.game.flash(p.def.colors.accent, 0.14);
+            this.audio.sfx('heal');
+        }
     }
     updatePressureEvents() {
         if (this.waveActive && !this.hunterSpawned && rankValue(this.rank) >= rankValue('S')) {
@@ -654,8 +770,9 @@ export class GameplayScene {
     spawnHunter() {
         const kinds = ['hound', 'brute', 'seraph', 'shade', 'construct', 'echo'];
         const kind = kinds[clamp(this.stage.arc - 1, 0, kinds.length - 1)];
-        const side = this.player.x < this.camera.x + this.viewW / 2 ? 1 : -1;
-        const x = clamp(this.player.x + side * 420, this.camera.x + 92, this.camera.x + this.viewW - 92);
+        const center = this.partyX();
+        const side = center < this.camera.x + this.viewW / 2 ? 1 : -1;
+        const x = clamp(center + side * 420, this.camera.x + 92, this.camera.x + this.viewW - 92);
         this.hunter = this.spawnEnemy(kind, x, true);
         this.hunterSpawned = true;
         this.discover([archiveCreatureId(this.stage.arc, this.hunter.def.kind)], 'CAÇADOR REVELADO');
@@ -667,7 +784,7 @@ export class GameplayScene {
     }
     spawnAnomaly() {
         const side = Math.random() < 0.5 ? -1 : 1;
-        const x = clamp(this.player.x + side * (240 + Math.random() * 150), this.camera.x + 120, this.camera.x + this.viewW - 120);
+        const x = clamp(this.partyX() + side * (240 + Math.random() * 150), this.camera.x + 120, this.camera.x + this.viewW - 120);
         this.obstacles.push(new StageObstacle('fracture', x, this.stage.floor, this.stage, { temporary: true, life: 8 }));
         this.discover([archiveRelicId('fracture')], 'ANOMALIA REVELADA');
         this.text('ANOMALIA', x, this.stage.floor - 132, '#ff5a3c', 15);
@@ -689,7 +806,7 @@ export class GameplayScene {
         this.hazards = this.hazards.filter((h) => h.owner !== 'enemy');
         this.projectiles = this.projectiles.filter((p) => p.owner !== 'enemy');
         const maxCam = Math.max(0, this.stage.width - this.viewW);
-        const lock = clamp(this.player.x - this.viewW * 0.45, 0, maxCam);
+        const lock = clamp(this.partyX() - this.viewW * 0.45, 0, maxCam);
         this.camera.setBounds(lock, lock);
         this.camera.snapTo(lock);
         for (let i = 0; i < this.bonusTotal; i++) {
@@ -713,10 +830,10 @@ export class GameplayScene {
             mote.phase += dt;
             mote.y = mote.baseY + Math.sin(mote.phase * 2.2) * 7;
         }
-        const p = this.player;
         for (let i = this.bonusMotes.length - 1; i >= 0; i--) {
             const mote = this.bonusMotes[i];
-            if (Math.hypot(p.x - mote.x, p.centerY - mote.y) > 58)
+            const collector = this.players.find((p) => !p.dead && Math.hypot(p.x - mote.x, p.centerY - mote.y) <= 58);
+            if (!collector)
                 continue;
             this.bonusMotes.splice(i, 1);
             this.bonusCollected++;
@@ -738,9 +855,9 @@ export class GameplayScene {
             this.finishBonus();
     }
     spawnBonusHazard() {
-        const p = this.player;
+        const center = this.partyX();
         const side = Math.random() < 0.5 ? -1 : 1;
-        const x = clamp(p.x + side * (90 + Math.random() * 240), this.camera.x + 90, this.camera.x + this.viewW - 90);
+        const x = clamp(center + side * (90 + Math.random() * 240), this.camera.x + 90, this.camera.x + this.viewW - 90);
         this.spawnHazard({
             kind: 'explosion',
             x,
@@ -770,12 +887,13 @@ export class GameplayScene {
         this.bonusMotes = [];
         this.bonusTimer = 0;
         this.hazards = this.hazards.filter((h) => h.owner !== 'enemy');
-        this.player.invuln = Math.max(this.player.invuln, 0.8);
+        for (const p of this.players)
+            p.invuln = Math.max(p.invuln, 0.8);
         this.camera.setBounds(0, Math.max(0, this.stage.width - this.viewW));
         this.persistRecord();
         if (gained > 0) {
             this.setBanner('CORAÇÃO CONQUISTADO', `${gained} VIDA(S) EXTRA(S) · ${this.bonusCollected}/${this.bonusTotal} COLETADOS`, '#ff6a9a', 3.4);
-            this.particles.ring(this.player.x, this.player.centerY, '#ff6a9a', 190, 0.7, 6);
+            this.particles.ring(this.partyX(), this.stage.floor - 60, '#ff6a9a', 190, 0.7, 6);
             this.game.flash('#ff6a9a', 0.18);
             this.audio.sfx('heal');
         }
@@ -790,7 +908,7 @@ export class GameplayScene {
     }
     // ------------------------------------------------------------ menus
     openPause() {
-        if (this.player.dead)
+        if (this.players.every((p) => p.dead))
             return;
         this.paused = true;
         // Mouse e botão B voltam ao contexto de menu enquanto a pausa estiver aberta.
@@ -806,7 +924,11 @@ export class GameplayScene {
         this.audio.sfx('ui');
     }
     updatePauseMenu() {
-        if (this.input.pressed('pause') || this.input.pressed('back') || this.input.pressed('cancel')) {
+        if (this.input.pressed('pause') ||
+            this.input.pressed('back') ||
+            this.input.pressed('cancel') ||
+            this.input.pressed('pause', 1) ||
+            this.input.pressed('cancel', 1)) {
             this.paused = false;
             this.input.setGameplayContext(true);
             this.game.setTouchControlsVisible(true);
@@ -818,7 +940,7 @@ export class GameplayScene {
             this.game.gotoTitle();
             return;
         }
-        const action = this.pauseMenu.update(this.input, this.audio);
+        const action = this.pauseMenu.update(this.input, this.audio) ?? this.pauseMenu.update(this.input, this.audio, 1);
         if (!action)
             return;
         switch (action) {
@@ -828,15 +950,29 @@ export class GameplayScene {
                 this.game.setTouchControlsVisible(true);
                 break;
             case 'swap':
-                this.game.gotoCharacterSelect(this.stage.id, this.player.charId);
+                this.leaveToMap();
                 break;
             case 'restart':
-                this.game.transitionTo(() => this.game.showGameplay(this.stage.id, this.player.charId));
+                this.restartScene();
                 break;
             case 'title':
                 this.game.gotoTitle();
                 break;
         }
+    }
+    restartScene() {
+        if (this.isCoop) {
+            this.game.transitionTo(() => this.game.showCoopGameplay(this.stage.id, this.players[0].charId, this.players[1].charId));
+        }
+        else {
+            this.game.transitionTo(() => this.game.showGameplay(this.stage.id, this.players[0].charId));
+        }
+    }
+    leaveToMap() {
+        if (this.isCoop)
+            this.game.gotoMultiplayer();
+        else
+            this.game.gotoCharacterSelect(this.stage.id, this.player.charId);
     }
     openGameOver() {
         this.gameOver = true;
@@ -859,15 +995,15 @@ export class GameplayScene {
             this.game.gotoTitle();
             return;
         }
-        const action = this.gameOverMenu.update(this.input, this.audio);
+        const action = this.gameOverMenu.update(this.input, this.audio) ?? this.gameOverMenu.update(this.input, this.audio, 1);
         if (!action)
             return;
         switch (action) {
             case 'retry':
-                this.game.transitionTo(() => this.game.showGameplay(this.stage.id, this.player.charId));
+                this.restartScene();
                 break;
             case 'swap':
-                this.game.gotoCharacterSelect(this.stage.id, this.player.charId);
+                this.leaveToMap();
                 break;
             case 'title':
                 this.game.gotoTitle();
@@ -921,7 +1057,7 @@ export class GameplayScene {
         const actors = [...this.enemies];
         if (this.boss)
             actors.push(this.boss);
-        actors.push(this.player);
+        actors.push(...this.players);
         actors.sort((a, b) => a.y - b.y);
         for (const actor of actors) {
             if (actor instanceof Boss)
@@ -931,6 +1067,8 @@ export class GameplayScene {
             else if (actor instanceof Player)
                 drawPlayer(ctx, actor, this.time);
         }
+        if (this.isCoop)
+            this.drawPartyMarkers(ctx);
         for (const p of this.projectiles)
             p.draw(ctx);
         for (const mote of this.bonusMotes) {
@@ -965,6 +1103,9 @@ export class GameplayScene {
         this.drawArenaFrame(ctx);
         drawHud(ctx, {
             player: this.player,
+            playerRevive: this.reviveProgress[0] ?? 0,
+            partner: this.players[1] ?? null,
+            partnerRevive: this.players[1] ? this.reviveProgress[1] ?? 0 : 0,
             stage: this.stage,
             waveIndex: this.waveIndex,
             waveCount: this.stage.waves.length,
@@ -996,12 +1137,71 @@ export class GameplayScene {
         if (this.gameOver)
             this.drawGameOver(ctx);
     }
+    /** Marcadores de party no mundo: anel de cor, etiqueta P1/P2 e reanimação. */
+    drawPartyMarkers(ctx) {
+        const colors = ['#56e3ff', '#ffd166'];
+        this.players.forEach((p, i) => {
+            const color = colors[i] ?? '#ffffff';
+            if (!p.dead) {
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.globalAlpha = 0.5;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.ellipse(p.x, p.y + 2, 30 * p.scale, 9, 0, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            }
+            const downed = this.downed[i] && p.dead;
+            const tag = downed ? `P${i + 1} CAÍDO` : `P${i + 1}`;
+            const tagY = p.y - 146 * p.scale;
+            const tagW = 22 + tag.length * 6.4;
+            ctx.save();
+            ctx.globalAlpha = p.dead ? 0.92 : 0.78;
+            ctx.fillStyle = 'rgba(5,8,16,0.82)';
+            roundRectPath(ctx, p.x - tagW / 2, tagY - 16, tagW, 20, 9);
+            ctx.fill();
+            ctx.strokeStyle = hexToRgba(color, 0.7);
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+            label(ctx, tag, p.x, tagY - 1, 9.5, color, {
+                align: 'center',
+                font: FONTS.mono,
+                weight: 700,
+                spacing: 0.8,
+                alpha: p.dead ? 0.85 : 0.95,
+            });
+            if (downed) {
+                const barW = 128;
+                const bx = p.x - barW / 2;
+                const by = tagY + 10;
+                const progress = this.reviveProgress[i];
+                ctx.save();
+                ctx.fillStyle = 'rgba(5,8,16,0.82)';
+                roundRectPath(ctx, bx, by, barW, 8, 3);
+                ctx.fill();
+                ctx.fillStyle = color;
+                if (progress > 0.001) {
+                    roundRectPath(ctx, bx, by, barW * progress, 8, 3);
+                    ctx.fill();
+                }
+                ctx.strokeStyle = hexToRgba(color, 0.45);
+                ctx.lineWidth = 1;
+                roundRectPath(ctx, bx + 0.5, by + 0.5, barW - 1, 7, 3);
+                ctx.stroke();
+                ctx.restore();
+                label(ctx, progress > 0.001 ? 'REANIMANDO…' : 'APROXIME-SE PARA REANIMAR', p.x, by + 22, 8.5, hexToRgba(color, 0.9), { align: 'center', font: FONTS.mono, spacing: 0.7 });
+            }
+        });
+    }
     /** Camada de pós-processamento do modo anime: linhas de velocidade, impacto e cor. */
     drawAnimeScreen(ctx, camX) {
         const w = this.viewW;
         const h = this.viewH;
-        const speed = Math.abs(this.player.vx);
-        const dashing = this.player.dashTime > 0;
+        const speed = Math.max(...this.players.map((p) => Math.abs(p.vx)));
+        const dashing = this.players.some((p) => p.dashTime > 0);
         if (dashing || speed > 260) {
             const power = dashing ? 1 : clamp((speed - 260) / 180, 0, 1);
             ctx.save();
@@ -1068,7 +1268,7 @@ export class GameplayScene {
     drawScreenPostFx(ctx) {
         const w = this.viewW;
         const h = this.viewH;
-        const hpDanger = clamp(1 - this.player.hpRatio, 0, 1);
+        const hpDanger = Math.max(...this.players.map((p) => (p.dead ? 1 : clamp(1 - p.hpRatio, 0, 1))));
         const bossDanger = this.boss ? clamp(this.boss.phaseIndex / 2, 0, 1) : 0;
         const danger = clamp(hpDanger * 0.7 + bossDanger * 0.45, 0, 1);
         const pressure = clamp(this.pressure / 100, 0, 1);
@@ -1194,7 +1394,11 @@ export class GameplayScene {
             font: FONTS.mono,
             spacing: 0.8,
         });
-        label(ctx, `VIDA ${Math.ceil(p.hp)} / ${p.maxHp}   ·   ABATES ${this.kills}`, x + 142, y + 157, 10.5, 'rgba(200,208,228,0.7)', {
+        const partner = this.players[1];
+        const partnerLine = partner
+            ? `   ·   P2 ${partner.dead ? 'CAÍDO' : `${Math.ceil(partner.hp)}/${partner.maxHp}`}`
+            : '';
+        label(ctx, `P1 ${Math.ceil(p.hp)} / ${p.maxHp}${partnerLine}   ·   ABATES ${this.kills}`, x + 142, y + 157, 10.5, 'rgba(200,208,228,0.7)', {
             font: FONTS.mono,
             spacing: 0.8,
         });
@@ -1249,7 +1453,7 @@ export class GameplayScene {
             label(ctx, key, cx + 31, cyy, 9, '#ffffff', { align: 'center', font: FONTS.mono, weight: 700 });
             label(ctx, action, cx + 72, cyy, 10, 'rgba(200,208,228,0.65)', { font: FONTS.mono, spacing: 0.8 });
         });
-        label(ctx, this.game.isTouchDevice ? 'TOQUE NOS ITENS · ⌂ MENU ACIMA' : 'ESC / BACKSPACE FECHAR · M ÁUDIO', x + w - 32, y + h - 18, 9, 'rgba(170,178,200,0.42)', {
+        label(ctx, this.game.isTouchDevice ? 'TOQUE NOS ITENS · ⌂ MENU ACIMA' : 'ESC / BACKSPACE FECHAR · P2 USA O 2º CONTROLE', x + w - 32, y + h - 18, 9, 'rgba(170,178,200,0.42)', {
             align: 'right',
             font: FONTS.mono,
             spacing: 1,
@@ -1289,7 +1493,8 @@ export class GameplayScene {
             font: FONTS.mono,
             spacing: 1.1,
         });
-        label(ctx, 'O VÉU O DEVOROU', this.viewW / 2, y + 76, 40, '#ffe7eb', {
+        const names = this.players.map((p) => p.def.name.toUpperCase()).join('  ·  ');
+        label(ctx, this.isCoop ? 'A PARTY CAIU' : 'O VÉU O DEVOROU', this.viewW / 2, y + 76, 40, '#ffe7eb', {
             align: 'center',
             weight: 800,
             spacing: 4,
@@ -1297,7 +1502,7 @@ export class GameplayScene {
             outline: 'rgba(0,0,0,0.6)',
             outlineWidth: 4,
         });
-        label(ctx, `${this.player.def.name.toUpperCase()} CAIU NO ${this.stage.subtitle.toUpperCase()} — ${this.stage.name.toUpperCase()}`, this.viewW / 2, y + 100, 10.5, hexToRgba(accent, 0.9), {
+        label(ctx, `${names} CAÍRAM NO ${this.stage.subtitle.toUpperCase()} — ${this.stage.name.toUpperCase()}`, this.viewW / 2, y + 100, 10.5, hexToRgba(accent, 0.9), {
             align: 'center',
             font: FONTS.mono,
             spacing: 1.2,
@@ -1306,7 +1511,7 @@ export class GameplayScene {
             ['PONTOS', String(this.score).padStart(6, '0')],
             ['RANK', this.rank],
             ['ABATES', String(this.kills)],
-            ['COMBO', String(Math.max(this.maxCombo, this.player.bestCombo)).padStart(2, '0')],
+            ['COMBO', String(Math.max(this.maxCombo, ...this.players.map((p) => p.bestCombo))).padStart(2, '0')],
         ];
         stats.forEach(([k, v], i) => {
             const sx = x + 86 + i * 150;

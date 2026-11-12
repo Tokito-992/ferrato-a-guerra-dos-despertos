@@ -1,5 +1,5 @@
 /** Projéteis e zonas de perigo (magma, singularidade, raios, fendas...). */
-import { clamp, rectsOverlap, TAU } from '../core/math.js?v=6ccbb66fdb55';
+import { clamp, rectsOverlap, TAU } from '../core/math.js?v=876088114997';
 export class Projectile {
     constructor(def) {
         this.spinAngle = 0;
@@ -33,7 +33,7 @@ export class Projectile {
         }
         this.vy += this.gravity * dt;
         if (this.homing > 0 && this.owner === 'enemy') {
-            const p = world.player;
+            const p = world.nearestPlayer(this.x, this.y);
             const angle = Math.atan2(p.centerY - this.y, p.x - this.x);
             const speed = Math.hypot(this.vx, this.vy);
             const current = Math.atan2(this.vy, this.vx);
@@ -90,18 +90,20 @@ export class Projectile {
             }
         }
         else {
-            const p = world.player;
-            if (!p.dead && rectsOverlap(this.box, p.hurtbox)) {
+            for (const p of world.players) {
+                if (p.dead || !rectsOverlap(this.box, p.hurtbox))
+                    continue;
                 const dealt = world.damagePlayer(this.damage, {
                     fromX: this.x - this.vx,
                     knockback: 180,
                     hitstun: 0.2,
                     color: this.color,
-                });
+                }, p);
                 world.particles.burst(this.x, this.y, 8, this.color, { speed: 190, gravity: 180, size: 2.8 });
                 if (dealt > 0)
                     world.hitStop(0.03);
                 this.dead = true;
+                break;
             }
         }
         if (this.x < world.camera.x - 220 || this.x > world.camera.x + world.viewW + 220) {
@@ -319,11 +321,14 @@ export class Hazard {
             }
         }
         else {
-            const p = world.player;
-            const dx = this.x - p.x;
-            const dist = Math.abs(dx);
-            if (dist < this.radius * 2) {
-                p.vx += Math.sign(dx) * this.pull * dt * 2.2;
+            for (const p of world.players) {
+                if (p.dead)
+                    continue;
+                const dx = this.x - p.x;
+                const dist = Math.abs(dx);
+                if (dist < this.radius * 2) {
+                    p.vx += Math.sign(dx) * this.pull * dt * 2.2;
+                }
             }
         }
     }
@@ -360,15 +365,16 @@ export class Hazard {
             }
         }
         else {
-            const p = world.player;
-            if (!p.dead && rectsOverlap(this.box, p.hurtbox)) {
+            for (const p of world.players) {
+                if (p.dead || !rectsOverlap(this.box, p.hurtbox))
+                    continue;
                 world.damagePlayer(dmg, {
                     fromX: this.x,
                     knockback: this.kind === 'void' ? 60 : 220,
                     launch: 100,
                     hitstun: 0.22,
                     color: this.color,
-                });
+                }, p);
             }
         }
     }

@@ -191,7 +191,7 @@ export class Enemy extends Combatant {
   }
 
   private updateAI(dt: number, world: World): void {
-    const player = world.player;
+    const player = world.nearestPlayer(this.x, this.centerY);
     const dx = player.x - this.x;
     const adx = Math.abs(dx);
     this.aimX = player.x;
@@ -597,9 +597,9 @@ export class Enemy extends Combatant {
       kind: 'magma',
       size: 3.4,
     });
-    const distToPlayer = Math.abs(world.player.x - this.x);
-    if (distToPlayer < radius && Math.abs(world.player.y - this.stage.floor) < 90) {
-      world.damagePlayer(this.damageValue * 1.15, {
+    const distToPlayer = Math.abs(world.nearestPlayer(this.x, this.stage.floor).x - this.x);
+    if (distToPlayer < radius) {
+      world.damagePlayers(this.x, this.stage.floor - 30, radius, this.damageValue * 1.15, {
         fromX: this.x,
         knockback: 420,
         launch: 260,
@@ -626,18 +626,19 @@ export class Enemy extends Combatant {
     this.stateTime = 0;
     world.particles.burst(this.x, this.centerY, 12, this.def.accent, { speed: 130, gravity: -40, kind: 'smoke', size: 8 });
     world.audio.sfx('blink');
-    this.faceToward(world.player.x);
+    this.faceToward(world.nearestPlayer(this.x, this.centerY).x);
   }
 
   private hitPlayer(world: World, mult: number, knockback: number): void {
     this.didHit = true;
+    const target = world.nearestPlayer(this.x, this.centerY);
     const dealt = world.damagePlayer(this.damageValue * mult, {
       fromX: this.x,
       knockback,
       launch: 120,
       hitstun: 0.22,
       color: this.def.accent,
-    });
+    }, target);
     if (dealt > 0) {
       world.hitStop(0.045);
       world.shake(0.22);

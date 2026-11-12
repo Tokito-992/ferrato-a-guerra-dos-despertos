@@ -92,6 +92,9 @@ export interface World {
   readonly viewH: number;
   readonly bossActive: boolean;
   readonly locked: boolean;
+  /** Todos os jogadores da sessão (1 no solo, 2 no co-op local). */
+  readonly players: Player[];
+  /** Primeiro jogador; atalho de compatibilidade. */
   player: Player;
   enemies: Enemy[];
   boss: Boss | null;
@@ -100,8 +103,16 @@ export interface World {
   spawnHazard(def: HazardDef): void;
   spawnEnemy(kind: string, x: number, elite?: boolean): Enemy;
   damageEnemy(target: Combatant, damage: number, opts?: HitOptions): void;
-  damagePlayer(damage: number, opts?: HitOptions): number;
-  healPlayer(amount: number): void;
+  /** Jogador vivo mais próximo do ponto informado. */
+  nearestPlayer(x: number, y?: number): Player;
+  /** Dano direcionado; sem alvo, atinge o jogador 1. */
+  damagePlayer(damage: number, opts?: HitOptions, target?: Player): number;
+  /** Dano em área que atinge todos os jogadores dentro do raio. */
+  damagePlayers(x: number, y: number, radius: number, damage: number, opts?: HitOptions): number;
+  /** Cura um jogador específico; sem alvo, cura o jogador 1. */
+  healPlayer(amount: number, target?: Player): void;
+  /** Cura todos os jogadores vivos (recompensa de onda/elite). */
+  healParty(amount: number): void;
   shake(amount: number): void;
   flash(color: string, alpha: number): void;
   hitStop(seconds: number): void;
@@ -111,8 +122,8 @@ export interface World {
   enemyKilled(enemy: Enemy): void;
   /** Impacto pesado no solo (usado por golpes sísmicos). */
   heavyImpact(x: number, y: number, color: string): void;
-  /** Marca um inimigo como "selado" visual e mecanicamente. */
-  sealEnemies(radius: number, duration: number): void;
+  /** Marca um inimigo como "selado" visual e mecanicamente, a partir do ponto informado. */
+  sealEnemies(radius: number, duration: number, x?: number, y?: number): void;
   /** Destrói projéteis inimigos em um raio (usado por habilidades de selo). */
   clearEnemyProjectiles(x: number, y: number, radius: number): void;
 }
