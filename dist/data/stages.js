@@ -10,7 +10,7 @@
  * O sexto capítulo de cada arco é uma crônica de vínculo e lore: o mundo, os
  * monstros, o Ferrato e o motivo de cada Desperto antes do confronto final.
  */
-import { hexToRgba, mixColor } from '../core/math.js?v=2287ee03d2bc';
+import { hexToRgba, mixColor } from '../core/math.js?v=6ccbb66fdb55';
 export const ARC_COUNT = 6;
 export const CHAPTERS_PER_ARC = 7;
 export const MAX_STAGE = ARC_COUNT * CHAPTERS_PER_ARC;

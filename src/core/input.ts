@@ -1,5 +1,8 @@
 /** Entrada de teclado, mouse, toque e controle com noções de "pressionado neste frame". */
 
+import { BINDABLE_ACTIONS, defaultBindings } from './bindings.js';
+import type { BindableAction, ControlBindings } from './bindings.js';
+
 export type Action =
   | 'left'
   | 'right'
@@ -19,30 +22,10 @@ export type Action =
 /** Jogador 1 usa teclado/toque/controle; jogador 2 usa o segundo controle. */
 export type PlayerIndex = 0 | 1;
 
-const KEYMAP: Record<string, Action> = {
-  ArrowLeft: 'left',
-  KeyA: 'left',
-  ArrowRight: 'right',
-  KeyD: 'right',
-  ArrowUp: 'up',
-  KeyW: 'up',
-  ArrowDown: 'down',
-  KeyS: 'down',
-  Space: 'jump',
-  KeyJ: 'attack',
-  KeyK: 'heavy',
-  KeyL: 'dash',
-  ShiftLeft: 'dash',
-  ShiftRight: 'dash',
-  KeyE: 'ability',
-  Enter: 'confirm',
-  NumpadEnter: 'confirm',
-  Escape: 'pause',
-  KeyP: 'pause',
-  KeyM: 'mute',
-  Backspace: 'back',
-  KeyQ: 'back',
-};
+/** Resultado da captura de um novo botão; `null` significa cancelamento. */
+export type BindingCapture =
+  | { device: 'keyboard'; code: string }
+  | { device: 'mouse'; button: number | null };
 
 interface KeyState {
   raw: Set<string>;
@@ -103,6 +86,16 @@ export class Input {
   private virtualPressed = new Set<Action>();
   private virtualReleased = new Set<Action>();
 
+  private bindings: ControlBindings = defaultBindings();
+  private keymap = new Map<string, Action>();
+  private rawPressed = new Set<string>();
+  private mouseButtonsDown = new Set<number>();
+  private mouseButtonsPressed = new Set<number>();
+  private mouseButtonsReleased = new Set<number>();
+  private captureDevice: 'keyboard' | 'mouse' | null = null;
+  private captureCallback: ((capture: BindingCapture | null) => void) | null = null;
+  private suppressClickUntil = 0;
+
   private pads: [PadState, PadState] = [emptyPadState(), emptyPadState()];
   private padSlots: [number | null, number | null] = [null, null];
   private padRepeat: [Map<Action, number>, Map<Action, number>] = [new Map(), new Map()];
@@ -119,6 +112,7 @@ export class Input {
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
+    this.setBindings(this.bindings);
     this.touchMode =
       'ontouchstart' in window ||
       (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0) ||
@@ -132,6 +126,7 @@ export class Input {
     window.addEventListener('mouseup', this.handleMouseUp);
     canvas.addEventListener('click', this.handleClick);
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    canvas.addEventListener('auxclick', (e) => e.preventDefault());
     canvas.addEventListener('touchstart', this.handleTouchStart, { passive: false });
     canvas.addEventListener('touchmove', this.handleTouchMove, { passive: false });
     canvas.addEventListener('touchend', this.handleTouchEnd, { passive: false });
@@ -147,20 +142,32 @@ export class Input {
   private handleKeyDown = (e: KeyboardEvent): void => {
     // Overlays de interface (ex.: guia de instalação) têm prioridade no teclado.
     if (document.body.classList.contains('ui-overlay-open')) return;
-    const action = KEYMAP[e.code];
+
+    if (this.captureDevice) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.repeat) return;
+      if (e.code === 'Escape') {
+        this.finishCapture(null);
+        return;
+      }
+      if (this.captureDevice === 'keyboard') {
+        this.finishCapture({ device: 'keyboard', code: e.code });
+      } else if (e.code === 'Delete' || e.code === 'Backspace') {
+        this.finishCapture({ device: 'mouse', button: null });
+      }
+      return;
+    }
+
+    const action = this.keymap.get(e.code);
     this.fireGesture();
-    if (!action) return;
+    this.rawPressed.add(e.code);
     // Evita rolagem/atalhos do navegador nos controles do jogo.
-    if (
-      e.code === 'Space' ||
-      e.code === 'ArrowUp' ||
-      e.code === 'ArrowDown' ||
-      e.code === 'ArrowLeft' ||
-      e.code === 'ArrowRight' ||
-      e.code === 'Backspace'
-    ) {
+    if (e.code === 'Space' || e.code === 'Backspace' || e.code.startsWith('Arrow')) {
       e.preventDefault();
     }
+    if (!action) return;
+    e.preventDefault();
     if (!this.state.raw.has(e.code)) {
       this.state.pressed.add(action);
     }
@@ -169,13 +176,17 @@ export class Input {
   };
 
   private handleKeyUp = (e: KeyboardEvent): void => {
-    const action = KEYMAP[e.code];
+    const action = this.keymap.get(e.code);
     this.state.raw.delete(e.code);
     if (!action) return;
     // Só libera a ação se nenhuma tecla alternativa ainda estiver pressionada.
-    const stillDown = Object.entries(KEYMAP).some(
-      ([code, act]) => act === action && this.state.raw.has(code),
-    );
+    let stillDown = false;
+    for (const [code, act] of this.keymap) {
+      if (act === action && this.state.raw.has(code)) {
+        stillDown = true;
+        break;
+      }
+    }
     if (!stillDown) {
       this.state.down.delete(action);
       this.state.released.add(action);
@@ -185,13 +196,84 @@ export class Input {
   private handleBlur = (): void => {
     this.state.raw.clear();
     this.state.down.clear();
+    this.rawPressed.clear();
+    this.mouseButtonsDown.clear();
     this.releaseAllVirtual();
+    this.finishCapture(null);
   };
 
   private handleGamepadConnected = (e: GamepadEvent): void => {
     this.fireGesture();
     this.onGamepadConnected?.(e.gamepad.index);
   };
+
+  /** Atualiza o mapa de teclas a partir do save. */
+  setBindings(bindings: ControlBindings): void {
+    this.bindings = bindings;
+    this.keymap.clear();
+    for (const action of BINDABLE_ACTIONS) {
+      for (const code of bindings[action].keyboard) {
+        if (!this.keymap.has(code)) this.keymap.set(code, action);
+      }
+    }
+    // Escape é reservado para cancelar/voltar em qualquer tela.
+    this.keymap.set('Escape', 'pause');
+  }
+
+  /** Captura o próximo botão pressionado (usado pela tela de controles). */
+  captureNext(
+    device: 'keyboard' | 'mouse',
+    callback: (capture: BindingCapture | null) => void,
+  ): void {
+    this.cancelCapture();
+    this.clear();
+    this.captureDevice = device;
+    this.captureCallback = callback;
+  }
+
+  cancelCapture(): void {
+    if (!this.captureDevice) return;
+    this.finishCapture(null);
+  }
+
+  isCapturing(): boolean {
+    return this.captureDevice !== null;
+  }
+
+  private finishCapture(capture: BindingCapture | null): void {
+    const callback = this.captureCallback;
+    this.captureDevice = null;
+    this.captureCallback = null;
+    this.mouse.clicked = false;
+    this.mouseButtonsPressed.clear();
+    this.mouseButtonsReleased.clear();
+    this.state.pressed.clear();
+    this.state.released.clear();
+    callback?.(capture);
+  }
+
+  /** Tecla crua do frame, mesmo que não esteja mapeada (ex.: 1, 2, R). */
+  pressedCode(code: string): boolean {
+    return this.rawPressed.has(code);
+  }
+
+  private mouseActionDown(action: Action): boolean {
+    if (!this.gameplayContext) return false;
+    const binding = this.bindings[action as BindableAction];
+    return Boolean(binding && binding.mouse !== null && this.mouseButtonsDown.has(binding.mouse));
+  }
+
+  private mouseActionPressed(action: Action): boolean {
+    if (!this.gameplayContext) return false;
+    const binding = this.bindings[action as BindableAction];
+    return Boolean(binding && binding.mouse !== null && this.mouseButtonsPressed.has(binding.mouse));
+  }
+
+  private mouseActionReleased(action: Action): boolean {
+    if (!this.gameplayContext) return false;
+    const binding = this.bindings[action as BindableAction];
+    return Boolean(binding && binding.mouse !== null && this.mouseButtonsReleased.has(binding.mouse));
+  }
 
   /** Em combate, B dá dash; nos menus, B volta. */
   setGameplayContext(active: boolean): void {
@@ -310,20 +392,45 @@ export class Input {
   };
 
   private handleMouseDown = (e: MouseEvent): void => {
-    if (e.button !== 0) return;
+    if (this.captureDevice) {
+      if (this.captureDevice === 'mouse') {
+        e.preventDefault();
+        if (e.button === 0) this.suppressClickUntil = performance.now() + 600;
+        this.finishCapture({ device: 'mouse', button: e.button });
+      } else {
+        e.preventDefault();
+      }
+      return;
+    }
+    // Toques sintetizam eventos de mouse em alguns navegadores; não os trate como clique.
+    if (performance.now() - this.lastTouchAt < 700) return;
     this.fireGesture();
     const p = this.eventToCanvas(e);
     this.mouse.x = p.x;
     this.mouse.y = p.y;
-    this.mouse.down = true;
+    if (e.button === 0) this.mouse.down = true;
+    this.mouseButtonsDown.add(e.button);
+    this.mouseButtonsPressed.add(e.button);
+    // Evita autoscroll do botão do meio e navegação dos botões laterais.
+    if (e.button !== 0) e.preventDefault();
   };
 
-  private handleMouseUp = (): void => {
-    this.mouse.down = false;
+  private handleMouseUp = (e: MouseEvent): void => {
+    if (e.button === 0) this.mouse.down = false;
+    if (this.mouseButtonsDown.delete(e.button)) {
+      this.mouseButtonsReleased.add(e.button);
+    }
+    if (e.button !== 0) e.preventDefault();
   };
 
   private handleClick = (e: MouseEvent): void => {
     if (e.button !== 0) return;
+    if (this.captureDevice) return;
+    if (performance.now() < this.suppressClickUntil) {
+      // Consome apenas o clique gerado pelo próprio botão capturado.
+      this.suppressClickUntil = 0;
+      return;
+    }
     // O toque já registra o clique em touchstart; evita confirmação dupla.
     if (performance.now() - this.lastTouchAt < 700) return;
     const p = this.eventToCanvas(e);
@@ -383,21 +490,36 @@ export class Input {
 
   isDown(action: Action, player: PlayerIndex = 0): boolean {
     if (player === 0) {
-      return this.state.down.has(action) || this.virtualDown.has(action) || this.pads[0].down.has(action);
+      return (
+        this.state.down.has(action) ||
+        this.virtualDown.has(action) ||
+        this.pads[0].down.has(action) ||
+        this.mouseActionDown(action)
+      );
     }
     return this.pads[1].down.has(action);
   }
 
   pressed(action: Action, player: PlayerIndex = 0): boolean {
     if (player === 0) {
-      return this.state.pressed.has(action) || this.virtualPressed.has(action) || this.pads[0].pressed.has(action);
+      return (
+        this.state.pressed.has(action) ||
+        this.virtualPressed.has(action) ||
+        this.pads[0].pressed.has(action) ||
+        this.mouseActionPressed(action)
+      );
     }
     return this.pads[1].pressed.has(action);
   }
 
   released(action: Action, player: PlayerIndex = 0): boolean {
     if (player === 0) {
-      return this.state.released.has(action) || this.virtualReleased.has(action) || this.pads[0].released.has(action);
+      return (
+        this.state.released.has(action) ||
+        this.virtualReleased.has(action) ||
+        this.pads[0].released.has(action) ||
+        this.mouseActionReleased(action)
+      );
     }
     return this.pads[1].released.has(action);
   }
@@ -412,11 +534,15 @@ export class Input {
     this.pads[0].released.clear();
     this.pads[1].pressed.clear();
     this.pads[1].released.clear();
+    this.rawPressed.clear();
+    this.mouseButtonsPressed.clear();
+    this.mouseButtonsReleased.clear();
     this.mouse.clicked = false;
     this.mouse.moved = false;
   }
 
   clear(): void {
+    this.cancelCapture();
     this.state.pressed.clear();
     this.state.released.clear();
     this.state.down.clear();
@@ -424,6 +550,10 @@ export class Input {
     this.virtualPressed.clear();
     this.virtualReleased.clear();
     this.virtualDown.clear();
+    this.rawPressed.clear();
+    this.mouseButtonsDown.clear();
+    this.mouseButtonsPressed.clear();
+    this.mouseButtonsReleased.clear();
     this.pads[0].pressed.clear();
     this.pads[0].released.clear();
     this.pads[1].pressed.clear();
@@ -440,5 +570,6 @@ export class Input {
     // Evita que o clique usado para trocar de cena avance a próxima tela.
     this.mouse.clicked = false;
     this.mouse.moved = false;
+    this.mouse.down = false;
   }
 }

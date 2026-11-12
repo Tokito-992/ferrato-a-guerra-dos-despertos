@@ -36,6 +36,16 @@ No GitHub Pages, publique a raiz do repositório (mantendo `index.html`, `styles
 
 Menus também aceitam mouse (clique e hover).
 
+### Remapear teclado e mouse
+
+Em **CONFIGURAÇÕES → CONTROLES DE TECLADO E MOUSE** dá para trocar cada ação:
+
+- **TECLADO**: selecione a ação, aperte `ENTER`/`A` e pressione a tecla nova. A ação passa a usar apenas a tecla escolhida; `R` restaura todos os padrões.
+- **MOUSE**: selecione a ação e clique o botão desejado. `DELETE` remove a atribuição. Os botões do mouse só agem durante o combate; nos menus, o clique esquerdo continua sendo a interface.
+- `ESC` é reservado e sempre volta/cancela, mesmo depois de remapear outras teclas.
+
+Os padrões do mouse são: esquerdo = ataque leve, meio = dash e direito = ataque pesado. O mapeamento do controle (gamepad) continua fixo no padrão.
+
 ### No controle (Gamepad API)
 
 O primeiro controle conectado assume o jogador 1 automaticamente; o segundo fica reservado para o futuro co-op local. O navegador precisa reconhecer o controle como **Standard Gamepad** (Xbox, PlayStation e Switch Pro são compatíveis).

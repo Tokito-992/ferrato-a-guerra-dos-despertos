@@ -959,6 +959,8 @@ export class GameplayScene implements Scene, World {
   private openPause(): void {
     if (this.player.dead) return;
     this.paused = true;
+    // Mouse e botão B voltam ao contexto de menu enquanto a pausa estiver aberta.
+    this.input.setGameplayContext(false);
     // Os botões virtuais não devem ativar itens do menu de pausa.
     this.game.setTouchControlsVisible(false);
     this.pauseMenu.setItems(
@@ -976,6 +978,7 @@ export class GameplayScene implements Scene, World {
   private updatePauseMenu(): void {
     if (this.input.pressed('pause') || this.input.pressed('back') || this.input.pressed('cancel')) {
       this.paused = false;
+      this.input.setGameplayContext(true);
       this.game.setTouchControlsVisible(true);
       this.audio.sfx('ui');
       return;
@@ -990,6 +993,7 @@ export class GameplayScene implements Scene, World {
     switch (action) {
       case 'resume':
         this.paused = false;
+        this.input.setGameplayContext(true);
         this.game.setTouchControlsVisible(true);
         break;
       case 'swap':
@@ -1006,6 +1010,7 @@ export class GameplayScene implements Scene, World {
 
   private openGameOver(): void {
     this.gameOver = true;
+    this.input.setGameplayContext(false);
     this.game.setTouchControlsVisible(false);
     this.persistRecord();
     this.gameOverMenu.setItems(

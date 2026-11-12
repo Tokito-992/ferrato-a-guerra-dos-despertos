@@ -65,6 +65,12 @@ export class SettingsScene implements Scene {
         accent: '#56e3ff',
       },
       {
+        id: 'controls',
+        label: 'CONTROLES DE TECLADO E MOUSE',
+        detail: 'PERSONALIZAR BOTÕES',
+        accent: '#b48bff',
+      },
+      {
         id: 'audio',
         label: 'ÁUDIO',
         detail: this.game.save.muted ? 'SILENCIADO' : 'LIGADO',
@@ -109,6 +115,9 @@ export class SettingsScene implements Scene {
       }
       case 'customize':
         this.startEditing();
+        return;
+      case 'controls':
+        this.game.gotoControls();
         return;
       case 'audio': {
         const muted = this.game.audio.toggleMuted();
@@ -235,9 +244,9 @@ export class SettingsScene implements Scene {
 
     const hasIOSGuide = needsIOSInstallGuide();
     this.menu.draw(ctx, 90, 198, 520, {
-      itemHeight: hasIOSGuide ? 46 : 52,
-      gap: hasIOSGuide ? 7 : 8,
-      size: hasIOSGuide ? 16 : 17,
+      itemHeight: hasIOSGuide ? 42 : 48,
+      gap: hasIOSGuide ? 6 : 7,
+      size: hasIOSGuide ? 15 : 16,
       accent: '#56e3ff',
     });
 

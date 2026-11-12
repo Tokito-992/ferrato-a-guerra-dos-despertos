@@ -1,11 +1,11 @@
 /** Configurações: layout dos controles de toque, dock, áudio e tutorial. */
-import { TITLE_THEME_INDEX } from '../core/audio.js?v=2287ee03d2bc';
-import { hexToRgba } from '../core/math.js?v=2287ee03d2bc';
-import { drawTitleBackground } from '../render/backgrounds.js?v=2287ee03d2bc';
-import { drawCharacterSilhouette } from '../render/characters.js?v=2287ee03d2bc';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=2287ee03d2bc';
-import { Menu } from '../ui/menu.js?v=2287ee03d2bc';
-import { needsIOSInstallGuide } from '../core/platform.js?v=2287ee03d2bc';
+import { TITLE_THEME_INDEX } from '../core/audio.js?v=6ccbb66fdb55';
+import { hexToRgba } from '../core/math.js?v=6ccbb66fdb55';
+import { drawTitleBackground } from '../render/backgrounds.js?v=6ccbb66fdb55';
+import { drawCharacterSilhouette } from '../render/characters.js?v=6ccbb66fdb55';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=6ccbb66fdb55';
+import { Menu } from '../ui/menu.js?v=6ccbb66fdb55';
+import { needsIOSInstallGuide } from '../core/platform.js?v=6ccbb66fdb55';
 export class SettingsScene {
     constructor(game) {
         this.game = game;
@@ -56,6 +56,12 @@ export class SettingsScene {
                 accent: '#56e3ff',
             },
             {
+                id: 'controls',
+                label: 'CONTROLES DE TECLADO E MOUSE',
+                detail: 'PERSONALIZAR BOTÕES',
+                accent: '#b48bff',
+            },
+            {
                 id: 'audio',
                 label: 'ÁUDIO',
                 detail: this.game.save.muted ? 'SILENCIADO' : 'LIGADO',
@@ -100,6 +106,9 @@ export class SettingsScene {
             }
             case 'customize':
                 this.startEditing();
+                return;
+            case 'controls':
+                this.game.gotoControls();
                 return;
             case 'audio': {
                 const muted = this.game.audio.toggleMuted();
@@ -216,9 +225,9 @@ export class SettingsScene {
         });
         const hasIOSGuide = needsIOSInstallGuide();
         this.menu.draw(ctx, 90, 198, 520, {
-            itemHeight: hasIOSGuide ? 46 : 52,
-            gap: hasIOSGuide ? 7 : 8,
-            size: hasIOSGuide ? 16 : 17,
+            itemHeight: hasIOSGuide ? 42 : 48,
+            gap: hasIOSGuide ? 6 : 7,
+            size: hasIOSGuide ? 15 : 16,
             accent: '#56e3ff',
         });
         label(ctx, '◀ ▶ ALTERAR   ·   ENTER / TOQUE CONFIRMAR', 90, 616, 10, 'rgba(190,198,220,0.52)', {

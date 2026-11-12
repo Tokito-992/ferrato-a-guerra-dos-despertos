@@ -1,28 +1,29 @@
 /** Núcleo do jogo: loop, troca de cenas, transições, hitstop e persistência. */
-import { CHARACTERS } from '../data/characters.js?v=2287ee03d2bc';
-import { getStage, MAX_STAGE } from '../data/stages.js?v=2287ee03d2bc';
-import { STORY } from '../data/story.js?v=2287ee03d2bc';
-import { AudioEngine } from './audio.js?v=2287ee03d2bc';
-import { Input } from './input.js?v=2287ee03d2bc';
-import { ParticleSystem } from './particles.js?v=2287ee03d2bc';
-import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=2287ee03d2bc';
-import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=2287ee03d2bc';
-import { needsIOSInstallGuide } from './platform.js?v=2287ee03d2bc';
-import { cloudSync } from './cloud-sync.js?v=2287ee03d2bc';
-import { showInstallGuide } from '../ui/install-guide.js?v=2287ee03d2bc';
-import { showAccountPanel } from '../ui/account-panel.js?v=2287ee03d2bc';
-import { clamp, hexToRgba } from './math.js?v=2287ee03d2bc';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=2287ee03d2bc';
-import { TitleScene } from '../scenes/title.js?v=2287ee03d2bc';
-import { CharacterSelectScene } from '../scenes/characterSelect.js?v=2287ee03d2bc';
-import { GameplayScene } from '../scenes/gameplay.js?v=2287ee03d2bc';
-import { ComicScene } from '../scenes/comic.js?v=2287ee03d2bc';
-import { VictoryScene } from '../scenes/victory.js?v=2287ee03d2bc';
-import { CreditsScene } from '../scenes/credits.js?v=2287ee03d2bc';
-import { SettingsScene } from '../scenes/settings.js?v=2287ee03d2bc';
-import { TutorialScene } from '../scenes/tutorial.js?v=2287ee03d2bc';
-import { ArchiveScene } from '../scenes/archive.js?v=2287ee03d2bc';
-import { ARCHIVE_ENTRY_IDS } from '../data/archive.js?v=2287ee03d2bc';
+import { CHARACTERS } from '../data/characters.js?v=6ccbb66fdb55';
+import { getStage, MAX_STAGE } from '../data/stages.js?v=6ccbb66fdb55';
+import { STORY } from '../data/story.js?v=6ccbb66fdb55';
+import { AudioEngine } from './audio.js?v=6ccbb66fdb55';
+import { Input } from './input.js?v=6ccbb66fdb55';
+import { ParticleSystem } from './particles.js?v=6ccbb66fdb55';
+import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=6ccbb66fdb55';
+import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=6ccbb66fdb55';
+import { needsIOSInstallGuide } from './platform.js?v=6ccbb66fdb55';
+import { cloudSync } from './cloud-sync.js?v=6ccbb66fdb55';
+import { showInstallGuide } from '../ui/install-guide.js?v=6ccbb66fdb55';
+import { showAccountPanel } from '../ui/account-panel.js?v=6ccbb66fdb55';
+import { clamp, hexToRgba } from './math.js?v=6ccbb66fdb55';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=6ccbb66fdb55';
+import { TitleScene } from '../scenes/title.js?v=6ccbb66fdb55';
+import { CharacterSelectScene } from '../scenes/characterSelect.js?v=6ccbb66fdb55';
+import { GameplayScene } from '../scenes/gameplay.js?v=6ccbb66fdb55';
+import { ComicScene } from '../scenes/comic.js?v=6ccbb66fdb55';
+import { VictoryScene } from '../scenes/victory.js?v=6ccbb66fdb55';
+import { CreditsScene } from '../scenes/credits.js?v=6ccbb66fdb55';
+import { SettingsScene } from '../scenes/settings.js?v=6ccbb66fdb55';
+import { ControlsScene } from '../scenes/controls.js?v=6ccbb66fdb55';
+import { TutorialScene } from '../scenes/tutorial.js?v=6ccbb66fdb55';
+import { ArchiveScene } from '../scenes/archive.js?v=6ccbb66fdb55';
+import { ARCHIVE_ENTRY_IDS } from '../data/archive.js?v=6ccbb66fdb55';
 /** Posições normalizadas usadas quando não há layout livre salvo. */
 function presetTouchPositions(layout, dock) {
     const y = dock === 'top' ? 0.1 : 0.9;
@@ -109,6 +110,7 @@ export class Game {
         this.audio = new AudioEngine();
         this.input = new Input(canvas);
         this.save = loadSave();
+        this.input.setBindings(this.save.bindings);
         this.audio.setMuted(this.save.muted);
         this.input.onFirstGesture = () => {
             this.audio.init();
@@ -445,6 +447,7 @@ export class Game {
         this.save = save;
         writeSave(this.save, clientUpdatedAt);
         this.audio.setMuted(this.save.muted);
+        this.input.setBindings(this.save.bindings);
         this.applyTouchSettings();
         if (this.scene instanceof SettingsScene) {
             this.setScene(new SettingsScene(this));
@@ -562,6 +565,12 @@ export class Game {
     }
     gotoSettings() {
         this.transitionTo(() => this.setScene(new SettingsScene(this)));
+    }
+    gotoControls() {
+        this.transitionTo(() => this.setScene(new ControlsScene(this)));
+    }
+    showControls() {
+        this.setScene(new ControlsScene(this));
     }
     gotoArchive() {
         this.transitionTo(() => this.setScene(new ArchiveScene(this)));

@@ -6,6 +6,8 @@ import { ARC_COUNT, CHAPTERS_PER_ARC, MAX_STAGE } from '../data/stages.js';
 import { ARCHIVE_ENTRY_IDS, backfillArchiveIds } from '../data/archive.js';
 import { isRank } from './rank.js';
 import type { Rank } from './rank.js';
+import { sanitizeBindings } from './bindings.js';
+import type { ControlBindings } from './bindings.js';
 
 export type TouchLayout = 'standard' | 'lefty';
 export type TouchDock = 'bottom' | 'top';
@@ -64,6 +66,8 @@ export interface SaveData {
   touchDock: TouchDock;
   /** Posições livres dos botões; ausente = usa o preset de lado/dock. */
   touchPositions: TouchPositions | null;
+  /** Teclas e botões do mouse personalizados pelo jogador. */
+  bindings: ControlBindings;
   /** Registros já avistados no Arquivo do Véu (bestiário). */
   archive: string[];
 }
@@ -84,6 +88,7 @@ interface LegacySave {
   touchLayout?: string;
   touchDock?: string;
   touchPositions?: Record<string, unknown> | null;
+  bindings?: unknown;
   archive?: unknown[];
 }
 
@@ -188,6 +193,7 @@ function sanitize(data: LegacySave): SaveData {
     touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
     touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
     touchPositions: sanitizeTouchPositions(data.touchPositions),
+    bindings: sanitizeBindings(data.bindings),
     archive,
   };
 }
@@ -254,6 +260,7 @@ function migrateLegacy(data: LegacySave): SaveData {
     touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
     touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
     touchPositions: sanitizeTouchPositions(data.touchPositions),
+    bindings: sanitizeBindings(data.bindings),
     archive: backfillArchiveIds(migratedCleared, maxStage),
   };
 }
@@ -275,6 +282,7 @@ export function defaultSave(): SaveData {
     touchLayout: 'standard',
     touchDock: 'bottom',
     touchPositions: null,
+    bindings: sanitizeBindings(null),
     archive: [],
   };
 }
@@ -346,6 +354,7 @@ function migrateV2(data: LegacySave): SaveData {
     touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
     touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
     touchPositions: sanitizeTouchPositions(data.touchPositions),
+    bindings: sanitizeBindings(data.bindings),
     archive: backfillArchiveIds(cleared, maxStage),
   };
 }

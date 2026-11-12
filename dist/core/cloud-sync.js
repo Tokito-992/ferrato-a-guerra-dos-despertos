@@ -6,9 +6,9 @@
  * - se a nuvem estiver mais recente, o upload automático fica bloqueado;
  * - o jogador escolhe explicitamente qual save manter.
  */
-import { isCloudConfigured } from './cloud-config.js?v=2287ee03d2bc';
-import { CloudError, clearStoredSession, consumeAuthHash, downloadCloudSave, refreshSession as refreshSessionApi, requestPasswordReset as requestPasswordResetApi, restoreSession, signIn as signInApi, signOut as signOutApi, signUp as signUpApi, updatePassword as updatePasswordApi, uploadCloudSave, } from './supabase.js?v=2287ee03d2bc';
-import { localSaveUpdatedAt, markLocalSaveUpdated } from './save.js?v=2287ee03d2bc';
+import { isCloudConfigured } from './cloud-config.js?v=6ccbb66fdb55';
+import { CloudError, clearStoredSession, consumeAuthHash, downloadCloudSave, refreshSession as refreshSessionApi, requestPasswordReset as requestPasswordResetApi, restoreSession, signIn as signInApi, signOut as signOutApi, signUp as signUpApi, updatePassword as updatePasswordApi, uploadCloudSave, } from './supabase.js?v=6ccbb66fdb55';
+import { localSaveUpdatedAt, markLocalSaveUpdated } from './save.js?v=6ccbb66fdb55';
 /** Margem para evitar que diferenças de relógio entre aparelhos causem falsos conflitos. */
 const CONFLICT_THRESHOLD_MS = 1500;
 const UPLOAD_DEBOUNCE_MS = 1600;

@@ -1,8 +1,9 @@
 /** Persistência local de progresso (localStorage) — campanha de 42 capítulos. */
-import { CHARACTER_ORDER } from '../data/characters.js?v=2287ee03d2bc';
-import { ARC_COUNT, CHAPTERS_PER_ARC, MAX_STAGE } from '../data/stages.js?v=2287ee03d2bc';
-import { ARCHIVE_ENTRY_IDS, backfillArchiveIds } from '../data/archive.js?v=2287ee03d2bc';
-import { isRank } from './rank.js?v=2287ee03d2bc';
+import { CHARACTER_ORDER } from '../data/characters.js?v=6ccbb66fdb55';
+import { ARC_COUNT, CHAPTERS_PER_ARC, MAX_STAGE } from '../data/stages.js?v=6ccbb66fdb55';
+import { ARCHIVE_ENTRY_IDS, backfillArchiveIds } from '../data/archive.js?v=6ccbb66fdb55';
+import { isRank } from './rank.js?v=6ccbb66fdb55';
+import { sanitizeBindings } from './bindings.js?v=6ccbb66fdb55';
 export const TOUCH_BUTTON_IDS = [
     'left',
     'right',
@@ -99,6 +100,7 @@ function sanitize(data) {
         touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
         touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
         touchPositions: sanitizeTouchPositions(data.touchPositions),
+        bindings: sanitizeBindings(data.bindings),
         archive,
     };
 }
@@ -159,6 +161,7 @@ function migrateLegacy(data) {
         touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
         touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
         touchPositions: sanitizeTouchPositions(data.touchPositions),
+        bindings: sanitizeBindings(data.bindings),
         archive: backfillArchiveIds(migratedCleared, maxStage),
     };
 }
@@ -179,6 +182,7 @@ export function defaultSave() {
         touchLayout: 'standard',
         touchDock: 'bottom',
         touchPositions: null,
+        bindings: sanitizeBindings(null),
         archive: [],
     };
 }
@@ -238,6 +242,7 @@ function migrateV2(data) {
         touchLayout: data.touchLayout === 'lefty' ? 'lefty' : 'standard',
         touchDock: data.touchDock === 'top' ? 'top' : 'bottom',
         touchPositions: sanitizeTouchPositions(data.touchPositions),
+        bindings: sanitizeBindings(data.bindings),
         archive: backfillArchiveIds(cleared, maxStage),
     };
 }

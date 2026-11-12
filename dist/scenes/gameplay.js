@@ -1,24 +1,24 @@
 /** Cena principal: arena lateral, ondas, chefe, pausa, troca de herói e game over. */
-import { Camera } from '../core/camera.js?v=2287ee03d2bc';
-import { ParticleSystem } from '../core/particles.js?v=2287ee03d2bc';
-import { clamp, hexToRgba } from '../core/math.js?v=2287ee03d2bc';
-import { rankColor, rankFromPressure, rankValue } from '../core/rank.js?v=2287ee03d2bc';
-import { MAX_HEARTS } from '../core/save.js?v=2287ee03d2bc';
-import { MAX_STAGE } from '../data/stages.js?v=2287ee03d2bc';
-import { archiveBossId, archiveCreatureId, archivePhenomenonId, archivePlaceId, archiveRelicId, stageRelicKinds, } from '../data/archive.js?v=2287ee03d2bc';
-import { Player } from '../entities/player.js?v=2287ee03d2bc';
-import { Enemy } from '../entities/enemy.js?v=2287ee03d2bc';
-import { Boss } from '../entities/boss.js?v=2287ee03d2bc';
-import { Hazard, Projectile } from '../entities/projectiles.js?v=2287ee03d2bc';
-import { StageObstacle, buildStageObstacles } from '../entities/obstacles.js?v=2287ee03d2bc';
-import { drawStageBackground } from '../render/backgrounds.js?v=2287ee03d2bc';
-import { drawCharacterPortrait, drawPlayer } from '../render/characters.js?v=2287ee03d2bc';
-import { drawBoss, drawEnemy } from '../render/enemies.js?v=2287ee03d2bc';
-import { drawHeart } from '../render/hearts.js?v=2287ee03d2bc';
-import { visualStyle } from '../render/style.js?v=2287ee03d2bc';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=2287ee03d2bc';
-import { drawHud } from '../ui/hud.js?v=2287ee03d2bc';
-import { Menu } from '../ui/menu.js?v=2287ee03d2bc';
+import { Camera } from '../core/camera.js?v=6ccbb66fdb55';
+import { ParticleSystem } from '../core/particles.js?v=6ccbb66fdb55';
+import { clamp, hexToRgba } from '../core/math.js?v=6ccbb66fdb55';
+import { rankColor, rankFromPressure, rankValue } from '../core/rank.js?v=6ccbb66fdb55';
+import { MAX_HEARTS } from '../core/save.js?v=6ccbb66fdb55';
+import { MAX_STAGE } from '../data/stages.js?v=6ccbb66fdb55';
+import { archiveBossId, archiveCreatureId, archivePhenomenonId, archivePlaceId, archiveRelicId, stageRelicKinds, } from '../data/archive.js?v=6ccbb66fdb55';
+import { Player } from '../entities/player.js?v=6ccbb66fdb55';
+import { Enemy } from '../entities/enemy.js?v=6ccbb66fdb55';
+import { Boss } from '../entities/boss.js?v=6ccbb66fdb55';
+import { Hazard, Projectile } from '../entities/projectiles.js?v=6ccbb66fdb55';
+import { StageObstacle, buildStageObstacles } from '../entities/obstacles.js?v=6ccbb66fdb55';
+import { drawStageBackground } from '../render/backgrounds.js?v=6ccbb66fdb55';
+import { drawCharacterPortrait, drawPlayer } from '../render/characters.js?v=6ccbb66fdb55';
+import { drawBoss, drawEnemy } from '../render/enemies.js?v=6ccbb66fdb55';
+import { drawHeart } from '../render/hearts.js?v=6ccbb66fdb55';
+import { visualStyle } from '../render/style.js?v=6ccbb66fdb55';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=6ccbb66fdb55';
+import { drawHud } from '../ui/hud.js?v=6ccbb66fdb55';
+import { Menu } from '../ui/menu.js?v=6ccbb66fdb55';
 function insideRect(rect, x, y) {
     return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
 }
@@ -793,6 +793,8 @@ export class GameplayScene {
         if (this.player.dead)
             return;
         this.paused = true;
+        // Mouse e botão B voltam ao contexto de menu enquanto a pausa estiver aberta.
+        this.input.setGameplayContext(false);
         // Os botões virtuais não devem ativar itens do menu de pausa.
         this.game.setTouchControlsVisible(false);
         this.pauseMenu.setItems([
@@ -806,6 +808,7 @@ export class GameplayScene {
     updatePauseMenu() {
         if (this.input.pressed('pause') || this.input.pressed('back') || this.input.pressed('cancel')) {
             this.paused = false;
+            this.input.setGameplayContext(true);
             this.game.setTouchControlsVisible(true);
             this.audio.sfx('ui');
             return;
@@ -821,6 +824,7 @@ export class GameplayScene {
         switch (action) {
             case 'resume':
                 this.paused = false;
+                this.input.setGameplayContext(true);
                 this.game.setTouchControlsVisible(true);
                 break;
             case 'swap':
@@ -836,6 +840,7 @@ export class GameplayScene {
     }
     openGameOver() {
         this.gameOver = true;
+        this.input.setGameplayContext(false);
         this.game.setTouchControlsVisible(false);
         this.persistRecord();
         this.gameOverMenu.setItems([

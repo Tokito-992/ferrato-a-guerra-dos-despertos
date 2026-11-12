@@ -25,6 +25,7 @@ import { ComicScene } from '../scenes/comic.js';
 import { VictoryScene } from '../scenes/victory.js';
 import { CreditsScene } from '../scenes/credits.js';
 import { SettingsScene } from '../scenes/settings.js';
+import { ControlsScene } from '../scenes/controls.js';
 import { TutorialScene } from '../scenes/tutorial.js';
 import { ArchiveScene } from '../scenes/archive.js';
 import { ARCHIVE_ENTRY_IDS } from '../data/archive.js';
@@ -131,6 +132,7 @@ export class Game {
     this.audio = new AudioEngine();
     this.input = new Input(canvas);
     this.save = loadSave();
+    this.input.setBindings(this.save.bindings);
     this.audio.setMuted(this.save.muted);
     this.input.onFirstGesture = () => {
       this.audio.init();
@@ -506,6 +508,7 @@ export class Game {
     this.save = save;
     writeSave(this.save, clientUpdatedAt);
     this.audio.setMuted(this.save.muted);
+    this.input.setBindings(this.save.bindings);
     this.applyTouchSettings();
     if (this.scene instanceof SettingsScene) {
       this.setScene(new SettingsScene(this));
@@ -631,6 +634,14 @@ export class Game {
 
   gotoSettings(): void {
     this.transitionTo(() => this.setScene(new SettingsScene(this)));
+  }
+
+  gotoControls(): void {
+    this.transitionTo(() => this.setScene(new ControlsScene(this)));
+  }
+
+  showControls(): void {
+    this.setScene(new ControlsScene(this));
   }
 
   gotoArchive(): void {

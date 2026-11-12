@@ -1,9 +1,9 @@
 /** Bootstrap do jogo: valida o canvas, inicia o loop e remove a tela de carregamento. */
-import { Game } from './core/game.js?v=2287ee03d2bc';
-import { cloudSync } from './core/cloud-sync.js?v=2287ee03d2bc';
-import { canFullscreen, enterFullscreen, toggleFullscreen, watchFullscreen } from './core/fullscreen.js?v=2287ee03d2bc';
-import { needsIOSInstallGuide } from './core/platform.js?v=2287ee03d2bc';
-import { toggleAnimeStyle, visualStyle } from './render/style.js?v=2287ee03d2bc';
+import { Game } from './core/game.js?v=6ccbb66fdb55';
+import { cloudSync } from './core/cloud-sync.js?v=6ccbb66fdb55';
+import { canFullscreen, enterFullscreen, toggleFullscreen, watchFullscreen } from './core/fullscreen.js?v=6ccbb66fdb55';
+import { needsIOSInstallGuide } from './core/platform.js?v=6ccbb66fdb55';
+import { toggleAnimeStyle, visualStyle } from './render/style.js?v=6ccbb66fdb55';
 function hideLoading() {
     const loading = document.getElementById('loading');
     if (!loading)
