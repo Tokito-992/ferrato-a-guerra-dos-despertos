@@ -661,7 +661,7 @@ export class ArchiveScene implements Scene {
         font: FONTS.ui,
         weight: 500,
       });
-      label(ctx, 'A PÁGINA REAGE À SUA PRESENÇA. CONTINUE A CAMPANHA.', DETAIL_X + DETAIL_W, 632, 8, 'rgba(160,168,190,0.34)', {
+      label(ctx, 'A PÁGINA REAGE À SUA PRESENÇA. CONTINUE A CAMPANHA.', DETAIL_X + DETAIL_W, 616, 8, 'rgba(160,168,190,0.34)', {
         align: 'right',
         font: FONTS.mono,
         spacing: 0.8,

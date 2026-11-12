@@ -5,10 +5,10 @@
  * criatura, enfrenta o chefe, visita o capítulo ou encontra uma relíquia.
  * Heróis são revelados pelo desbloqueio narrativo de cada Desperto.
  */
-import { CHARACTER_ORDER, CHARACTERS } from './characters.js?v=bf59b6c4844c';
-import { BOSSES } from './bosses.js?v=bf59b6c4844c';
-import { ARC_COUNT, CHAPTERS_PER_ARC, STAGES, getArcStages, getStage } from './stages.js?v=bf59b6c4844c';
-import { ENEMY_BASE } from './enemies.js?v=bf59b6c4844c';
+import { CHARACTER_ORDER, CHARACTERS } from './characters.js?v=4f75418098ef';
+import { BOSSES } from './bosses.js?v=4f75418098ef';
+import { ARC_COUNT, CHAPTERS_PER_ARC, STAGES, getArcStages, getStage } from './stages.js?v=4f75418098ef';
+import { ENEMY_BASE } from './enemies.js?v=4f75418098ef';
 export const ARCHIVE_SECTIONS = [
     {
         id: 'heroes',

@@ -1,24 +1,24 @@
 /** Cena principal: arena lateral, ondas, chefe, pausa, troca de herói e game over. */
-import { Camera } from '../core/camera.js?v=bf59b6c4844c';
-import { ParticleSystem } from '../core/particles.js?v=bf59b6c4844c';
-import { clamp, hexToRgba } from '../core/math.js?v=bf59b6c4844c';
-import { rankColor, rankFromPressure, rankValue } from '../core/rank.js?v=bf59b6c4844c';
-import { MAX_HEARTS } from '../core/save.js?v=bf59b6c4844c';
-import { MAX_STAGE } from '../data/stages.js?v=bf59b6c4844c';
-import { archiveBossId, archiveCreatureId, archivePhenomenonId, archivePlaceId, archiveRelicId, stageRelicKinds, } from '../data/archive.js?v=bf59b6c4844c';
-import { Player } from '../entities/player.js?v=bf59b6c4844c';
-import { Enemy } from '../entities/enemy.js?v=bf59b6c4844c';
-import { Boss } from '../entities/boss.js?v=bf59b6c4844c';
-import { Hazard, Projectile } from '../entities/projectiles.js?v=bf59b6c4844c';
-import { StageObstacle, buildStageObstacles } from '../entities/obstacles.js?v=bf59b6c4844c';
-import { drawStageBackground } from '../render/backgrounds.js?v=bf59b6c4844c';
-import { drawCharacterPortrait, drawPlayer } from '../render/characters.js?v=bf59b6c4844c';
-import { drawBoss, drawEnemy } from '../render/enemies.js?v=bf59b6c4844c';
-import { drawHeart } from '../render/hearts.js?v=bf59b6c4844c';
-import { visualStyle } from '../render/style.js?v=bf59b6c4844c';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=bf59b6c4844c';
-import { drawHud } from '../ui/hud.js?v=bf59b6c4844c';
-import { Menu } from '../ui/menu.js?v=bf59b6c4844c';
+import { Camera } from '../core/camera.js?v=4f75418098ef';
+import { ParticleSystem } from '../core/particles.js?v=4f75418098ef';
+import { clamp, hexToRgba } from '../core/math.js?v=4f75418098ef';
+import { rankColor, rankFromPressure, rankValue } from '../core/rank.js?v=4f75418098ef';
+import { MAX_HEARTS } from '../core/save.js?v=4f75418098ef';
+import { MAX_STAGE } from '../data/stages.js?v=4f75418098ef';
+import { archiveBossId, archiveCreatureId, archivePhenomenonId, archivePlaceId, archiveRelicId, stageRelicKinds, } from '../data/archive.js?v=4f75418098ef';
+import { Player } from '../entities/player.js?v=4f75418098ef';
+import { Enemy } from '../entities/enemy.js?v=4f75418098ef';
+import { Boss } from '../entities/boss.js?v=4f75418098ef';
+import { Hazard, Projectile } from '../entities/projectiles.js?v=4f75418098ef';
+import { StageObstacle, buildStageObstacles } from '../entities/obstacles.js?v=4f75418098ef';
+import { drawStageBackground } from '../render/backgrounds.js?v=4f75418098ef';
+import { drawCharacterPortrait, drawPlayer } from '../render/characters.js?v=4f75418098ef';
+import { drawBoss, drawEnemy } from '../render/enemies.js?v=4f75418098ef';
+import { drawHeart } from '../render/hearts.js?v=4f75418098ef';
+import { visualStyle } from '../render/style.js?v=4f75418098ef';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=4f75418098ef';
+import { drawHud } from '../ui/hud.js?v=4f75418098ef';
+import { Menu } from '../ui/menu.js?v=4f75418098ef';
 function insideRect(rect, x, y) {
     return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
 }

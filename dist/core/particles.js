@@ -1,5 +1,5 @@
 /** Sistema de partículas leve, com vários estilos visuais para habilidades. */
-import { clamp, easeOutCubic, rand, TAU } from './math.js?v=bf59b6c4844c';
+import { clamp, easeOutCubic, rand, TAU } from './math.js?v=4f75418098ef';
 export class ParticleSystem {
     constructor() {
         this.items = [];
