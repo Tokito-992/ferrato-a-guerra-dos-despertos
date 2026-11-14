@@ -1655,3 +1655,178 @@ body.account-open #rotate-hint {
   .account-panel,
   .account-card { animation: none; }
 }
+
+/* Painel da sala online: criar/entrar por código e lobby da dupla. */
+.online-card {
+  width: min(760px, 100%);
+}
+
+.online-entry {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.online-entry-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid rgba(86, 227, 255, 0.18);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.online-entry-card .account-desc {
+  flex: 1;
+  margin: 0;
+}
+
+.online-entry-card .account-subtitle {
+  margin: 0;
+}
+
+.online-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 4px 0 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(86, 227, 255, 0.34);
+  border-radius: 10px;
+  background:
+    radial-gradient(340px 120px at 10% 0%, rgba(86, 227, 255, 0.12), transparent 70%),
+    rgba(2, 4, 10, 0.55);
+}
+
+.online-code-row .account-save-kicker {
+  margin: 0 0 2px;
+}
+
+.online-code {
+  margin: 0;
+  font-family: "Share Tech Mono", "Consolas", monospace;
+  font-size: clamp(28px, 6vw, 42px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.32em;
+  color: #bdefff;
+  text-shadow: 0 0 26px rgba(86, 227, 255, 0.36);
+}
+
+.online-room-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  font-family: "Share Tech Mono", "Consolas", monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: #8f99ae;
+}
+
+.online-room-status.online {
+  color: #8df4a8;
+}
+
+.online-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff6a7a;
+  box-shadow: 0 0 10px rgba(255, 106, 122, 0.7);
+}
+
+.online-room-status.online .online-dot {
+  background: #8df4a8;
+  box-shadow: 0 0 10px rgba(141, 244, 168, 0.8);
+}
+
+.online-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.online-grid .account-field {
+  grid-column: span 2;
+}
+
+.online-field-static {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 68px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(2, 4, 10, 0.4);
+}
+
+.online-field-static span {
+  font-family: "Share Tech Mono", "Consolas", monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  color: #8f99ae;
+}
+
+.online-field-static strong {
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  color: #f4f7ff;
+}
+
+.online-field-static em {
+  font-family: "Share Tech Mono", "Consolas", monospace;
+  font-size: 9px;
+  font-style: normal;
+  letter-spacing: 0.12em;
+  color: #56e3ff;
+}
+
+.online-start {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.account-field select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 7px;
+  background: rgba(2, 4, 10, 0.7);
+  color: #f4f7ff;
+  font: 500 15px / 1.2 "Rajdhani", "Segoe UI", system-ui, sans-serif;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.account-field select:focus {
+  border-color: rgba(86, 227, 255, 0.65);
+  box-shadow: 0 0 0 2px rgba(86, 227, 255, 0.12);
+}
+
+@media (max-width: 680px) {
+  .online-entry,
+  .online-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .online-grid .account-field {
+    grid-column: span 1;
+  }
+
+  .online-code-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .online-code {
+    font-size: 30px;
+    letter-spacing: 0.2em;
+  }
+}

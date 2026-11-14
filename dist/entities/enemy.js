@@ -1,12 +1,23 @@
 /** Inimigos comuns com IA própria por arquétipo. */
-import { clamp, rand, rectsOverlap, TAU } from '../core/math.js?v=876088114997';
-import { Combatant } from './combatant.js?v=876088114997';
-import { ENEMY_BASE, ELITE_DAMAGE_MULT, ELITE_HP_MULT } from '../data/enemies.js?v=876088114997';
+import { clamp, rand, rectsOverlap, TAU } from '../core/math.js?v=1400d032a431';
+import { Combatant } from './combatant.js?v=1400d032a431';
+import { ENEMY_BASE, ELITE_DAMAGE_MULT, ELITE_HP_MULT } from '../data/enemies.js?v=1400d032a431';
+const NET_ENEMY_STATES = [
+    'spawn',
+    'chase',
+    'windup',
+    'attack',
+    'recover',
+    'stagger',
+    'hover',
+];
 export class Enemy extends Combatant {
     constructor(stage, kind, x, elite = false) {
         const base = ENEMY_BASE[kind];
         const hp = Math.round(base.hp * stage.difficulty * (elite ? ELITE_HP_MULT : 1));
         super(x, stage.floor, base.w * (elite ? 1.35 : 1), base.h * (elite ? 1.35 : 1), hp);
+        /** Identificador estável usado pelos snapshots do co-op online. */
+        this.netId = 0;
         this.state = 'spawn';
         this.stateTime = 0;
         this.cooldown = 0;
@@ -53,6 +64,28 @@ export class Enemy extends Combatant {
             return 0;
         const w = Math.max(0.01, this.def.windup);
         return clamp(this.stateTime / w, 0, 1);
+    }
+    /** Aplica o estado visual enviado pelo host, sem rodar IA nem física. */
+    applyNetVisual(v) {
+        this.x = v.x;
+        this.y = v.y;
+        this.vx = v.vx;
+        this.vy = v.vy;
+        this.maxHp = Math.max(1, v.maxHp);
+        this.hp = clamp(v.hp, 0, this.maxHp);
+        this.facing = v.facing < 0 ? -1 : 1;
+        this.state = NET_ENEMY_STATES.includes(v.state)
+            ? v.state
+            : 'chase';
+        this.stateTime = Math.max(0, v.stateTime);
+        this.dead = v.dead;
+        this.alpha = clamp(v.alpha, 0, 1);
+        this.hitFlash = Math.max(0, v.hitFlash);
+        this.enrage = v.enrage;
+        this.deathTimer = Math.max(0, v.deathTimer);
+        this.aimX = v.aimX;
+        this.aimY = v.aimY;
+        this.windupFlash = Math.max(0, v.windupFlash);
     }
     get attackRatio() {
         if (this.state !== 'attack')

@@ -1,8 +1,8 @@
 /** Ícones procedurais do Arquivo do Véu. */
-import { CHARACTERS } from '../data/characters.js?v=876088114997';
-import { hexToRgba, mixColor, mulberry32, TAU } from '../core/math.js?v=876088114997';
-import { drawCharacterPortrait } from './characters.js?v=876088114997';
-import { glow, roundRectPath } from './theme.js?v=876088114997';
+import { CHARACTERS } from '../data/characters.js?v=1400d032a431';
+import { hexToRgba, mixColor, mulberry32, TAU } from '../core/math.js?v=1400d032a431';
+import { drawCharacterPortrait } from './characters.js?v=1400d032a431';
+import { glow, roundRectPath } from './theme.js?v=1400d032a431';
 const INK = '#06070d';
 function makeInk(accent) {
     return {

@@ -34,6 +34,43 @@ interface ActiveAttack {
   hitInfo: Map<Combatant, { count: number; last: number }>;
 }
 
+/** Estado visual recebido do host no co-op online. */
+export interface PlayerNetVisual {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  hp: number;
+  maxHp: number;
+  dead: boolean;
+  facing: number;
+  state: string;
+  onGround: boolean;
+  walkPhase: number;
+  dashTime: number;
+  dashDir: number;
+  invuln: number;
+  hitFlash: number;
+  abilityFlash: number;
+  deathTimer: number;
+  comboHits: number;
+  abilityCd: number;
+  attack: { slot: string; t: number } | null;
+}
+
+const NET_STATES: readonly PlayerAnimState[] = [
+  'idle',
+  'run',
+  'jump',
+  'fall',
+  'attack',
+  'dash',
+  'hurt',
+  'dead',
+];
+
+const NET_SLOTS: readonly MoveSlot[] = ['light1', 'light2', 'light3', 'heavy', 'air'];
+
 export class Player extends Combatant {
   readonly def: CharacterDef;
   readonly charId: CharacterId;
@@ -235,6 +272,58 @@ export class Player extends Combatant {
     if (!this.onGround) return this.vy < 0 ? 'jump' : 'fall';
     if (Math.abs(this.vx) > 24) return 'run';
     return 'idle';
+  }
+
+  /**
+   * Aplica o estado visual do host no convidado. Não roda física nem combate:
+   * o convidado apenas desenha o que o host simula.
+   */
+  applyNetVisual(v: PlayerNetVisual): void {
+    this.x = v.x;
+    this.y = v.y;
+    this.vx = v.vx;
+    this.vy = v.vy;
+    this.maxHp = Math.max(1, v.maxHp);
+    this.hp = clamp(v.hp, 0, this.maxHp);
+    this.dead = v.dead;
+    this.facing = v.facing < 0 ? -1 : 1;
+    this.state = NET_STATES.includes(v.state as PlayerAnimState)
+      ? (v.state as PlayerAnimState)
+      : v.dead
+        ? 'dead'
+        : 'idle';
+    this.onGround = v.onGround;
+    this.walkPhase = v.walkPhase;
+    this.dashTime = Math.max(0, v.dashTime);
+    this.dashDir = v.dashDir < 0 ? -1 : 1;
+    this.invuln = Math.max(0, v.invuln);
+    this.hitFlash = Math.max(0, v.hitFlash);
+    this.abilityFlash = Math.max(0, v.abilityFlash);
+    this.deathTimer = Math.max(0, v.deathTimer);
+    this.comboHits = Math.max(0, Math.floor(v.comboHits));
+    this.abilityCd = Math.max(0, v.abilityCd);
+
+    this.attack = null;
+    if (v.attack) {
+      const slot = NET_SLOTS.includes(v.attack.slot as MoveSlot)
+        ? (v.attack.slot as MoveSlot)
+        : null;
+      if (slot) {
+        const def = MOVESETS[this.charId][slot];
+        const total = def.startup + def.active + def.recovery;
+        this.attack = {
+          def,
+          slot,
+          t: clamp(v.attack.t, 0, total),
+          dir: this.facing,
+          damageScale: 1,
+          spawned: true,
+          fxDone: true,
+          echo: false,
+          hitInfo: new Map(),
+        };
+      }
+    }
   }
 
   private updateMovement(dt: number, world: World): void {

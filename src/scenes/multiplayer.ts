@@ -19,6 +19,7 @@ import { drawCharacterPortrait } from '../render/characters.js';
 import { FONTS, label, panel, roundRectPath } from '../render/theme.js';
 import { Menu } from '../ui/menu.js';
 import type { MenuItem } from '../ui/menu.js';
+import { openOnlinePanel } from '../ui/online-panel.js';
 
 function fitText(ctx: CanvasRenderingContext2D, text: string, maxW: number, size: number): string {
   ctx.save();
@@ -79,6 +80,7 @@ export class MultiplayerScene implements Scene {
   private t = 0;
   private intro = 0;
   private lastP2 = false;
+  private lastOnline = false;
 
   constructor(private readonly game: Game) {
     const max = clamp(game.save.maxStage, 1, MAX_STAGE);
@@ -112,7 +114,10 @@ export class MultiplayerScene implements Scene {
     this.game.audio.playAmbience('cosmic');
     this.intro = 0;
     this.lastP2 = this.canStart;
+    this.lastOnline = this.game.onlineSession !== null;
     this.syncMenu();
+    // Voltando de um capítulo online, a sala continua ativa e reabre por cima.
+    if (this.game.onlineSession) openOnlinePanel(this.game);
   }
 
   private syncMenu(keepIndex = true): void {
@@ -150,8 +155,7 @@ export class MultiplayerScene implements Scene {
         id: 'online',
         badge: 'ON',
         label: 'SALA PRIVADA ONLINE',
-        disabled: true,
-        disabledTag: 'EM BREVE',
+        detail: this.game.onlineSession ? 'SESSÃO ATIVA' : 'CRIAR OU ENTRAR COM CÓDIGO',
         accent: '#56e3ff',
         height: 42,
       },
@@ -205,6 +209,11 @@ export class MultiplayerScene implements Scene {
       this.lastP2 = ready;
       this.syncMenu();
     }
+    const online = this.game.onlineSession !== null;
+    if (online !== this.lastOnline) {
+      this.lastOnline = online;
+      this.syncMenu();
+    }
 
     if (this.game.input.pressed('pause') || this.game.input.pressed('back') || this.game.input.pressed('cancel')) {
       this.game.gotoTitle();
@@ -245,6 +254,9 @@ export class MultiplayerScene implements Scene {
         break;
       case 'start':
         this.start();
+        break;
+      case 'online':
+        openOnlinePanel(this.game);
         break;
       case 'back':
         this.game.gotoTitle();
@@ -428,12 +440,12 @@ export class MultiplayerScene implements Scene {
       weight: 500,
     });
 
-    // Nota da próxima etapa: sala online por código.
-    label(ctx, 'SALA ONLINE · EM BREVE', 684, 636, 9.5, hexToRgba('#56e3ff', 0.8), {
+    // Sala online por código: cada jogador mantém o próprio save.
+    label(ctx, 'SALA ONLINE POR CÓDIGO', 684, 636, 9.5, hexToRgba('#56e3ff', 0.8), {
       font: FONTS.mono,
       spacing: 1.2,
     });
-    label(ctx, 'CÓDIGO CURTO · CADA JOGADOR MANTÉM O PRÓPRIO SAVE', 1176, 636, 8.5, 'rgba(170,178,200,0.42)', {
+    label(ctx, 'HOST AUTORITATIVO · CADA JOGADOR MANTÉM O PRÓPRIO SAVE', 1176, 636, 8.5, 'rgba(170,178,200,0.42)', {
       align: 'right',
       font: FONTS.mono,
       spacing: 0.8,

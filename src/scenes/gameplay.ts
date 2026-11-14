@@ -11,9 +11,14 @@ import { rankColor, rankFromPressure, rankValue } from '../core/rank.js';
 import type { Rank } from '../core/rank.js';
 import { MAX_HEARTS } from '../core/save.js';
 import type { CharacterId } from '../data/characters.js';
-import { MAX_STAGE } from '../data/stages.js';
+import { getStage, MAX_STAGE } from '../data/stages.js';
 import type { StageDef, WaveDef } from '../data/stages.js';
 import type { EnemyKind } from '../data/enemies.js';
+import type { BossId } from '../data/bosses.js';
+import type { OnlineSnapshot } from '../core/online.js';
+import { packInput, unpackInput } from '../core/online.js';
+import type { OnlineSession } from '../core/online.js';
+import type { ObstacleKind } from '../entities/obstacles.js';
 import {
   archiveBossId,
   archiveCreatureId,
@@ -54,6 +59,10 @@ interface Timer {
 
 function insideRect(rect: { x: number; y: number; w: number; h: number }, x: number, y: number): boolean {
   return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
+}
+
+function isGameplayPhase(value: string): value is GameplayPhase {
+  return value === 'intro' || value === 'combat' || value === 'bonus' || value === 'cleared';
 }
 
 /** Grão de filme procedural, gerado uma vez e repetido em tela. */
@@ -163,13 +172,32 @@ export class GameplayScene implements Scene, World {
   private bonusHazardTimer = 0;
   private bonusHazardCount = 0;
 
+  // Co-op online: o host simula e envia snapshots; o convidado só desenha.
+  private readonly online: OnlineSession | null;
+  private readonly onlineRole: 'host' | 'guest' | null;
+  private onlineUnsubs: (() => void)[] = [];
+  private onlineSnapshot: OnlineSnapshot | null = null;
+  private onlineSnapshotAcc = 0;
+  private onlineInputAcc = 0;
+  private onlineFinished = false;
+  private onlineReturning = false;
+  private onlinePauseSentAt = -10;
+  private nextNetId = 1;
+  private readonly guestEnemies = new Map<number, Enemy>();
+  private playerTargets: { x: number; y: number }[] = [];
+  private readonly enemyTargets = new Map<number, { x: number; y: number }>();
+  private bossTarget: { x: number; y: number } | null = null;
+
   constructor(
     private readonly game: Game,
     stage: StageDef,
     charId: CharacterId,
     partnerId?: CharacterId,
+    online?: OnlineSession,
   ) {
     this.stage = stage;
+    this.online = online ?? null;
+    this.onlineRole = online?.role ?? null;
     this.audio = game.audio;
     this.input = game.input;
     this.viewW = game.width;
@@ -213,10 +241,436 @@ export class GameplayScene implements Scene, World {
       ],
       'ARQUIVO DO VÉU ATUALIZADO',
     );
+
+    if (this.onlineRole === 'host') this.setupHostOnline();
+    else if (this.onlineRole === 'guest') this.setupGuestOnline();
   }
 
   exit(): void {
     this.game.setTouchControlsVisible(false);
+    for (const unsubscribe of this.onlineUnsubs) unsubscribe();
+    this.onlineUnsubs = [];
+    if (this.onlineRole === 'host') this.input.setRemotePlayer(1, false);
+  }
+
+  // ------------------------------------------------------------ co-op online
+
+  /** Host: recebe a entrada do convidado e mantém a simulação autoritativa. */
+  private setupHostOnline(): void {
+    const session = this.online;
+    if (!session) return;
+    this.input.setRemotePlayer(1, true);
+    this.onlineUnsubs.push(
+      session.on('input', (value) => {
+        const input = value as { down?: number; pressed?: number };
+        const unpacked = unpackInput(input.down ?? 0, input.pressed ?? 0);
+        this.input.setRemoteState(1, unpacked.down, unpacked.pressed);
+      }),
+    );
+    this.onlineUnsubs.push(
+      session.on('pause-request', () => {
+        if (!this.paused && !this.gameOver) this.openPause();
+      }),
+    );
+    this.onlineUnsubs.push(
+      session.on('resume-request', () => {
+        if (this.paused) this.resumePause();
+      }),
+    );
+    this.onlineUnsubs.push(
+      session.on('restart-request', () => {
+        this.performOnlineRestart();
+      }),
+    );
+    this.onlineUnsubs.push(
+      session.on('peer-left', () => {
+        this.game.setNotice('O CONVIDADO SAIU DA SALA', '#ff6a7a');
+        this.returnToOnlineRoom();
+      }),
+    );
+  }
+
+  /** Convidado: envia entrada local e desenha os snapshots recebidos. */
+  private setupGuestOnline(): void {
+    const session = this.online;
+    if (!session) return;
+    this.onlineUnsubs.push(
+      session.on('snapshot', (value) => {
+        if (value && typeof value === 'object') this.applyGuestSnapshot(value as OnlineSnapshot);
+      }),
+    );
+    this.onlineUnsubs.push(
+      session.on('pause', (value) => {
+        if (value === true) this.openGuestPause();
+        else this.resumePause();
+      }),
+    );
+    this.onlineUnsubs.push(
+      session.on('stage-clear', (value) => {
+        const stageId = Number(value);
+        this.applyGuestStageClear(Number.isFinite(stageId) ? stageId : this.stage.id);
+      }),
+    );
+    this.onlineUnsubs.push(
+      session.on('lobby-return', (value) => {
+        const info = value as { cleared?: boolean } | null;
+        if (info?.cleared) {
+          // Deixa o banner de capítulo concluído aparecer; `applyGuestStageClear`
+          // agenda a volta para a sala.
+          this.applyGuestStageClear(this.stage.id);
+          return;
+        }
+        this.returnToOnlineRoom();
+      }),
+    );
+    this.onlineUnsubs.push(
+      session.on('restart', (value) => {
+        const start = value as { stageId: number; p1: CharacterId; p2: CharacterId } | null;
+        if (!start) return;
+        this.game.transitionTo(() =>
+          this.game.showOnlineGuest(start.stageId, start.p1, start.p2),
+        );
+      }),
+    );
+    this.onlineUnsubs.push(
+      session.on('peer-left', () => {
+        this.game.dropOnlineSession();
+        this.game.setNotice('O HOST ENCERROU A SALA', '#ff6a7a');
+        this.returnToOnlineRoom();
+      }),
+    );
+  }
+
+  /** Convidado aplica o progresso no próprio save quando o host conclui o capítulo. */
+  private applyGuestStageClear(stageId: number): void {
+    if (this.onlineRole !== 'guest' || this.onlineFinished) return;
+    this.onlineFinished = true;
+    const stage = getStage(clamp(Math.floor(stageId), 1, MAX_STAGE));
+    this.persistRecord();
+    this.game.applyStageClear(stage.id, stage.character);
+    this.setBanner(
+      'CAPÍTULO CONCLUÍDO',
+      'PROGRESSO SALVO NESTE APARELHO · VOLTANDO À SALA',
+      '#8df4a8',
+      3.2,
+    );
+    this.after(2.4, () => this.returnToOnlineRoom());
+  }
+
+  private returnToOnlineRoom(): void {
+    if (this.onlineReturning) return;
+    this.onlineReturning = true;
+    this.online?.setPaused(false);
+    this.game.returnToOnlineLobby();
+  }
+
+  private performOnlineRestart(): void {
+    if (this.onlineRole === 'host') {
+      this.online?.restart(this.stage.id, this.player.charId, this.players[1]?.charId ?? this.stage.character);
+      this.game.transitionTo(() =>
+        this.game.showOnlineHost(this.stage.id, this.player.charId, this.players[1]?.charId ?? this.stage.character),
+      );
+    } else if (this.onlineRole === 'guest') {
+      this.online?.requestRestart();
+      this.game.setNotice('PEDIDO DE REINÍCIO ENVIADO AO HOST', '#56e3ff');
+    }
+  }
+
+  private openGuestPause(): void {
+    if (this.gameOver) return;
+    this.onlinePauseSentAt = this.time;
+    // O host atendeu: o aviso do pedido já cumpriu o papel e não deve cobrir o menu.
+    this.game.clearNotice('PEDIDO DE PAUSA ENVIADO AO HOST');
+    this.paused = true;
+    this.input.setGameplayContext(false);
+    this.game.setTouchControlsVisible(false);
+    this.pauseMenu.setItems(
+      [
+        { id: 'resume', label: 'CONTINUAR', detail: 'PEDIR AO HOST', accent: this.player.def.colors.accent },
+        { id: 'restart', label: 'PEDIR REINÍCIO', detail: 'HOST DECIDE', accent: '#ffd166' },
+        { id: 'leave', label: 'SAIR DA SALA', detail: 'VOLTAR AO LOBBY', accent: '#ff6a7a' },
+      ],
+      true,
+    );
+    this.audio.sfx('ui');
+  }
+
+  private applyGuestSnapshot(snapshot: OnlineSnapshot): void {
+    this.onlineSnapshot = snapshot;
+    this.time = Math.max(this.time, snapshot.t);
+    const wasPaused = this.paused;
+    this.paused = snapshot.paused;
+    if (snapshot.paused && !wasPaused) this.openGuestPause();
+    else if (!snapshot.paused && wasPaused) this.resumePause();
+    if (snapshot.gameOver && !this.gameOver) this.openGuestGameOver();
+
+    const maxCam = Math.max(0, this.stage.width - this.viewW);
+    this.camera.setBounds(0, maxCam);
+
+    // Jogadores.
+    snapshot.players.forEach((value, index) => {
+      const player = this.players[index];
+      if (!player) return;
+      const oldX = player.x;
+      const oldY = player.y;
+      player.applyNetVisual(value);
+      this.playerTargets[index] = { x: player.x, y: player.y };
+      player.x = oldX;
+      player.y = oldY;
+    });
+
+    // Inimigos comuns.
+    const seenEnemies = new Set<number>();
+    for (const value of snapshot.enemies) {
+      let enemy = this.guestEnemies.get(value.id);
+      if (!enemy) {
+        enemy = new Enemy(this.stage, value.kind as EnemyKind, value.x, value.elite);
+        enemy.netId = value.id;
+        this.guestEnemies.set(value.id, enemy);
+      }
+      const oldX = enemy.x;
+      const oldY = enemy.y;
+      enemy.applyNetVisual(value);
+      this.enemyTargets.set(value.id, { x: enemy.x, y: enemy.y });
+      enemy.x = oldX;
+      enemy.y = oldY;
+      seenEnemies.add(value.id);
+    }
+    for (const id of [...this.guestEnemies.keys()]) {
+      if (seenEnemies.has(id)) continue;
+      this.guestEnemies.delete(id);
+      this.enemyTargets.delete(id);
+    }
+    this.enemies = [...this.guestEnemies.values()];
+
+    // Chefe.
+    if (snapshot.boss) {
+      const value = snapshot.boss;
+      if (!this.boss || this.boss.def.id !== value.id) {
+        this.boss = new Boss(value.id as BossId, value.x, this.stage.floor);
+      }
+      const oldX = this.boss.x;
+      const oldY = this.boss.y;
+      this.boss.applyNetVisual(value);
+      this.bossTarget = { x: this.boss.x, y: this.boss.y };
+      this.boss.x = oldX;
+      this.boss.y = oldY;
+    } else {
+      this.boss = null;
+      this.bossTarget = null;
+    }
+
+    // Projéteis e zonas: recriados a partir do snapshot apenas para desenho.
+    this.projectiles = snapshot.projectile.map((value) => {
+      const projectile = new Projectile({
+        x: value.x,
+        y: value.y,
+        vx: value.vx,
+        vy: value.vy,
+        radius: value.radius,
+        damage: 0,
+        owner: value.owner,
+        color: value.color,
+        accent: value.accent,
+        style: value.style as ProjectileDef['style'],
+        life: 999,
+      });
+      projectile.spinAngle = value.spinAngle;
+      return projectile;
+    });
+    this.hazards = snapshot.hazards.map((value) => {
+      const hazard = new Hazard({
+        kind: value.kind as HazardDef['kind'],
+        x: value.x,
+        y: value.y,
+        w: value.w,
+        h: value.h,
+        radius: value.radius,
+        duration: value.duration,
+        damage: 0,
+        owner: value.owner,
+        color: value.color,
+        accent: value.accent,
+      });
+      hazard.time = value.time;
+      hazard.delay = value.delay;
+      return hazard;
+    });
+
+    this.obstacles = snapshot.obstacles.map((value) => {
+      const obstacle = new StageObstacle(
+        value.kind as ObstacleKind,
+        value.x,
+        value.y,
+        this.stage,
+        { temporary: value.temporary, life: value.life },
+      );
+      obstacle.cycle = value.cycle;
+      obstacle.active = value.active;
+      obstacle.used = value.used;
+      obstacle.phase = value.phase;
+      return obstacle;
+    });
+
+    this.bonusMotes = snapshot.bonus
+      ? snapshot.bonus.motes.map((mote, index) => ({
+          x: mote.x,
+          y: mote.y,
+          baseY: mote.y,
+          phase: index * 1.7,
+        }))
+      : [];
+    this.bonusTimer = snapshot.bonus ? snapshot.bonus.time : 0;
+    this.bonusCollected = snapshot.bonus ? snapshot.bonus.collected : 0;
+    this.bonusRewardCap = snapshot.bonus ? snapshot.bonus.rewardCap : 1;
+
+    this.phase = isGameplayPhase(snapshot.phase) ? snapshot.phase : 'combat';
+    this.waveIndex = snapshot.waveIndex;
+    this.kills = snapshot.kills;
+    this.score = snapshot.score;
+    this.maxCombo = snapshot.maxCombo;
+    this.hearts = snapshot.hearts;
+    this.pressure = snapshot.pressure;
+    this.downed = snapshot.downed;
+    this.reviveProgress = snapshot.revive;
+    this.banner = snapshot.banner
+      ? {
+          text: snapshot.banner.text,
+          sub: snapshot.banner.sub,
+          color: snapshot.banner.color,
+          t: Math.max(0, snapshot.banner.max - snapshot.banner.remaining),
+          max: snapshot.banner.max,
+        }
+      : null;
+  }
+
+  private updateGuest(dt: number): void {
+    this.time += dt;
+    if (this.gameOver) {
+      this.updateGameOverMenu();
+      return;
+    }
+    if (this.paused) {
+      this.updateGuestPauseMenu();
+      return;
+    }
+    if (this.input.pressed('pause') || this.input.pressed('back') || this.input.pressed('pause', 1)) {
+      // Um pedido por vez: segurar/teclar repetidamente não deve inundar o host
+      // nem empilhar avisos sobre o menu de pausa.
+      if (this.time - this.onlinePauseSentAt >= 1.6) {
+        this.onlinePauseSentAt = this.time;
+        this.online?.requestPause();
+        this.game.setNotice('PEDIDO DE PAUSA ENVIADO AO HOST', '#56e3ff', 2.2);
+      }
+      return;
+    }
+
+    this.onlineInputAcc += dt;
+    const packed = packInput(this.input, 0);
+    if (packed.pressed !== 0 || this.onlineInputAcc >= 1 / 24) {
+      this.onlineInputAcc = 0;
+      this.online?.sendInput(packed.down, packed.pressed);
+    }
+
+    this.updateGuestVisuals(dt);
+    if (this.animeImpact > 0) this.animeImpact = Math.max(0, this.animeImpact - dt);
+    this.updateBanner(dt);
+    // O convidado não simula combate, mas usa timers de cena para o retorno
+    // automático à sala depois do aviso de capítulo concluído.
+    this.updateTimers(dt);
+
+    if (this.onlineSnapshot) {
+      const targetCam = clamp(
+        this.onlineSnapshot.cam,
+        0,
+        Math.max(0, this.stage.width - this.viewW),
+      );
+      this.camera.update(dt, targetCam);
+    }
+  }
+
+  private updateGuestVisuals(dt: number): void {
+    const blend = 1 - Math.exp(-dt * 16);
+    this.players.forEach((player, index) => {
+      const target = this.playerTargets[index];
+      if (target) {
+        player.x += (target.x - player.x) * blend;
+        player.y += (target.y - player.y) * blend;
+      }
+      player.animTime += dt;
+      player.walkPhase += dt * (6 + Math.abs(player.vx) * 0.03);
+      player.hitFlash = Math.max(0, player.hitFlash - dt);
+      player.abilityFlash = Math.max(0, player.abilityFlash - dt);
+      player.comboTimerDisplay = Math.max(0, player.comboTimerDisplay - dt);
+    });
+
+    for (const enemy of this.enemies) {
+      const target = this.enemyTargets.get(enemy.netId);
+      if (target) {
+        enemy.x += (target.x - enemy.x) * blend;
+        enemy.y += (target.y - enemy.y) * blend;
+      }
+      enemy.animPhase += dt;
+      enemy.walkPhase += dt * (4 + Math.abs(enemy.vx) * 0.02);
+      enemy.stateTime += dt;
+      enemy.windupFlash = Math.max(0, enemy.windupFlash - dt);
+      enemy.hitFlash = Math.max(0, enemy.hitFlash - dt);
+      if (enemy.dead) enemy.deathTimer += dt;
+    }
+
+    if (this.boss && this.bossTarget) {
+      this.boss.x += (this.bossTarget.x - this.boss.x) * blend;
+      this.boss.y += (this.bossTarget.y - this.boss.y) * blend;
+      this.boss.animPhase += dt;
+      this.boss.stateT += dt;
+      this.boss.hitFlash = Math.max(0, this.boss.hitFlash - dt);
+      if (this.boss.dead) this.boss.deathTimer += dt;
+    }
+  }
+
+  private updateGuestPauseMenu(): void {
+    if (this.input.pressed('pause') || this.input.pressed('back') || this.input.pressed('cancel')) {
+      this.online?.requestResume();
+      this.resumePause();
+      return;
+    }
+    const action = this.pauseMenu.update(this.input, this.audio);
+    if (!action) return;
+    switch (action) {
+      case 'resume':
+        this.online?.requestResume();
+        this.resumePause();
+        break;
+      case 'restart':
+        this.online?.requestRestart();
+        this.game.setNotice('PEDIDO DE REINÍCIO ENVIADO AO HOST', '#56e3ff');
+        break;
+      case 'leave':
+        this.leaveOnlineRoom();
+        break;
+    }
+  }
+
+  private leaveOnlineRoom(): void {
+    this.online?.leave();
+    this.game.dropOnlineSession();
+    this.game.returnToOnlineLobby('VOCÊ SAIU DA SALA');
+  }
+
+  private openGuestGameOver(): void {
+    this.gameOver = true;
+    this.input.setGameplayContext(false);
+    this.game.setTouchControlsVisible(false);
+    this.persistRecord();
+    this.gameOverMenu.setItems(
+      [
+        { id: 'retry', label: 'PEDIR REINÍCIO', detail: 'HOST DECIDE', accent: this.player.def.colors.accent },
+        { id: 'swap', label: 'SAIR DA SALA', detail: 'VOLTAR AO LOBBY', accent: '#56e3ff' },
+        { id: 'title', label: 'MENU PRINCIPAL', detail: 'ARQUIVO SALVO', accent: '#ffe6a3' },
+      ],
+      false,
+    );
+    this.audio.sfx('gameover');
   }
 
   // ------------------------------------------------------------ World
@@ -246,6 +700,7 @@ export class GameplayScene implements Scene, World {
   spawnEnemy(kind: string, x: number, elite = false): Enemy {
     const px = clamp(x, this.camera.x + 74, this.camera.x + this.viewW - 74);
     const enemy = new Enemy(this.stage, kind as EnemyKind, px, elite);
+    enemy.netId = this.nextNetId++;
     this.game.unlockArchive([archiveCreatureId(this.stage.arc, enemy.def.kind)]);
     this.enemies.push(enemy);
     this.particles.ring(px, this.stage.floor - 6, enemy.def.accent, 42, 0.35, 2);
@@ -472,6 +927,10 @@ export class GameplayScene implements Scene, World {
   // ------------------------------------------------------------ ciclo
 
   update(dt: number): void {
+    if (this.onlineRole === 'guest') {
+      this.updateGuest(dt);
+      return;
+    }
     if (this.gameOver) {
       this.updateGameOverMenu();
       return;
@@ -528,6 +987,161 @@ export class GameplayScene implements Scene, World {
     } else {
       this.partyDeathTimer = 0;
     }
+
+    if (this.onlineRole === 'host') {
+      this.onlineSnapshotAcc += dt;
+      if (this.onlineSnapshotAcc >= 1 / 20) {
+        this.onlineSnapshotAcc = 0;
+        this.online?.sendSnapshot(this.buildSnapshot());
+      }
+    }
+  }
+
+  /** Monta o estado autoritativo enviado ao convidado. */
+  private buildSnapshot(): OnlineSnapshot {
+    return {
+      t: this.time,
+      cam: this.camera.x,
+      players: this.players.map((player) => ({
+        x: player.x,
+        y: player.y,
+        vx: player.vx,
+        vy: player.vy,
+        hp: player.hp,
+        maxHp: player.maxHp,
+        dead: player.dead,
+        facing: player.facing,
+        state: player.state,
+        onGround: player.onGround,
+        walkPhase: player.walkPhase,
+        combatState: player.state,
+        dashTime: player.dashTime,
+        dashDir: player.dashDir,
+        invuln: player.invuln,
+        hitFlash: player.hitFlash,
+        abilityFlash: player.abilityFlash,
+        deathTimer: player.deathTimer,
+        comboHits: player.comboHits,
+        abilityCd: player.abilityCd,
+        attack: player.attack
+          ? { slot: player.attack.slot, t: player.attack.t }
+          : null,
+      })),
+      enemies: this.enemies.map((enemy) => ({
+        id: enemy.netId,
+        kind: enemy.def.kind,
+        elite: enemy.elite,
+        x: enemy.x,
+        y: enemy.y,
+        vx: enemy.vx,
+        vy: enemy.vy,
+        hp: enemy.hp,
+        maxHp: enemy.maxHp,
+        facing: enemy.facing,
+        state: enemy.state,
+        stateTime: enemy.stateTime,
+        dead: enemy.dead,
+        alpha: enemy.alpha,
+        hitFlash: enemy.hitFlash,
+        enrage: enemy.enrage,
+        deathTimer: enemy.deathTimer,
+        aimX: enemy.aimX,
+        aimY: enemy.aimY,
+        windupFlash: enemy.windupFlash,
+      })),
+      boss: this.boss
+        ? {
+            id: this.boss.def.id,
+            x: this.boss.x,
+            y: this.boss.y,
+            hp: this.boss.hp,
+            maxHp: this.boss.maxHp,
+            facing: this.boss.facing,
+            state: this.boss.state,
+            stateT: this.boss.stateT,
+            phaseIndex: this.boss.phaseIndex,
+            dead: this.boss.dead,
+            hitFlash: this.boss.hitFlash,
+            alpha: 1,
+            animPhase: this.boss.animPhase,
+            attackId: this.boss.attackId,
+            attackWindup: this.boss.attackWindup,
+            attackDuration: this.boss.attackDuration,
+            attackRecover: this.boss.attackRecover,
+          }
+        : null,
+      projectile: this.projectiles.map((projectile) => ({
+        x: projectile.x,
+        y: projectile.y,
+        vx: projectile.vx,
+        vy: projectile.vy,
+        radius: projectile.radius,
+        color: projectile.color,
+        accent: projectile.accent,
+        style: projectile.style,
+        owner: projectile.owner,
+        spinAngle: projectile.spinAngle,
+      })),
+      hazards: this.hazards.map((hazard) => ({
+        kind: hazard.kind,
+        x: hazard.x,
+        y: hazard.y,
+        w: hazard.w,
+        h: hazard.h,
+        radius: hazard.radius,
+        duration: hazard.duration,
+        damage: hazard.damage,
+        owner: hazard.owner,
+        color: hazard.color,
+        accent: hazard.accent,
+        time: hazard.time,
+        delay: hazard.delay,
+      })),
+      waveIndex: this.waveIndex,
+      waveLabel: this.waveLabel,
+      waveCount: this.stage.waves.length,
+      kills: this.kills,
+      score: this.score,
+      maxCombo: Math.max(this.maxCombo, ...this.players.map((player) => player.bestCombo)),
+      hearts: this.hearts,
+      pressure: this.pressure,
+      phase: this.phase,
+      paused: this.paused,
+      gameOver: this.gameOver,
+      banner: this.banner
+        ? {
+            text: this.banner.text,
+            sub: this.banner.sub,
+            color: this.banner.color,
+            remaining: Math.max(0, this.banner.max - this.banner.t),
+            max: this.banner.max,
+          }
+        : null,
+      bonus:
+        this.phase === 'bonus'
+          ? {
+              time: Math.max(0, this.bonusTimer),
+              max: this.bonusDuration,
+              collected: this.bonusCollected,
+              total: this.bonusTotal,
+              rewardCap: this.bonusRewardCap,
+              motes: this.bonusMotes.map((mote) => ({ x: mote.x, y: mote.y })),
+            }
+          : null,
+      obstacles: this.obstacles.map((obstacle) => ({
+        kind: obstacle.kind,
+        x: obstacle.x,
+        y: obstacle.y,
+        temporary: obstacle.temporary,
+        life: obstacle.life,
+        cycle: obstacle.cycle,
+        active: obstacle.active,
+        used: obstacle.used,
+        phase: obstacle.phase,
+      })),
+      revive: [...this.reviveProgress],
+      downed: [...this.downed],
+    };
   }
 
   /** Trata a queda de um jogador: coração, reanimação pelo parceiro ou game over. */
@@ -671,8 +1285,23 @@ export class GameplayScene implements Scene, World {
       // O combate terminou: a tensão sai e o tema do plano volta para o finale.
       this.audio.playMusic(this.stage.music);
       this.persistRecord();
-      this.after(2.7, () => this.game.finishStage(this.stage.id, this.player.charId, this.isCoop));
+      this.after(2.7, () => this.finishChapter());
     }
+  }
+
+  /** Conclui o capítulo: online host avisa e volta à sala; solo/local segue o fluxo normal. */
+  private finishChapter(): void {
+    if (this.onlineRole === 'host') {
+      if (this.onlineFinished) return;
+      this.onlineFinished = true;
+      this.online?.stageClear(this.stage.id);
+      this.game.applyStageClear(this.stage.id, this.player.charId);
+      this.online?.lobbyReturn(this.stage.id, this.player.charId, true);
+      this.game.setNotice('CAPÍTULO CONCLUÍDO — PROGRESSO SALVO', '#8df4a8');
+      this.returnToOnlineRoom();
+      return;
+    }
+    this.game.finishStage(this.stage.id, this.player.charId, this.isCoop);
   }
 
   private completeChapter(): void {
@@ -691,7 +1320,7 @@ export class GameplayScene implements Scene, World {
     this.game.flash(this.stage.palette.accent, 0.16);
     this.audio.sfx('victory');
     this.persistRecord();
-    this.after(2.4, () => this.game.finishStage(this.stage.id, this.player.charId, this.isCoop));
+    this.after(2.4, () => this.finishChapter());
   }
 
   private startWave(wave: WaveDef): void {
@@ -1088,20 +1717,34 @@ export class GameplayScene implements Scene, World {
   private openPause(): void {
     if (this.players.every((p) => p.dead)) return;
     this.paused = true;
+    this.online?.setPaused(true);
     // Mouse e botão B voltam ao contexto de menu enquanto a pausa estiver aberta.
     this.input.setGameplayContext(false);
     // Os botões virtuais não devem ativar itens do menu de pausa.
     this.game.setTouchControlsVisible(false);
+    const onlineHost = this.onlineRole === 'host';
     this.pauseMenu.setItems(
       [
         { id: 'resume', label: 'CONTINUAR', detail: 'ESC', accent: this.player.def.colors.accent },
-        { id: 'swap', label: 'MAPA DA CAMPANHA', detail: 'ARCOS & CAPÍTULOS', accent: '#56e3ff' },
-        { id: 'restart', label: 'REINICIAR CAPÍTULO', detail: `CAP. ${this.stage.chapter}`, accent: '#ffd166' },
-        { id: 'title', label: 'SAIR PARA O MENU', detail: 'PROGRESSO SALVO', accent: '#ff6a7a' },
+        onlineHost
+          ? { id: 'swap', label: 'VOLTAR À SALA ONLINE', detail: 'SEM SALVAR ESTE CAPÍTULO', accent: '#56e3ff' }
+          : { id: 'swap', label: 'MAPA DA CAMPANHA', detail: 'ARCOS & CAPÍTULOS', accent: '#56e3ff' },
+        { id: 'restart', label: 'REINICIAR CAPÍTULO', detail: onlineHost ? 'AVISA O CONVIDADO' : `CAP. ${this.stage.chapter}`, accent: '#ffd166' },
+        onlineHost
+          ? { id: 'title', label: 'FECHAR SALA', detail: 'O CONVIDADO SAI', accent: '#ff6a7a' }
+          : { id: 'title', label: 'SAIR PARA O MENU', detail: 'PROGRESSO SALVO', accent: '#ff6a7a' },
       ],
       true,
     );
     this.audio.sfx('ui');
+  }
+
+  private resumePause(): void {
+    if (!this.paused) return;
+    this.paused = false;
+    this.input.setGameplayContext(true);
+    this.game.setTouchControlsVisible(true);
+    this.online?.setPaused(false);
   }
 
   private updatePauseMenu(): void {
@@ -1112,15 +1755,13 @@ export class GameplayScene implements Scene, World {
       this.input.pressed('pause', 1) ||
       this.input.pressed('cancel', 1)
     ) {
-      this.paused = false;
-      this.input.setGameplayContext(true);
-      this.game.setTouchControlsVisible(true);
+      this.resumePause();
       this.audio.sfx('ui');
       return;
     }
     // Atalho de toque: o botão de casa no topo da pausa volta direto ao título.
     if (this.input.mouse.clicked && insideRect(this.pauseHomeRect, this.input.mouse.x, this.input.mouse.y)) {
-      this.game.gotoTitle();
+      this.leaveToTitle();
       return;
     }
     const action =
@@ -1128,9 +1769,7 @@ export class GameplayScene implements Scene, World {
     if (!action) return;
     switch (action) {
       case 'resume':
-        this.paused = false;
-        this.input.setGameplayContext(true);
-        this.game.setTouchControlsVisible(true);
+        this.resumePause();
         break;
       case 'swap':
         this.leaveToMap();
@@ -1139,12 +1778,16 @@ export class GameplayScene implements Scene, World {
         this.restartScene();
         break;
       case 'title':
-        this.game.gotoTitle();
+        this.leaveToTitle();
         break;
     }
   }
 
   private restartScene(): void {
+    if (this.onlineRole === 'host' || this.onlineRole === 'guest') {
+      this.performOnlineRestart();
+      return;
+    }
     if (this.isCoop) {
       this.game.transitionTo(() =>
         this.game.showCoopGameplay(this.stage.id, this.players[0].charId, this.players[1].charId),
@@ -1155,8 +1798,25 @@ export class GameplayScene implements Scene, World {
   }
 
   private leaveToMap(): void {
+    if (this.onlineRole === 'host') {
+      this.online?.lobbyReturn(this.stage.id, this.player.charId);
+      this.returnToOnlineRoom();
+      return;
+    }
+    if (this.onlineRole === 'guest') {
+      this.leaveOnlineRoom();
+      return;
+    }
     if (this.isCoop) this.game.gotoMultiplayer();
     else this.game.gotoCharacterSelect(this.stage.id, this.player.charId);
+  }
+
+  private leaveToTitle(): void {
+    if (this.online) {
+      this.online.leave();
+      this.game.dropOnlineSession();
+    }
+    this.game.gotoTitle();
   }
 
   private openGameOver(): void {
@@ -1164,24 +1824,27 @@ export class GameplayScene implements Scene, World {
     this.input.setGameplayContext(false);
     this.game.setTouchControlsVisible(false);
     this.persistRecord();
+    const onlineHost = this.onlineRole === 'host';
     this.gameOverMenu.setItems(
       [
-        { id: 'retry', label: 'TENTAR NOVAMENTE', detail: `CAP. ${this.stage.chapter}`, accent: this.player.def.colors.accent },
-        { id: 'swap', label: 'MAPA DA CAMPANHA', detail: 'ARCOS & CAPÍTULOS', accent: '#56e3ff' },
-        { id: 'title', label: 'MENU PRINCIPAL', detail: 'ARQUIVO SALVO', accent: '#ffe6a3' },
+        { id: 'retry', label: 'TENTAR NOVAMENTE', detail: onlineHost ? 'REINICIA PARA A DUPLA' : `CAP. ${this.stage.chapter}`, accent: this.player.def.colors.accent },
+        { id: 'swap', label: onlineHost ? 'VOLTAR À SALA ONLINE' : 'MAPA DA CAMPANHA', detail: onlineHost ? 'SEM SALVAR ESTE CAPÍTULO' : 'ARCOS & CAPÍTULOS', accent: '#56e3ff' },
+        { id: 'title', label: onlineHost ? 'FECHAR SALA' : 'MENU PRINCIPAL', detail: onlineHost ? 'O CONVIDADO SAI' : 'ARQUIVO SALVO', accent: '#ffe6a3' },
       ],
       false,
     );
     this.audio.sfx('gameover');
+    // O host não envia mais snapshots depois do game over; este é o último.
+    this.online?.sendSnapshot(this.buildSnapshot());
   }
 
   private updateGameOverMenu(): void {
     if (this.input.pressed('back') || this.input.pressed('cancel')) {
-      this.game.gotoTitle();
+      this.leaveToTitle();
       return;
     }
     if (this.input.mouse.clicked && insideRect(this.gameOverHomeRect, this.input.mouse.x, this.input.mouse.y)) {
-      this.game.gotoTitle();
+      this.leaveToTitle();
       return;
     }
     const action =
@@ -1189,13 +1852,19 @@ export class GameplayScene implements Scene, World {
     if (!action) return;
     switch (action) {
       case 'retry':
-        this.restartScene();
+        if (this.onlineRole === 'guest') {
+          this.online?.requestRestart();
+          this.game.setNotice('PEDIDO DE REINÍCIO ENVIADO AO HOST', '#56e3ff');
+        } else {
+          this.restartScene();
+        }
         break;
       case 'swap':
-        this.leaveToMap();
+        if (this.onlineRole === 'guest') this.leaveOnlineRoom();
+        else this.leaveToMap();
         break;
       case 'title':
-        this.game.gotoTitle();
+        this.leaveToTitle();
         break;
     }
   }
@@ -1680,7 +2349,14 @@ export class GameplayScene implements Scene, World {
       label(ctx, key, cx + 31, cyy, 9, '#ffffff', { align: 'center', font: FONTS.mono, weight: 700 });
       label(ctx, action, cx + 72, cyy, 10, 'rgba(200,208,228,0.65)', { font: FONTS.mono, spacing: 0.8 });
     });
-    label(ctx, this.game.isTouchDevice ? 'TOQUE NOS ITENS · ⌂ MENU ACIMA' : 'ESC / BACKSPACE FECHAR · P2 USA O 2º CONTROLE', x + w - 32, y + h - 18, 9, 'rgba(170,178,200,0.42)', {
+    const pauseHint = this.game.isTouchDevice
+      ? 'TOQUE NOS ITENS · ⌂ MENU ACIMA'
+      : this.onlineRole === 'host'
+        ? 'ESC / BACKSPACE FECHAR · P2 É O CONVIDADO'
+        : this.onlineRole === 'guest'
+          ? 'ESC / BACKSPACE FECHAR · VOCÊ CONTROLA O P2'
+          : 'ESC / BACKSPACE FECHAR · P2 USA O 2º CONTROLE';
+    label(ctx, pauseHint, x + w - 32, y + h - 18, 9, 'rgba(170,178,200,0.42)', {
       align: 'right',
       font: FONTS.mono,
       spacing: 1,

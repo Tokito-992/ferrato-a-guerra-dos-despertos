@@ -1,5 +1,8 @@
 /** Entrada de teclado, mouse, toque e controle com noções de "pressionado neste frame". */
-import { BINDABLE_ACTIONS, defaultBindings } from './bindings.js?v=876088114997';
+import { BINDABLE_ACTIONS, defaultBindings } from './bindings.js?v=1400d032a431';
+function emptyRemoteState() {
+    return { enabled: false, down: new Set(), pressed: new Set() };
+}
 const DIRECTIONS = ['left', 'right', 'up', 'down'];
 /** Mapeamento do Gamepad API padrão (Xbox/PlayStation/Switch Pro). */
 const GAMEPAD_BUTTONS = [
@@ -52,6 +55,8 @@ export class Input {
         this.padSlots = [null, null];
         this.padRepeat = [new Map(), new Map()];
         this.gameplayContext = false;
+        /** Entrada do parceiro remoto no co-op online, substituindo o 2º controle. */
+        this.remote = [emptyRemoteState(), emptyRemoteState()];
         this.mouse = { x: 0, y: 0, down: false, clicked: false, moved: false };
         /** Chamado no primeiro gesto do usuário (para liberar áudio). */
         this.onFirstGesture = null;
@@ -435,7 +440,27 @@ export class Input {
             this.virtualReleased.add(action);
         this.virtualDown.clear();
     }
+    /** Liga ou desliga a entrada remota de um jogador (co-op online). */
+    setRemotePlayer(player, enabled) {
+        const state = this.remote[player];
+        state.enabled = enabled;
+        if (!enabled) {
+            state.down.clear();
+            state.pressed.clear();
+        }
+    }
+    /** Aplica o último estado recebido do parceiro remoto. */
+    setRemoteState(player, down, pressed) {
+        const state = this.remote[player];
+        if (!state.enabled)
+            return;
+        state.down = new Set(down);
+        for (const action of pressed)
+            state.pressed.add(action);
+    }
     isDown(action, player = 0) {
+        if (this.remote[player].enabled)
+            return this.remote[player].down.has(action);
         if (player === 0) {
             return (this.state.down.has(action) ||
                 this.virtualDown.has(action) ||
@@ -445,6 +470,8 @@ export class Input {
         return this.pads[1].down.has(action);
     }
     pressed(action, player = 0) {
+        if (this.remote[player].enabled)
+            return this.remote[player].pressed.has(action);
         if (player === 0) {
             return (this.state.pressed.has(action) ||
                 this.virtualPressed.has(action) ||
@@ -454,6 +481,8 @@ export class Input {
         return this.pads[1].pressed.has(action);
     }
     released(action, player = 0) {
+        if (this.remote[player].enabled)
+            return false;
         if (player === 0) {
             return (this.state.released.has(action) ||
                 this.virtualReleased.has(action) ||
@@ -472,6 +501,9 @@ export class Input {
         this.pads[0].released.clear();
         this.pads[1].pressed.clear();
         this.pads[1].released.clear();
+        // A entrada remota é acumulada até a cena consumi-la neste frame.
+        this.remote[0].pressed.clear();
+        this.remote[1].pressed.clear();
         this.rawPressed.clear();
         this.mouseButtonsPressed.clear();
         this.mouseButtonsReleased.clear();
@@ -495,6 +527,8 @@ export class Input {
         this.pads[0].released.clear();
         this.pads[1].pressed.clear();
         this.pads[1].released.clear();
+        this.remote[0].pressed.clear();
+        this.remote[1].pressed.clear();
         this.padRepeat[0].clear();
         this.padRepeat[1].clear();
         // Mantém direções seguradas sem repetir imediatamente na cena nova.

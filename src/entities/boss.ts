@@ -48,9 +48,38 @@ const ATTACK_LABELS: Record<string, string> = {
   finalJudgment: 'SENTENÇA FINAL',
 };
 
+/** Estado visual recebido do host no co-op online. */
+export interface BossNetVisual {
+  x: number;
+  y: number;
+  hp: number;
+  maxHp: number;
+  facing: number;
+  state: string;
+  stateT: number;
+  phaseIndex: number;
+  dead: boolean;
+  hitFlash: number;
+  alpha: number;
+  animPhase: number;
+  attackId: string | null;
+  attackWindup: number;
+  attackDuration: number;
+  attackRecover: number;
+}
+
+const NET_BOSS_STATES: readonly BossState[] = [
+  'intro',
+  'idle',
+  'windup',
+  'execute',
+  'recover',
+  'phase',
+  'dead',
+];
+
 export class Boss extends Combatant {
-  readonly def: BossDef;
-  phaseIndex = 0;
+  readonly def: BossDef;  phaseIndex = 0;
   state: BossState = 'intro';
   stateT = 0;
   introTimer = 2.6;
@@ -89,6 +118,29 @@ export class Boss extends Combatant {
 
   get phaseName(): string {
     return this.def.phases[this.phaseIndex]?.name ?? '';
+  }
+
+  /** Aplica o estado visual enviado pelo host, sem rodar IA nem física. */
+  applyNetVisual(v: BossNetVisual): void {
+    this.x = v.x;
+    this.y = v.y;
+    this.maxHp = Math.max(1, v.maxHp);
+    this.hp = clamp(v.hp, 0, this.maxHp);
+    this.facing = v.facing < 0 ? -1 : 1;
+    this.state = NET_BOSS_STATES.includes(v.state as BossState)
+      ? (v.state as BossState)
+      : 'idle';
+    this.stateT = Math.max(0, v.stateT);
+    this.phaseIndex = clamp(Math.floor(v.phaseIndex), 0, Math.max(0, this.def.phases.length - 1));
+    this.dead = v.dead;
+    this.hitFlash = Math.max(0, v.hitFlash);
+    this.animPhase = v.animPhase;
+    this.attackId = v.attackId;
+    this.attackWindup = Math.max(0.01, v.attackWindup);
+    this.attackDuration = Math.max(0.01, v.attackDuration);
+    this.attackRecover = Math.max(0.01, v.attackRecover);
+    this.warning = '';
+    this.invuln = 0;
   }
 
   get attackLabel(): string {

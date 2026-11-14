@@ -1,30 +1,30 @@
 /** Núcleo do jogo: loop, troca de cenas, transições, hitstop e persistência. */
-import { CHARACTERS } from '../data/characters.js?v=876088114997';
-import { getStage, MAX_STAGE } from '../data/stages.js?v=876088114997';
-import { STORY } from '../data/story.js?v=876088114997';
-import { AudioEngine } from './audio.js?v=876088114997';
-import { Input } from './input.js?v=876088114997';
-import { ParticleSystem } from './particles.js?v=876088114997';
-import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=876088114997';
-import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=876088114997';
-import { needsIOSInstallGuide } from './platform.js?v=876088114997';
-import { cloudSync } from './cloud-sync.js?v=876088114997';
-import { showInstallGuide } from '../ui/install-guide.js?v=876088114997';
-import { showAccountPanel } from '../ui/account-panel.js?v=876088114997';
-import { clamp, hexToRgba } from './math.js?v=876088114997';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=876088114997';
-import { TitleScene } from '../scenes/title.js?v=876088114997';
-import { CharacterSelectScene } from '../scenes/characterSelect.js?v=876088114997';
-import { MultiplayerScene } from '../scenes/multiplayer.js?v=876088114997';
-import { GameplayScene } from '../scenes/gameplay.js?v=876088114997';
-import { ComicScene } from '../scenes/comic.js?v=876088114997';
-import { VictoryScene } from '../scenes/victory.js?v=876088114997';
-import { CreditsScene } from '../scenes/credits.js?v=876088114997';
-import { SettingsScene } from '../scenes/settings.js?v=876088114997';
-import { ControlsScene } from '../scenes/controls.js?v=876088114997';
-import { TutorialScene } from '../scenes/tutorial.js?v=876088114997';
-import { ArchiveScene } from '../scenes/archive.js?v=876088114997';
-import { ARCHIVE_ENTRY_IDS } from '../data/archive.js?v=876088114997';
+import { CHARACTERS } from '../data/characters.js?v=1400d032a431';
+import { getStage, MAX_STAGE } from '../data/stages.js?v=1400d032a431';
+import { STORY } from '../data/story.js?v=1400d032a431';
+import { AudioEngine } from './audio.js?v=1400d032a431';
+import { Input } from './input.js?v=1400d032a431';
+import { ParticleSystem } from './particles.js?v=1400d032a431';
+import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=1400d032a431';
+import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=1400d032a431';
+import { needsIOSInstallGuide } from './platform.js?v=1400d032a431';
+import { cloudSync } from './cloud-sync.js?v=1400d032a431';
+import { showInstallGuide } from '../ui/install-guide.js?v=1400d032a431';
+import { showAccountPanel } from '../ui/account-panel.js?v=1400d032a431';
+import { clamp, hexToRgba } from './math.js?v=1400d032a431';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=1400d032a431';
+import { TitleScene } from '../scenes/title.js?v=1400d032a431';
+import { CharacterSelectScene } from '../scenes/characterSelect.js?v=1400d032a431';
+import { MultiplayerScene } from '../scenes/multiplayer.js?v=1400d032a431';
+import { GameplayScene } from '../scenes/gameplay.js?v=1400d032a431';
+import { ComicScene } from '../scenes/comic.js?v=1400d032a431';
+import { VictoryScene } from '../scenes/victory.js?v=1400d032a431';
+import { CreditsScene } from '../scenes/credits.js?v=1400d032a431';
+import { SettingsScene } from '../scenes/settings.js?v=1400d032a431';
+import { ControlsScene } from '../scenes/controls.js?v=1400d032a431';
+import { TutorialScene } from '../scenes/tutorial.js?v=1400d032a431';
+import { ArchiveScene } from '../scenes/archive.js?v=1400d032a431';
+import { ARCHIVE_ENTRY_IDS } from '../data/archive.js?v=1400d032a431';
 /** Posições normalizadas usadas quando não há layout livre salvo. */
 function presetTouchPositions(layout, dock) {
     const y = dock === 'top' ? 0.1 : 0.9;
@@ -55,6 +55,8 @@ function presetTouchPositions(layout, dock) {
 }
 export class Game {
     constructor(canvas) {
+        /** Sala online ativa; sobrevive à troca de cenas até o jogador sair. */
+        this.onlineSession = null;
         this.width = 1280;
         this.height = 720;
         this.time = 0;
@@ -478,6 +480,7 @@ export class Game {
         this.transitionTo(() => this.showTitle());
     }
     showTitle() {
+        this.dropOnlineSession();
         this.setScene(new TitleScene(this));
     }
     gotoCharacterSelect(stageId, selected) {
@@ -524,19 +527,44 @@ export class Game {
         this.save.selected = p1;
         this.setScene(new GameplayScene(this, getStage(stageId), p1, p2));
     }
-    /** Chamado pela cena de combate quando o chefe cai. */
-    finishStage(stageId, charId, returnToLobby = false) {
-        if (this.finishing)
+    /** Inicia o capítulo no host autoritativo de uma sala online. */
+    showOnlineHost(stageId, p1, p2) {
+        if (!this.onlineSession) {
+            this.showMultiplayer();
             return;
-        this.finishing = true;
+        }
+        this.finishing = false;
         const stage = getStage(stageId);
+        const safeP1 = p1 in CHARACTERS ? p1 : stage.character;
+        const safeP2 = p2 in CHARACTERS ? p2 : safeP1;
+        this.save.selected = safeP1;
+        this.setScene(new GameplayScene(this, stage, safeP1, safeP2, this.onlineSession));
+    }
+    /** Inicia o capítulo no convidado; ele apenas envia entrada e desenha o host. */
+    showOnlineGuest(stageId, p1, p2) {
+        if (!this.onlineSession) {
+            this.showMultiplayer();
+            return;
+        }
+        this.finishing = false;
+        const stage = getStage(stageId);
+        const safeP1 = p1 in CHARACTERS ? p1 : stage.character;
+        const safeP2 = p2 in CHARACTERS ? p2 : safeP1;
+        this.save.selected = safeP2;
+        this.persist();
+        this.setScene(new GameplayScene(this, stage, safeP1, safeP2, this.onlineSession));
+    }
+    /**
+     * Aplica a conclusão de um capítulo ao save local sem trocar de cena.
+     * Usado pelo co-op online, em que cada jogador grava o próprio progresso.
+     */
+    applyStageClear(stageId, charId) {
         const id = charId in CHARACTERS ? charId : 'ravi';
         if (!this.save.cleared.includes(stageId))
             this.save.cleared.push(stageId);
         if (!this.save.unlocked.includes(id))
             this.save.unlocked.push(id);
         this.save.selected = id;
-        this.save.bestCombo = Math.max(this.save.bestCombo, 0);
         let nextChar = null;
         if (stageId < MAX_STAGE) {
             const next = getStage(stageId + 1);
@@ -549,7 +577,28 @@ export class Game {
             this.save.maxStage = Math.max(this.save.maxStage, Math.min(MAX_STAGE, stageId + 1));
             this.save.selected = nextChar;
         }
+        this.save.bestCombo = Math.max(this.save.bestCombo, 0);
         this.persist();
+        return nextChar;
+    }
+    /** Volta à cena de multijogador; o painel da sala reabre se a sessão continua ativa. */
+    returnToOnlineLobby(message) {
+        if (message)
+            this.setNotice(message, '#8df4a8');
+        this.transitionTo(() => this.showMultiplayer());
+    }
+    dropOnlineSession() {
+        this.onlineSession?.dispose();
+        this.onlineSession = null;
+    }
+    /** Chamado pela cena de combate quando o chefe cai. */
+    finishStage(stageId, charId, returnToLobby = false) {
+        if (this.finishing)
+            return;
+        this.finishing = true;
+        const stage = getStage(stageId);
+        const id = charId in CHARACTERS ? charId : 'ravi';
+        const nextChar = this.applyStageClear(stageId, id);
         // Co-op local: sem cutscene de transição de arco — a dupla volta ao lobby
         // para escolher o próximo capítulo junto.
         if (returnToLobby) {
@@ -633,6 +682,14 @@ export class Game {
     }
     setNotice(text, color = '#ff8a3d', max = 5.5) {
         this.notice = { text, color, t: 0, max };
+    }
+    /** Remove o aviso atual, ou apenas se ele ainda tiver o texto indicado. */
+    clearNotice(text) {
+        if (!this.notice)
+            return;
+        if (text !== undefined && this.notice.text !== text)
+            return;
+        this.notice = null;
     }
     persist() {
         writeSave(this.save);

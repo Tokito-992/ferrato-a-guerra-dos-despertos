@@ -9,11 +9,44 @@ import type { StageDef } from '../data/stages.js';
 
 export type EnemyState = 'spawn' | 'chase' | 'windup' | 'attack' | 'recover' | 'stagger' | 'hover';
 
+/** Estado visual recebido do host no co-op online. */
+export interface EnemyNetVisual {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  hp: number;
+  maxHp: number;
+  facing: number;
+  state: string;
+  stateTime: number;
+  dead: boolean;
+  alpha: number;
+  hitFlash: number;
+  enrage: boolean;
+  deathTimer: number;
+  aimX: number;
+  aimY: number;
+  windupFlash: number;
+}
+
+const NET_ENEMY_STATES: readonly EnemyState[] = [
+  'spawn',
+  'chase',
+  'windup',
+  'attack',
+  'recover',
+  'stagger',
+  'hover',
+];
+
 export class Enemy extends Combatant {
   readonly def: EnemyDef;
   readonly elite: boolean;
   readonly displayName: string;
   readonly stage: StageDef;
+  /** Identificador estável usado pelos snapshots do co-op online. */
+  netId = 0;
 
   state: EnemyState = 'spawn';
   stateTime = 0;
@@ -66,6 +99,29 @@ export class Enemy extends Combatant {
     if (this.state !== 'windup') return 0;
     const w = Math.max(0.01, this.def.windup);
     return clamp(this.stateTime / w, 0, 1);
+  }
+
+  /** Aplica o estado visual enviado pelo host, sem rodar IA nem física. */
+  applyNetVisual(v: EnemyNetVisual): void {
+    this.x = v.x;
+    this.y = v.y;
+    this.vx = v.vx;
+    this.vy = v.vy;
+    this.maxHp = Math.max(1, v.maxHp);
+    this.hp = clamp(v.hp, 0, this.maxHp);
+    this.facing = v.facing < 0 ? -1 : 1;
+    this.state = NET_ENEMY_STATES.includes(v.state as EnemyState)
+      ? (v.state as EnemyState)
+      : 'chase';
+    this.stateTime = Math.max(0, v.stateTime);
+    this.dead = v.dead;
+    this.alpha = clamp(v.alpha, 0, 1);
+    this.hitFlash = Math.max(0, v.hitFlash);
+    this.enrage = v.enrage;
+    this.deathTimer = Math.max(0, v.deathTimer);
+    this.aimX = v.aimX;
+    this.aimY = v.aimY;
+    this.windupFlash = Math.max(0, v.windupFlash);
   }
 
   get attackRatio(): number {

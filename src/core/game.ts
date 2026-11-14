@@ -10,6 +10,7 @@ import type { Action } from './input.js';
 import { ParticleSystem } from './particles.js';
 import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js';
 import type { SaveData, TouchButtonId, TouchDock, TouchLayout, TouchPositions } from './save.js';
+import type { OnlineSession } from './online.js';
 import { canFullscreen, toggleFullscreen } from './fullscreen.js';
 import { needsIOSInstallGuide } from './platform.js';
 import { cloudSync } from './cloud-sync.js';
@@ -90,6 +91,9 @@ export class Game {
   readonly input: Input;
   readonly audio: AudioEngine;
   save: SaveData;
+
+  /** Sala online ativa; sobrevive à troca de cenas até o jogador sair. */
+  onlineSession: OnlineSession | null = null;
 
   readonly width = 1280;
   readonly height = 720;
@@ -540,6 +544,7 @@ export class Game {
   }
 
   showTitle(): void {
+    this.dropOnlineSession();
     this.setScene(new TitleScene(this));
   }
 
@@ -593,17 +598,45 @@ export class Game {
     this.setScene(new GameplayScene(this, getStage(stageId), p1, p2));
   }
 
-  /** Chamado pela cena de combate quando o chefe cai. */
-  finishStage(stageId: number, charId: CharacterId, returnToLobby = false): void {
-    if (this.finishing) return;
-    this.finishing = true;
+  /** Inicia o capítulo no host autoritativo de uma sala online. */
+  showOnlineHost(stageId: number, p1: CharacterId, p2: CharacterId): void {
+    if (!this.onlineSession) {
+      this.showMultiplayer();
+      return;
+    }
+    this.finishing = false;
     const stage = getStage(stageId);
+    const safeP1 = p1 in CHARACTERS ? p1 : stage.character;
+    const safeP2 = p2 in CHARACTERS ? p2 : safeP1;
+    this.save.selected = safeP1;
+    this.setScene(new GameplayScene(this, stage, safeP1, safeP2, this.onlineSession));
+  }
+
+  /** Inicia o capítulo no convidado; ele apenas envia entrada e desenha o host. */
+  showOnlineGuest(stageId: number, p1: CharacterId, p2: CharacterId): void {
+    if (!this.onlineSession) {
+      this.showMultiplayer();
+      return;
+    }
+    this.finishing = false;
+    const stage = getStage(stageId);
+    const safeP1 = p1 in CHARACTERS ? p1 : stage.character;
+    const safeP2 = p2 in CHARACTERS ? p2 : safeP1;
+    this.save.selected = safeP2;
+    this.persist();
+    this.setScene(new GameplayScene(this, stage, safeP1, safeP2, this.onlineSession));
+  }
+
+  /**
+   * Aplica a conclusão de um capítulo ao save local sem trocar de cena.
+   * Usado pelo co-op online, em que cada jogador grava o próprio progresso.
+   */
+  applyStageClear(stageId: number, charId: CharacterId): CharacterId | null {
     const id = charId in CHARACTERS ? charId : 'ravi';
 
     if (!this.save.cleared.includes(stageId)) this.save.cleared.push(stageId);
     if (!this.save.unlocked.includes(id)) this.save.unlocked.push(id);
     this.save.selected = id;
-    this.save.bestCombo = Math.max(this.save.bestCombo, 0);
 
     let nextChar: CharacterId | null = null;
     if (stageId < MAX_STAGE) {
@@ -617,7 +650,29 @@ export class Game {
       this.save.maxStage = Math.max(this.save.maxStage, Math.min(MAX_STAGE, stageId + 1));
       this.save.selected = nextChar;
     }
+    this.save.bestCombo = Math.max(this.save.bestCombo, 0);
     this.persist();
+    return nextChar;
+  }
+
+  /** Volta à cena de multijogador; o painel da sala reabre se a sessão continua ativa. */
+  returnToOnlineLobby(message?: string): void {
+    if (message) this.setNotice(message, '#8df4a8');
+    this.transitionTo(() => this.showMultiplayer());
+  }
+
+  dropOnlineSession(): void {
+    this.onlineSession?.dispose();
+    this.onlineSession = null;
+  }
+
+  /** Chamado pela cena de combate quando o chefe cai. */
+  finishStage(stageId: number, charId: CharacterId, returnToLobby = false): void {
+    if (this.finishing) return;
+    this.finishing = true;
+    const stage = getStage(stageId);
+    const id = charId in CHARACTERS ? charId : 'ravi';
+    const nextChar = this.applyStageClear(stageId, id);
 
     // Co-op local: sem cutscene de transição de arco — a dupla volta ao lobby
     // para escolher o próximo capítulo junto.
@@ -718,6 +773,13 @@ export class Game {
 
   setNotice(text: string, color = '#ff8a3d', max = 5.5): void {
     this.notice = { text, color, t: 0, max };
+  }
+
+  /** Remove o aviso atual, ou apenas se ele ainda tiver o texto indicado. */
+  clearNotice(text?: string): void {
+    if (!this.notice) return;
+    if (text !== undefined && this.notice.text !== text) return;
+    this.notice = null;
   }
 
   persist(): void {

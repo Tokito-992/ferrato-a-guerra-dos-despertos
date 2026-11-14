@@ -1,8 +1,8 @@
 /** Chefes com múltiplos estágios, telegrafia e padrões únicos por fase. */
-import { clamp, rand, rectsOverlap, TAU } from '../core/math.js?v=876088114997';
-import { Combatant } from './combatant.js?v=876088114997';
-import { BOSSES } from '../data/bosses.js?v=876088114997';
-import { CHAPTERS_PER_ARC, getStage } from '../data/stages.js?v=876088114997';
+import { clamp, rand, rectsOverlap, TAU } from '../core/math.js?v=1400d032a431';
+import { Combatant } from './combatant.js?v=1400d032a431';
+import { BOSSES } from '../data/bosses.js?v=1400d032a431';
+import { CHAPTERS_PER_ARC, getStage } from '../data/stages.js?v=1400d032a431';
 const ATTACK_LABELS = {
     slam: 'PISADA',
     charge: 'INVESTIDA',
@@ -41,6 +41,15 @@ const ATTACK_LABELS = {
     timeStop: 'TEMPO',
     finalJudgment: 'SENTENÇA FINAL',
 };
+const NET_BOSS_STATES = [
+    'intro',
+    'idle',
+    'windup',
+    'execute',
+    'recover',
+    'phase',
+    'dead',
+];
 export class Boss extends Combatant {
     constructor(id, x, worldFloor) {
         const def = BOSSES[id];
@@ -79,6 +88,28 @@ export class Boss extends Combatant {
     }
     get phaseName() {
         return this.def.phases[this.phaseIndex]?.name ?? '';
+    }
+    /** Aplica o estado visual enviado pelo host, sem rodar IA nem física. */
+    applyNetVisual(v) {
+        this.x = v.x;
+        this.y = v.y;
+        this.maxHp = Math.max(1, v.maxHp);
+        this.hp = clamp(v.hp, 0, this.maxHp);
+        this.facing = v.facing < 0 ? -1 : 1;
+        this.state = NET_BOSS_STATES.includes(v.state)
+            ? v.state
+            : 'idle';
+        this.stateT = Math.max(0, v.stateT);
+        this.phaseIndex = clamp(Math.floor(v.phaseIndex), 0, Math.max(0, this.def.phases.length - 1));
+        this.dead = v.dead;
+        this.hitFlash = Math.max(0, v.hitFlash);
+        this.animPhase = v.animPhase;
+        this.attackId = v.attackId;
+        this.attackWindup = Math.max(0.01, v.attackWindup);
+        this.attackDuration = Math.max(0.01, v.attackDuration);
+        this.attackRecover = Math.max(0.01, v.attackRecover);
+        this.warning = '';
+        this.invuln = 0;
     }
     get attackLabel() {
         return this.attackId ? ATTACK_LABELS[this.attackId] ?? this.attackId : '';

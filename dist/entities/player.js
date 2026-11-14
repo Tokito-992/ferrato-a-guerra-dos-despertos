@@ -1,8 +1,8 @@
 /** Jogador: movimentação, combos, dash, habilidades e passivas por personagem. */
-import { clamp, rand, rectsOverlap } from '../core/math.js?v=876088114997';
-import { Combatant } from './combatant.js?v=876088114997';
-import { getCharacter } from '../data/characters.js?v=876088114997';
-import { MOVESETS } from '../data/movesets.js?v=876088114997';
+import { clamp, rand, rectsOverlap } from '../core/math.js?v=1400d032a431';
+import { Combatant } from './combatant.js?v=1400d032a431';
+import { getCharacter } from '../data/characters.js?v=1400d032a431';
+import { MOVESETS } from '../data/movesets.js?v=1400d032a431';
 /** Cada Desperto tem uma assinatura sonora própria ao ativar a habilidade. */
 const ABILITY_SFX = {
     ravi: 'abilityRavi',
@@ -12,6 +12,17 @@ const ABILITY_SFX = {
     elodie: 'abilityElodie',
     thryc: 'abilityThryc',
 };
+const NET_STATES = [
+    'idle',
+    'run',
+    'jump',
+    'fall',
+    'attack',
+    'dash',
+    'hurt',
+    'dead',
+];
+const NET_SLOTS = ['light1', 'light2', 'light3', 'heavy', 'air'];
 export class Player extends Combatant {
     constructor(x, charId, floor, playerIndex = 0) {
         const def = getCharacter(charId);
@@ -196,6 +207,56 @@ export class Player extends Combatant {
         if (Math.abs(this.vx) > 24)
             return 'run';
         return 'idle';
+    }
+    /**
+     * Aplica o estado visual do host no convidado. Não roda física nem combate:
+     * o convidado apenas desenha o que o host simula.
+     */
+    applyNetVisual(v) {
+        this.x = v.x;
+        this.y = v.y;
+        this.vx = v.vx;
+        this.vy = v.vy;
+        this.maxHp = Math.max(1, v.maxHp);
+        this.hp = clamp(v.hp, 0, this.maxHp);
+        this.dead = v.dead;
+        this.facing = v.facing < 0 ? -1 : 1;
+        this.state = NET_STATES.includes(v.state)
+            ? v.state
+            : v.dead
+                ? 'dead'
+                : 'idle';
+        this.onGround = v.onGround;
+        this.walkPhase = v.walkPhase;
+        this.dashTime = Math.max(0, v.dashTime);
+        this.dashDir = v.dashDir < 0 ? -1 : 1;
+        this.invuln = Math.max(0, v.invuln);
+        this.hitFlash = Math.max(0, v.hitFlash);
+        this.abilityFlash = Math.max(0, v.abilityFlash);
+        this.deathTimer = Math.max(0, v.deathTimer);
+        this.comboHits = Math.max(0, Math.floor(v.comboHits));
+        this.abilityCd = Math.max(0, v.abilityCd);
+        this.attack = null;
+        if (v.attack) {
+            const slot = NET_SLOTS.includes(v.attack.slot)
+                ? v.attack.slot
+                : null;
+            if (slot) {
+                const def = MOVESETS[this.charId][slot];
+                const total = def.startup + def.active + def.recovery;
+                this.attack = {
+                    def,
+                    slot,
+                    t: clamp(v.attack.t, 0, total),
+                    dir: this.facing,
+                    damageScale: 1,
+                    spawned: true,
+                    fxDone: true,
+                    echo: false,
+                    hitInfo: new Map(),
+                };
+            }
+        }
     }
     updateMovement(dt, world) {
         const dir = this.moveInput;
