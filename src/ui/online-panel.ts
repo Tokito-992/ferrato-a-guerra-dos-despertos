@@ -131,7 +131,7 @@ export function openOnlinePanel(game: Game): boolean {
   const startGuest = (target: OnlineSession, start: { stageId: number; p1: CharacterId; p2: CharacterId }): void => {
     if (target !== session) return;
     hidePanel(true);
-    game.transitionTo(() => game.showOnlineGuest(start.stageId, start.p1, start.p2));
+    game.enterOnlineGuestWithStory(start);
   };
 
   const startHost = (target: OnlineSession): void => {
@@ -146,7 +146,7 @@ export function openOnlinePanel(game: Game): boolean {
     const stage = getStage(stageId);
     session.start(stage.id, stage.character, p2);
     hidePanel(true);
-    game.transitionTo(() => game.showOnlineHost(stage.id, stage.character, p2));
+    game.enterOnlineHostWithStory({ stageId: stage.id, p1: stage.character, p2 });
   };
 
   const attachSession = (target: OnlineSession): void => {
@@ -249,7 +249,8 @@ export function openOnlinePanel(game: Game): boolean {
     body.innerHTML = `
       <p id="online-desc" class="account-desc">
         Convide uma pessoa para a campanha. O host simula o capítulo e envia o estado;
-        o convidado entra com o código curto. Cada jogador grava o próprio progresso neste aparelho.
+        o convidado entra com o código curto. Cada jogador grava o próprio progresso neste aparelho,
+        e a história em quadrinhos continua entre os capítulos.
       </p>
       <div class="online-entry">
         <article class="online-entry-card">
@@ -330,8 +331,8 @@ export function openOnlinePanel(game: Game): boolean {
     body.innerHTML = `
       <p id="online-desc" class="account-desc">
         ${host
-          ? 'Compartilhe o código. Você comanda o capítulo e o save do seu aparelho; o convidado grava o progresso dele.'
-          : 'Escolha seu Desperto e marque pronto. O host decide quando o capítulo começa.'}
+          ? 'Compartilhe o código. Você comanda o capítulo e o save do seu aparelho; o convidado grava o progresso dele. A campanha segue direto para o próximo capítulo, com a história em quadrinhos.'
+          : 'Escolha seu Desperto e marque pronto. O host decide quando o capítulo começa. A história entre os capítulos passa nos dois aparelhos.'}
       </p>
       <div class="online-code-row">
         <div>
@@ -530,7 +531,7 @@ export function openOnlinePanel(game: Game): boolean {
     renderEntry();
     const target = new OnlineSession('host');
     try {
-      game.onlineSession = target;
+      game.setOnlineSession(target);
       await target.connect();
       busy = false;
       mode = 'room';
@@ -552,7 +553,7 @@ export function openOnlinePanel(game: Game): boolean {
     renderEntry();
     const target = new OnlineSession('guest', code);
     try {
-      game.onlineSession = target;
+      game.setOnlineSession(target);
       await target.connect();
       busy = false;
       role = 'guest';

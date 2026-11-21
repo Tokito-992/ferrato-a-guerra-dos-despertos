@@ -10,7 +10,7 @@ import type { Action } from './input.js';
 import { ParticleSystem } from './particles.js';
 import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js';
 import type { SaveData, TouchButtonId, TouchDock, TouchLayout, TouchPositions } from './save.js';
-import type { OnlineSession } from './online.js';
+import type { OnlineSession, OnlineStart } from './online.js';
 import { canFullscreen, toggleFullscreen } from './fullscreen.js';
 import { needsIOSInstallGuide } from './platform.js';
 import { cloudSync } from './cloud-sync.js';
@@ -24,6 +24,7 @@ import { CharacterSelectScene } from '../scenes/characterSelect.js';
 import { MultiplayerScene } from '../scenes/multiplayer.js';
 import { GameplayScene } from '../scenes/gameplay.js';
 import { ComicScene } from '../scenes/comic.js';
+import { OnlineWaitScene } from '../scenes/online-wait.js';
 import { VictoryScene } from '../scenes/victory.js';
 import { CreditsScene } from '../scenes/credits.js';
 import { SettingsScene } from '../scenes/settings.js';
@@ -94,6 +95,13 @@ export class Game {
 
   /** Sala online ativa; sobrevive à troca de cenas até o jogador sair. */
   onlineSession: OnlineSession | null = null;
+
+  /** Verdadeiro durante a história entre capítulos de uma sala online. */
+  private onlineStory = false;
+  /** Próximo capítulo anunciado pelo host enquanto o convidado lê a história. */
+  private pendingOnlineStart: OnlineStart | null = null;
+  private onlineStartUnsub: (() => void) | null = null;
+  private onlinePeerUnsub: (() => void) | null = null;
 
   readonly width = 1280;
   readonly height = 720;
@@ -598,12 +606,77 @@ export class Game {
     this.setScene(new GameplayScene(this, getStage(stageId), p1, p2));
   }
 
+  /** Co-op local: abre o capítulo com a cutscene de abertura. */
+  startCoopStageWithStory(stageId: number, p1: CharacterId, p2: CharacterId): void {
+    const stage = getStage(stageId);
+    this.finishing = false;
+    this.save.selected = p1;
+    this.transitionTo(() => {
+      const go = () => this.showCoopGameplay(stage.id, p1, p2);
+      const intro = STORY[stage.id]?.intro;
+      if (intro && intro.length > 0) this.setScene(new ComicScene(this, stage, 'intro', go));
+      else go();
+    });
+  }
+
+  /** Host: mostra a abertura do capítulo antes de simular a sala. */
+  enterOnlineHostWithStory(start: OnlineStart): void {
+    this.onlineStory = false;
+    this.pendingOnlineStart = null;
+    const stage = getStage(start.stageId);
+    this.transitionTo(() => {
+      const go = () => this.showOnlineHost(start.stageId, start.p1, start.p2);
+      const intro = STORY[stage.id]?.intro;
+      if (intro && intro.length > 0) this.setScene(new ComicScene(this, stage, 'intro', go));
+      else go();
+    });
+  }
+
+  /** Convidado: mostra a mesma abertura e depois entra no estado do host. */
+  enterOnlineGuestWithStory(start: OnlineStart): void {
+    this.onlineStory = true;
+    this.pendingOnlineStart = null;
+    const stage = getStage(start.stageId);
+    this.transitionTo(() => {
+      const go = () => this.showOnlineGuest(start.stageId, start.p1, start.p2);
+      const intro = STORY[stage.id]?.intro;
+      if (intro && intro.length > 0) this.setScene(new ComicScene(this, stage, 'intro', go));
+      else go();
+    });
+  }
+
+  /** Convidado: retoma o próximo capítulo quando o host finalmente inicia. */
+  enterOnlineGuestStage(start: OnlineStart): void {
+    this.onlineStory = false;
+    this.pendingOnlineStart = null;
+    this.transitionTo(() => this.showOnlineGuest(start.stageId, start.p1, start.p2));
+  }
+
+  /** Consome o anúncio do host guardado durante a história. */
+  takePendingOnlineStart(): OnlineStart | null {
+    const start = this.pendingOnlineStart;
+    this.pendingOnlineStart = null;
+    return start;
+  }
+
+  /** Convidado desiste de esperar o host entre capítulos e fecha a sala. */
+  leaveOnlineStory(): void {
+    this.onlineStory = false;
+    this.pendingOnlineStart = null;
+    this.onlineSession?.leave();
+    this.dropOnlineSession();
+    this.setNotice('VOCÊ SAIU DA SALA ONLINE', '#56e3ff');
+    this.transitionTo(() => this.showMultiplayer());
+  }
+
   /** Inicia o capítulo no host autoritativo de uma sala online. */
   showOnlineHost(stageId: number, p1: CharacterId, p2: CharacterId): void {
     if (!this.onlineSession) {
       this.showMultiplayer();
       return;
     }
+    this.onlineStory = false;
+    this.pendingOnlineStart = null;
     this.finishing = false;
     const stage = getStage(stageId);
     const safeP1 = p1 in CHARACTERS ? p1 : stage.character;
@@ -618,6 +691,8 @@ export class Game {
       this.showMultiplayer();
       return;
     }
+    this.onlineStory = false;
+    this.pendingOnlineStart = null;
     this.finishing = false;
     const stage = getStage(stageId);
     const safeP1 = p1 in CHARACTERS ? p1 : stage.character;
@@ -661,32 +736,140 @@ export class Game {
     this.transitionTo(() => this.showMultiplayer());
   }
 
+  /** Co-op local: encerramento, abertura do próximo capítulo e combate emendado. */
+  finishCoopStage(stageId: number, p1: CharacterId, p2: CharacterId): void {
+    if (this.finishing) return;
+    this.finishing = true;
+    const stage = getStage(stageId);
+    this.applyStageClear(stageId, p1);
+    const afterOutro = () => {
+      if (stageId >= MAX_STAGE) {
+        this.showVictory(p1);
+        return;
+      }
+      const nextId = stageId + 1;
+      const nextStage = getStage(nextId);
+      this.showCoopIntro(nextId, nextStage.character, p2);
+    };
+    this.transitionTo(() => {
+      const outro = STORY[stageId]?.outro;
+      if (outro && outro.length > 0) this.setScene(new ComicScene(this, stage, 'outro', afterOutro));
+      else afterOutro();
+    });
+  }
+
+  private showCoopIntro(stageId: number, p1: CharacterId, p2: CharacterId): void {
+    const stage = getStage(stageId);
+    const go = () => this.showCoopGameplay(stageId, p1, p2);
+    const intro = STORY[stageId]?.intro;
+    if (intro && intro.length > 0) this.setScene(new ComicScene(this, stage, 'intro', go));
+    else go();
+  }
+
+  /** Host: segue a campanha online sem voltar ao lobby entre capítulos. */
+  finishOnlineHostChapter(stageId: number, p1: CharacterId, p2: CharacterId): void {
+    if (!this.onlineSession || this.onlineStory) return;
+    this.onlineStory = true;
+    this.pendingOnlineStart = null;
+    const stage = getStage(stageId);
+    const afterOutro = () => {
+      if (stageId >= MAX_STAGE) {
+        this.onlineStory = false;
+        this.showVictory(p1);
+        return;
+      }
+      const nextId = stageId + 1;
+      const nextStage = getStage(nextId);
+      const nextP1 = nextStage.character;
+      this.onlineSession?.start(nextId, nextP1, p2);
+      const go = () => this.showOnlineHost(nextId, nextP1, p2);
+      const intro = STORY[nextId]?.intro;
+      if (intro && intro.length > 0) this.setScene(new ComicScene(this, nextStage, 'intro', go));
+      else go();
+    };
+    this.transitionTo(() => {
+      const outro = STORY[stageId]?.outro;
+      if (outro && outro.length > 0) this.setScene(new ComicScene(this, stage, 'outro', afterOutro));
+      else afterOutro();
+    });
+  }
+
+  /** Convidado: segue a mesma história e espera o host iniciar o próximo capítulo. */
+  finishOnlineGuestChapter(stageId: number, p1: CharacterId, p2: CharacterId): void {
+    if (!this.onlineSession || this.onlineSession.role !== 'guest' || this.onlineStory) return;
+    this.onlineStory = true;
+    const stage = getStage(stageId);
+    const afterOutro = () => {
+      if (stageId >= MAX_STAGE) {
+        this.onlineStory = false;
+        this.showVictory(p1);
+        return;
+      }
+      const nextId = stageId + 1;
+      const nextStage = getStage(nextId);
+      const afterIntro = () => {
+        const pending = this.takePendingOnlineStart();
+        if (pending) {
+          this.onlineStory = false;
+          this.showOnlineGuest(pending.stageId, pending.p1, pending.p2);
+          return;
+        }
+        this.setScene(new OnlineWaitScene(this, nextStage, p2));
+      };
+      const intro = STORY[nextId]?.intro;
+      if (intro && intro.length > 0) this.setScene(new ComicScene(this, nextStage, 'intro', afterIntro));
+      else afterIntro();
+    };
+    this.transitionTo(() => {
+      const outro = STORY[stageId]?.outro;
+      if (outro && outro.length > 0) this.setScene(new ComicScene(this, stage, 'outro', afterOutro));
+      else afterOutro();
+    });
+  }
+
+  /** Registra a sala no jogo e mantém vivo o anúncio de novos capítulos. */
+  setOnlineSession(session: OnlineSession): void {
+    this.dropOnlineSession();
+    this.onlineSession = session;
+    this.onlineStartUnsub = session.on<OnlineStart>('start', (start) => {
+      if (!start || session.role !== 'guest') return;
+      if (this.scene instanceof GameplayScene && start.stageId <= this.scene.stage.id) return;
+      if (!this.onlineStory && !(this.scene instanceof GameplayScene)) return;
+      this.pendingOnlineStart = start;
+    });
+    this.onlinePeerUnsub = session.on('peer-left', () => {
+      if (!this.onlineStory) return;
+      this.onlineStory = false;
+      this.pendingOnlineStart = null;
+      if (session.role === 'guest') {
+        this.setNotice('O HOST SAIU DA SALA', '#ff6a7a');
+        this.dropOnlineSession();
+        this.transitionTo(() => this.showMultiplayer());
+      } else {
+        this.setNotice('O CONVIDADO SAIU DA SALA', '#ff6a7a');
+        this.transitionTo(() => this.showMultiplayer());
+      }
+    });
+  }
+
   dropOnlineSession(): void {
+    this.onlineStartUnsub?.();
+    this.onlineStartUnsub = null;
+    this.onlinePeerUnsub?.();
+    this.onlinePeerUnsub = null;
+    this.onlineStory = false;
+    this.pendingOnlineStart = null;
     this.onlineSession?.dispose();
     this.onlineSession = null;
   }
 
-  /** Chamado pela cena de combate quando o chefe cai. */
-  finishStage(stageId: number, charId: CharacterId, returnToLobby = false): void {
+  /** Chamado pela cena de combate solo quando o chefe cai. */
+  finishStage(stageId: number, charId: CharacterId): void {
     if (this.finishing) return;
     this.finishing = true;
     const stage = getStage(stageId);
     const id = charId in CHARACTERS ? charId : 'ravi';
     const nextChar = this.applyStageClear(stageId, id);
-
-    // Co-op local: sem cutscene de transição de arco — a dupla volta ao lobby
-    // para escolher o próximo capítulo junto.
-    if (returnToLobby) {
-      const next = Math.min(MAX_STAGE, stageId + 1);
-      this.setNotice(
-        stageId >= MAX_STAGE
-          ? 'CAMPANHA CO-OP CONCLUÍDA — O VÉU FOI ROMPIDO'
-          : `CAPÍTULO ${stageId} CONCLUÍDO — CAP. ${next} LIBERADO`,
-        '#8df4a8',
-      );
-      this.transitionTo(() => this.showMultiplayer());
-      return;
-    }
 
     const outro = STORY[stageId]?.outro;
     const finish = () => {

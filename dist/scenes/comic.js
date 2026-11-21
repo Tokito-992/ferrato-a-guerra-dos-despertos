@@ -9,13 +9,13 @@
  * texto precisou ser reescrito. Os capítulos de abertura de arco recebem arte
  * extra e uma página inteira de despertar.
  */
-import { CHAPTERS_PER_ARC } from '../data/stages.js?v=1400d032a431';
-import { STORY } from '../data/story.js?v=1400d032a431';
-import { CHARACTERS } from '../data/characters.js?v=1400d032a431';
-import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js?v=1400d032a431';
-import { drawStageBackground } from '../render/backgrounds.js?v=1400d032a431';
-import { BASE, drawCharacterFigure, drawCharacterPortrait } from '../render/characters.js?v=1400d032a431';
-import { FONTS, label, roundRectPath } from '../render/theme.js?v=1400d032a431';
+import { CHAPTERS_PER_ARC } from '../data/stages.js?v=d7bd45e88846';
+import { STORY } from '../data/story.js?v=d7bd45e88846';
+import { CHARACTERS } from '../data/characters.js?v=d7bd45e88846';
+import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js?v=d7bd45e88846';
+import { drawStageBackground } from '../render/backgrounds.js?v=d7bd45e88846';
+import { BASE, drawCharacterFigure, drawCharacterPortrait } from '../render/characters.js?v=d7bd45e88846';
+import { FONTS, label, roundRectPath } from '../render/theme.js?v=d7bd45e88846';
 const PAGE_SIZE = 3;
 const GAP = 16;
 const MARGIN_X = 40;

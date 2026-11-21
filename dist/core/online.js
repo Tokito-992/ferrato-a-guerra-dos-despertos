@@ -9,8 +9,8 @@
  * WebSockets Phoenix, um por jogador. A chave publishable é pública e o código
  * curto da sala funciona como convite.
  */
-import { CHARACTERS } from '../data/characters.js?v=1400d032a431';
-import { isCloudConfigured, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './cloud-config.js?v=1400d032a431';
+import { CHARACTERS } from '../data/characters.js?v=d7bd45e88846';
+import { isCloudConfigured, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './cloud-config.js?v=d7bd45e88846';
 /** Bits de entrada enviados pelo convidado, na ordem fixa abaixo. */
 export const NET_ACTIONS = [
     'left',

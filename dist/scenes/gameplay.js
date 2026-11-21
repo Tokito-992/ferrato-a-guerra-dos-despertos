@@ -1,25 +1,25 @@
 /** Cena principal: arena lateral, ondas, chefe, pausa, troca de herói e game over. */
-import { Camera } from '../core/camera.js?v=1400d032a431';
-import { ParticleSystem } from '../core/particles.js?v=1400d032a431';
-import { clamp, hexToRgba } from '../core/math.js?v=1400d032a431';
-import { rankColor, rankFromPressure, rankValue } from '../core/rank.js?v=1400d032a431';
-import { MAX_HEARTS } from '../core/save.js?v=1400d032a431';
-import { getStage, MAX_STAGE } from '../data/stages.js?v=1400d032a431';
-import { packInput, unpackInput } from '../core/online.js?v=1400d032a431';
-import { archiveBossId, archiveCreatureId, archivePhenomenonId, archivePlaceId, archiveRelicId, stageRelicKinds, } from '../data/archive.js?v=1400d032a431';
-import { Player } from '../entities/player.js?v=1400d032a431';
-import { Enemy } from '../entities/enemy.js?v=1400d032a431';
-import { Boss } from '../entities/boss.js?v=1400d032a431';
-import { Hazard, Projectile } from '../entities/projectiles.js?v=1400d032a431';
-import { StageObstacle, buildStageObstacles } from '../entities/obstacles.js?v=1400d032a431';
-import { drawStageBackground } from '../render/backgrounds.js?v=1400d032a431';
-import { drawCharacterPortrait, drawPlayer } from '../render/characters.js?v=1400d032a431';
-import { drawBoss, drawEnemy } from '../render/enemies.js?v=1400d032a431';
-import { drawHeart } from '../render/hearts.js?v=1400d032a431';
-import { visualStyle } from '../render/style.js?v=1400d032a431';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=1400d032a431';
-import { drawHud } from '../ui/hud.js?v=1400d032a431';
-import { Menu } from '../ui/menu.js?v=1400d032a431';
+import { Camera } from '../core/camera.js?v=d7bd45e88846';
+import { ParticleSystem } from '../core/particles.js?v=d7bd45e88846';
+import { clamp, hexToRgba } from '../core/math.js?v=d7bd45e88846';
+import { rankColor, rankFromPressure, rankValue } from '../core/rank.js?v=d7bd45e88846';
+import { MAX_HEARTS } from '../core/save.js?v=d7bd45e88846';
+import { getStage, MAX_STAGE } from '../data/stages.js?v=d7bd45e88846';
+import { packInput, unpackInput } from '../core/online.js?v=d7bd45e88846';
+import { archiveBossId, archiveCreatureId, archivePhenomenonId, archivePlaceId, archiveRelicId, stageRelicKinds, } from '../data/archive.js?v=d7bd45e88846';
+import { Player } from '../entities/player.js?v=d7bd45e88846';
+import { Enemy } from '../entities/enemy.js?v=d7bd45e88846';
+import { Boss } from '../entities/boss.js?v=d7bd45e88846';
+import { Hazard, Projectile } from '../entities/projectiles.js?v=d7bd45e88846';
+import { StageObstacle, buildStageObstacles } from '../entities/obstacles.js?v=d7bd45e88846';
+import { drawStageBackground } from '../render/backgrounds.js?v=d7bd45e88846';
+import { drawCharacterPortrait, drawPlayer } from '../render/characters.js?v=d7bd45e88846';
+import { drawBoss, drawEnemy } from '../render/enemies.js?v=d7bd45e88846';
+import { drawHeart } from '../render/hearts.js?v=d7bd45e88846';
+import { visualStyle } from '../render/style.js?v=d7bd45e88846';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=d7bd45e88846';
+import { drawHud } from '../ui/hud.js?v=d7bd45e88846';
+import { Menu } from '../ui/menu.js?v=d7bd45e88846';
 function insideRect(rect, x, y) {
     return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
 }
@@ -234,8 +234,8 @@ export class GameplayScene {
         this.onlineUnsubs.push(session.on('lobby-return', (value) => {
             const info = value;
             if (info?.cleared) {
-                // Deixa o banner de capítulo concluído aparecer; `applyGuestStageClear`
-                // agenda a volta para a sala.
+                // Compatibilidade com hosts antigos: o capítulo concluído entra na
+                // história local em vez de voltar direto para o lobby.
                 this.applyGuestStageClear(this.stage.id);
                 return;
             }
@@ -261,8 +261,8 @@ export class GameplayScene {
         const stage = getStage(clamp(Math.floor(stageId), 1, MAX_STAGE));
         this.persistRecord();
         this.game.applyStageClear(stage.id, stage.character);
-        this.setBanner('CAPÍTULO CONCLUÍDO', 'PROGRESSO SALVO NESTE APARELHO · VOLTANDO À SALA', '#8df4a8', 3.2);
-        this.after(2.4, () => this.returnToOnlineRoom());
+        this.game.setNotice('CAPÍTULO CONCLUÍDO — PROGRESSO SALVO NESTE APARELHO', '#8df4a8');
+        this.game.finishOnlineGuestChapter(stage.id, this.player.charId, this.players[1]?.charId ?? stage.character);
     }
     returnToOnlineRoom() {
         if (this.onlineReturning)
@@ -467,8 +467,7 @@ export class GameplayScene {
         if (this.animeImpact > 0)
             this.animeImpact = Math.max(0, this.animeImpact - dt);
         this.updateBanner(dt);
-        // O convidado não simula combate, mas usa timers de cena para o retorno
-        // automático à sala depois do aviso de capítulo concluído.
+        // O convidado não simula combate; os timers apenas mantêm a apresentação.
         this.updateTimers(dt);
         if (this.onlineSnapshot) {
             const targetCam = clamp(this.onlineSnapshot.cam, 0, Math.max(0, this.stage.width - this.viewW));
@@ -1131,7 +1130,7 @@ export class GameplayScene {
             this.after(2.7, () => this.finishChapter());
         }
     }
-    /** Conclui o capítulo: online host avisa e volta à sala; solo/local segue o fluxo normal. */
+    /** Conclui o capítulo: online segue a história; co-op local emenda o próximo. */
     finishChapter() {
         if (this.onlineRole === 'host') {
             if (this.onlineFinished)
@@ -1139,12 +1138,17 @@ export class GameplayScene {
             this.onlineFinished = true;
             this.online?.stageClear(this.stage.id);
             this.game.applyStageClear(this.stage.id, this.player.charId);
-            this.online?.lobbyReturn(this.stage.id, this.player.charId, true);
             this.game.setNotice('CAPÍTULO CONCLUÍDO — PROGRESSO SALVO', '#8df4a8');
-            this.returnToOnlineRoom();
+            this.game.finishOnlineHostChapter(this.stage.id, this.player.charId, this.players[1]?.charId ?? this.stage.character);
             return;
         }
-        this.game.finishStage(this.stage.id, this.player.charId, this.isCoop);
+        if (this.onlineRole === 'guest')
+            return;
+        if (this.isCoop) {
+            this.game.finishCoopStage(this.stage.id, this.players[0].charId, this.players[1].charId);
+            return;
+        }
+        this.game.finishStage(this.stage.id, this.player.charId);
     }
     completeChapter() {
         if (this.phase === 'cleared')

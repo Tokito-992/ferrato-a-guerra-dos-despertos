@@ -315,8 +315,8 @@ export class GameplayScene implements Scene, World {
       session.on('lobby-return', (value) => {
         const info = value as { cleared?: boolean } | null;
         if (info?.cleared) {
-          // Deixa o banner de capítulo concluído aparecer; `applyGuestStageClear`
-          // agenda a volta para a sala.
+          // Compatibilidade com hosts antigos: o capítulo concluído entra na
+          // história local em vez de voltar direto para o lobby.
           this.applyGuestStageClear(this.stage.id);
           return;
         }
@@ -348,13 +348,15 @@ export class GameplayScene implements Scene, World {
     const stage = getStage(clamp(Math.floor(stageId), 1, MAX_STAGE));
     this.persistRecord();
     this.game.applyStageClear(stage.id, stage.character);
-    this.setBanner(
-      'CAPÍTULO CONCLUÍDO',
-      'PROGRESSO SALVO NESTE APARELHO · VOLTANDO À SALA',
+    this.game.setNotice(
+      'CAPÍTULO CONCLUÍDO — PROGRESSO SALVO NESTE APARELHO',
       '#8df4a8',
-      3.2,
     );
-    this.after(2.4, () => this.returnToOnlineRoom());
+    this.game.finishOnlineGuestChapter(
+      stage.id,
+      this.player.charId,
+      this.players[1]?.charId ?? stage.character,
+    );
   }
 
   private returnToOnlineRoom(): void {
@@ -575,8 +577,7 @@ export class GameplayScene implements Scene, World {
     this.updateGuestVisuals(dt);
     if (this.animeImpact > 0) this.animeImpact = Math.max(0, this.animeImpact - dt);
     this.updateBanner(dt);
-    // O convidado não simula combate, mas usa timers de cena para o retorno
-    // automático à sala depois do aviso de capítulo concluído.
+    // O convidado não simula combate; os timers apenas mantêm a apresentação.
     this.updateTimers(dt);
 
     if (this.onlineSnapshot) {
@@ -1289,19 +1290,31 @@ export class GameplayScene implements Scene, World {
     }
   }
 
-  /** Conclui o capítulo: online host avisa e volta à sala; solo/local segue o fluxo normal. */
+  /** Conclui o capítulo: online segue a história; co-op local emenda o próximo. */
   private finishChapter(): void {
     if (this.onlineRole === 'host') {
       if (this.onlineFinished) return;
       this.onlineFinished = true;
       this.online?.stageClear(this.stage.id);
       this.game.applyStageClear(this.stage.id, this.player.charId);
-      this.online?.lobbyReturn(this.stage.id, this.player.charId, true);
       this.game.setNotice('CAPÍTULO CONCLUÍDO — PROGRESSO SALVO', '#8df4a8');
-      this.returnToOnlineRoom();
+      this.game.finishOnlineHostChapter(
+        this.stage.id,
+        this.player.charId,
+        this.players[1]?.charId ?? this.stage.character,
+      );
       return;
     }
-    this.game.finishStage(this.stage.id, this.player.charId, this.isCoop);
+    if (this.onlineRole === 'guest') return;
+    if (this.isCoop) {
+      this.game.finishCoopStage(
+        this.stage.id,
+        this.players[0].charId,
+        this.players[1].charId,
+      );
+      return;
+    }
+    this.game.finishStage(this.stage.id, this.player.charId);
   }
 
   private completeChapter(): void {

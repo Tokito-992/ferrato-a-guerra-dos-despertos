@@ -1,21 +1,21 @@
 /**
- * Lobby de multijogador: co-op local para dois jogadores.
+ * Lobby de multijogador: co-op local e entrada da sala privada online.
  *
  * A party escolhe um capítulo liberado, o P1 assume o herói daquele capítulo e
  * o P2 escolhe entre os Despertos já desbloqueados. O segundo controle é
- * obrigatório para iniciar. A sala privada online fica sinalizada como próxima
- * etapa, sem prometer uma conexão que ainda não existe.
+ * obrigatório para iniciar o co-op local. A campanha segue direto para o
+ * próximo capítulo, com as cutscenes em quadrinhos nos dois modos.
  */
-import { TITLE_THEME_INDEX } from '../core/audio.js?v=1400d032a431';
-import { CHARACTER_ORDER, CHARACTERS } from '../data/characters.js?v=1400d032a431';
-import { BOSSES } from '../data/bosses.js?v=1400d032a431';
-import { getStage, MAX_STAGE } from '../data/stages.js?v=1400d032a431';
-import { clamp, easeOutCubic, hexToRgba } from '../core/math.js?v=1400d032a431';
-import { drawTitleBackground } from '../render/backgrounds.js?v=1400d032a431';
-import { drawCharacterPortrait } from '../render/characters.js?v=1400d032a431';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=1400d032a431';
-import { Menu } from '../ui/menu.js?v=1400d032a431';
-import { openOnlinePanel } from '../ui/online-panel.js?v=1400d032a431';
+import { TITLE_THEME_INDEX } from '../core/audio.js?v=d7bd45e88846';
+import { CHARACTER_ORDER, CHARACTERS } from '../data/characters.js?v=d7bd45e88846';
+import { BOSSES } from '../data/bosses.js?v=d7bd45e88846';
+import { getStage, MAX_STAGE } from '../data/stages.js?v=d7bd45e88846';
+import { clamp, easeOutCubic, hexToRgba } from '../core/math.js?v=d7bd45e88846';
+import { drawTitleBackground } from '../render/backgrounds.js?v=d7bd45e88846';
+import { drawCharacterPortrait } from '../render/characters.js?v=d7bd45e88846';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=d7bd45e88846';
+import { Menu } from '../ui/menu.js?v=d7bd45e88846';
+import { openOnlinePanel } from '../ui/online-panel.js?v=d7bd45e88846';
 function fitText(ctx, text, maxW, size) {
     ctx.save();
     ctx.font = `600 ${size}px ${FONTS.ui}`;
@@ -172,7 +172,7 @@ export class MultiplayerScene {
         const p1 = this.stage.character;
         const p2 = this.partnerId;
         this.game.audio.sfx('confirm');
-        this.game.transitionTo(() => this.game.showCoopGameplay(stageId, p1, p2));
+        this.game.startCoopStageWithStory(stageId, p1, p2);
     }
     update(dt) {
         this.t += dt;

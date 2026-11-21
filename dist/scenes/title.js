@@ -4,15 +4,15 @@
  * Composição em três zonas — identidade/ações à esquerda, arquivo da campanha
  * à direita e rodapé de estado — para separar leitura, navegação e progresso.
  */
-import { TITLE_THEME_INDEX } from '../core/audio.js?v=1400d032a431';
-import { CHARACTER_ORDER, CHARACTERS } from '../data/characters.js?v=1400d032a431';
-import { ARC_COUNT, CHAPTERS_PER_ARC, getArcStages, getStage, MAX_STAGE } from '../data/stages.js?v=1400d032a431';
-import { archiveTotalProgress } from '../data/archive.js?v=1400d032a431';
-import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js?v=1400d032a431';
-import { drawTitleBackground } from '../render/backgrounds.js?v=1400d032a431';
-import { drawCharacterPortrait } from '../render/characters.js?v=1400d032a431';
-import { FONTS, glow, label, panel, roundRectPath } from '../render/theme.js?v=1400d032a431';
-import { Menu } from '../ui/menu.js?v=1400d032a431';
+import { TITLE_THEME_INDEX } from '../core/audio.js?v=d7bd45e88846';
+import { CHARACTER_ORDER, CHARACTERS } from '../data/characters.js?v=d7bd45e88846';
+import { ARC_COUNT, CHAPTERS_PER_ARC, getArcStages, getStage, MAX_STAGE } from '../data/stages.js?v=d7bd45e88846';
+import { archiveTotalProgress } from '../data/archive.js?v=d7bd45e88846';
+import { clamp, easeOutCubic, hexToRgba, TAU } from '../core/math.js?v=d7bd45e88846';
+import { drawTitleBackground } from '../render/backgrounds.js?v=d7bd45e88846';
+import { drawCharacterPortrait } from '../render/characters.js?v=d7bd45e88846';
+import { FONTS, glow, label, panel, roundRectPath } from '../render/theme.js?v=d7bd45e88846';
+import { Menu } from '../ui/menu.js?v=d7bd45e88846';
 /** Anel arcano usado como marca d'água e como emblema de canto. */
 function drawSigil(ctx, x, y, radius, time, colorA, colorB, alpha) {
     ctx.save();

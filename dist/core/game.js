@@ -1,30 +1,31 @@
 /** Núcleo do jogo: loop, troca de cenas, transições, hitstop e persistência. */
-import { CHARACTERS } from '../data/characters.js?v=1400d032a431';
-import { getStage, MAX_STAGE } from '../data/stages.js?v=1400d032a431';
-import { STORY } from '../data/story.js?v=1400d032a431';
-import { AudioEngine } from './audio.js?v=1400d032a431';
-import { Input } from './input.js?v=1400d032a431';
-import { ParticleSystem } from './particles.js?v=1400d032a431';
-import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=1400d032a431';
-import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=1400d032a431';
-import { needsIOSInstallGuide } from './platform.js?v=1400d032a431';
-import { cloudSync } from './cloud-sync.js?v=1400d032a431';
-import { showInstallGuide } from '../ui/install-guide.js?v=1400d032a431';
-import { showAccountPanel } from '../ui/account-panel.js?v=1400d032a431';
-import { clamp, hexToRgba } from './math.js?v=1400d032a431';
-import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=1400d032a431';
-import { TitleScene } from '../scenes/title.js?v=1400d032a431';
-import { CharacterSelectScene } from '../scenes/characterSelect.js?v=1400d032a431';
-import { MultiplayerScene } from '../scenes/multiplayer.js?v=1400d032a431';
-import { GameplayScene } from '../scenes/gameplay.js?v=1400d032a431';
-import { ComicScene } from '../scenes/comic.js?v=1400d032a431';
-import { VictoryScene } from '../scenes/victory.js?v=1400d032a431';
-import { CreditsScene } from '../scenes/credits.js?v=1400d032a431';
-import { SettingsScene } from '../scenes/settings.js?v=1400d032a431';
-import { ControlsScene } from '../scenes/controls.js?v=1400d032a431';
-import { TutorialScene } from '../scenes/tutorial.js?v=1400d032a431';
-import { ArchiveScene } from '../scenes/archive.js?v=1400d032a431';
-import { ARCHIVE_ENTRY_IDS } from '../data/archive.js?v=1400d032a431';
+import { CHARACTERS } from '../data/characters.js?v=d7bd45e88846';
+import { getStage, MAX_STAGE } from '../data/stages.js?v=d7bd45e88846';
+import { STORY } from '../data/story.js?v=d7bd45e88846';
+import { AudioEngine } from './audio.js?v=d7bd45e88846';
+import { Input } from './input.js?v=d7bd45e88846';
+import { ParticleSystem } from './particles.js?v=d7bd45e88846';
+import { loadSave, writeSave, TOUCH_BUTTON_IDS } from './save.js?v=d7bd45e88846';
+import { canFullscreen, toggleFullscreen } from './fullscreen.js?v=d7bd45e88846';
+import { needsIOSInstallGuide } from './platform.js?v=d7bd45e88846';
+import { cloudSync } from './cloud-sync.js?v=d7bd45e88846';
+import { showInstallGuide } from '../ui/install-guide.js?v=d7bd45e88846';
+import { showAccountPanel } from '../ui/account-panel.js?v=d7bd45e88846';
+import { clamp, hexToRgba } from './math.js?v=d7bd45e88846';
+import { FONTS, label, panel, roundRectPath } from '../render/theme.js?v=d7bd45e88846';
+import { TitleScene } from '../scenes/title.js?v=d7bd45e88846';
+import { CharacterSelectScene } from '../scenes/characterSelect.js?v=d7bd45e88846';
+import { MultiplayerScene } from '../scenes/multiplayer.js?v=d7bd45e88846';
+import { GameplayScene } from '../scenes/gameplay.js?v=d7bd45e88846';
+import { ComicScene } from '../scenes/comic.js?v=d7bd45e88846';
+import { OnlineWaitScene } from '../scenes/online-wait.js?v=d7bd45e88846';
+import { VictoryScene } from '../scenes/victory.js?v=d7bd45e88846';
+import { CreditsScene } from '../scenes/credits.js?v=d7bd45e88846';
+import { SettingsScene } from '../scenes/settings.js?v=d7bd45e88846';
+import { ControlsScene } from '../scenes/controls.js?v=d7bd45e88846';
+import { TutorialScene } from '../scenes/tutorial.js?v=d7bd45e88846';
+import { ArchiveScene } from '../scenes/archive.js?v=d7bd45e88846';
+import { ARCHIVE_ENTRY_IDS } from '../data/archive.js?v=d7bd45e88846';
 /** Posições normalizadas usadas quando não há layout livre salvo. */
 function presetTouchPositions(layout, dock) {
     const y = dock === 'top' ? 0.1 : 0.9;
@@ -57,6 +58,12 @@ export class Game {
     constructor(canvas) {
         /** Sala online ativa; sobrevive à troca de cenas até o jogador sair. */
         this.onlineSession = null;
+        /** Verdadeiro durante a história entre capítulos de uma sala online. */
+        this.onlineStory = false;
+        /** Próximo capítulo anunciado pelo host enquanto o convidado lê a história. */
+        this.pendingOnlineStart = null;
+        this.onlineStartUnsub = null;
+        this.onlinePeerUnsub = null;
         this.width = 1280;
         this.height = 720;
         this.time = 0;
@@ -527,12 +534,77 @@ export class Game {
         this.save.selected = p1;
         this.setScene(new GameplayScene(this, getStage(stageId), p1, p2));
     }
+    /** Co-op local: abre o capítulo com a cutscene de abertura. */
+    startCoopStageWithStory(stageId, p1, p2) {
+        const stage = getStage(stageId);
+        this.finishing = false;
+        this.save.selected = p1;
+        this.transitionTo(() => {
+            const go = () => this.showCoopGameplay(stage.id, p1, p2);
+            const intro = STORY[stage.id]?.intro;
+            if (intro && intro.length > 0)
+                this.setScene(new ComicScene(this, stage, 'intro', go));
+            else
+                go();
+        });
+    }
+    /** Host: mostra a abertura do capítulo antes de simular a sala. */
+    enterOnlineHostWithStory(start) {
+        this.onlineStory = false;
+        this.pendingOnlineStart = null;
+        const stage = getStage(start.stageId);
+        this.transitionTo(() => {
+            const go = () => this.showOnlineHost(start.stageId, start.p1, start.p2);
+            const intro = STORY[stage.id]?.intro;
+            if (intro && intro.length > 0)
+                this.setScene(new ComicScene(this, stage, 'intro', go));
+            else
+                go();
+        });
+    }
+    /** Convidado: mostra a mesma abertura e depois entra no estado do host. */
+    enterOnlineGuestWithStory(start) {
+        this.onlineStory = true;
+        this.pendingOnlineStart = null;
+        const stage = getStage(start.stageId);
+        this.transitionTo(() => {
+            const go = () => this.showOnlineGuest(start.stageId, start.p1, start.p2);
+            const intro = STORY[stage.id]?.intro;
+            if (intro && intro.length > 0)
+                this.setScene(new ComicScene(this, stage, 'intro', go));
+            else
+                go();
+        });
+    }
+    /** Convidado: retoma o próximo capítulo quando o host finalmente inicia. */
+    enterOnlineGuestStage(start) {
+        this.onlineStory = false;
+        this.pendingOnlineStart = null;
+        this.transitionTo(() => this.showOnlineGuest(start.stageId, start.p1, start.p2));
+    }
+    /** Consome o anúncio do host guardado durante a história. */
+    takePendingOnlineStart() {
+        const start = this.pendingOnlineStart;
+        this.pendingOnlineStart = null;
+        return start;
+    }
+    /** Convidado desiste de esperar o host entre capítulos e fecha a sala. */
+    leaveOnlineStory() {
+        this.onlineStory = false;
+        this.pendingOnlineStart = null;
+        this.onlineSession?.leave();
+        this.dropOnlineSession();
+        this.setNotice('VOCÊ SAIU DA SALA ONLINE', '#56e3ff');
+        this.transitionTo(() => this.showMultiplayer());
+    }
     /** Inicia o capítulo no host autoritativo de uma sala online. */
     showOnlineHost(stageId, p1, p2) {
         if (!this.onlineSession) {
             this.showMultiplayer();
             return;
         }
+        this.onlineStory = false;
+        this.pendingOnlineStart = null;
         this.finishing = false;
         const stage = getStage(stageId);
         const safeP1 = p1 in CHARACTERS ? p1 : stage.character;
@@ -546,6 +618,8 @@ export class Game {
             this.showMultiplayer();
             return;
         }
+        this.onlineStory = false;
+        this.pendingOnlineStart = null;
         this.finishing = false;
         const stage = getStage(stageId);
         const safeP1 = p1 in CHARACTERS ? p1 : stage.character;
@@ -587,28 +661,155 @@ export class Game {
             this.setNotice(message, '#8df4a8');
         this.transitionTo(() => this.showMultiplayer());
     }
+    /** Co-op local: encerramento, abertura do próximo capítulo e combate emendado. */
+    finishCoopStage(stageId, p1, p2) {
+        if (this.finishing)
+            return;
+        this.finishing = true;
+        const stage = getStage(stageId);
+        this.applyStageClear(stageId, p1);
+        const afterOutro = () => {
+            if (stageId >= MAX_STAGE) {
+                this.showVictory(p1);
+                return;
+            }
+            const nextId = stageId + 1;
+            const nextStage = getStage(nextId);
+            this.showCoopIntro(nextId, nextStage.character, p2);
+        };
+        this.transitionTo(() => {
+            const outro = STORY[stageId]?.outro;
+            if (outro && outro.length > 0)
+                this.setScene(new ComicScene(this, stage, 'outro', afterOutro));
+            else
+                afterOutro();
+        });
+    }
+    showCoopIntro(stageId, p1, p2) {
+        const stage = getStage(stageId);
+        const go = () => this.showCoopGameplay(stageId, p1, p2);
+        const intro = STORY[stageId]?.intro;
+        if (intro && intro.length > 0)
+            this.setScene(new ComicScene(this, stage, 'intro', go));
+        else
+            go();
+    }
+    /** Host: segue a campanha online sem voltar ao lobby entre capítulos. */
+    finishOnlineHostChapter(stageId, p1, p2) {
+        if (!this.onlineSession || this.onlineStory)
+            return;
+        this.onlineStory = true;
+        this.pendingOnlineStart = null;
+        const stage = getStage(stageId);
+        const afterOutro = () => {
+            if (stageId >= MAX_STAGE) {
+                this.onlineStory = false;
+                this.showVictory(p1);
+                return;
+            }
+            const nextId = stageId + 1;
+            const nextStage = getStage(nextId);
+            const nextP1 = nextStage.character;
+            this.onlineSession?.start(nextId, nextP1, p2);
+            const go = () => this.showOnlineHost(nextId, nextP1, p2);
+            const intro = STORY[nextId]?.intro;
+            if (intro && intro.length > 0)
+                this.setScene(new ComicScene(this, nextStage, 'intro', go));
+            else
+                go();
+        };
+        this.transitionTo(() => {
+            const outro = STORY[stageId]?.outro;
+            if (outro && outro.length > 0)
+                this.setScene(new ComicScene(this, stage, 'outro', afterOutro));
+            else
+                afterOutro();
+        });
+    }
+    /** Convidado: segue a mesma história e espera o host iniciar o próximo capítulo. */
+    finishOnlineGuestChapter(stageId, p1, p2) {
+        if (!this.onlineSession || this.onlineSession.role !== 'guest' || this.onlineStory)
+            return;
+        this.onlineStory = true;
+        const stage = getStage(stageId);
+        const afterOutro = () => {
+            if (stageId >= MAX_STAGE) {
+                this.onlineStory = false;
+                this.showVictory(p1);
+                return;
+            }
+            const nextId = stageId + 1;
+            const nextStage = getStage(nextId);
+            const afterIntro = () => {
+                const pending = this.takePendingOnlineStart();
+                if (pending) {
+                    this.onlineStory = false;
+                    this.showOnlineGuest(pending.stageId, pending.p1, pending.p2);
+                    return;
+                }
+                this.setScene(new OnlineWaitScene(this, nextStage, p2));
+            };
+            const intro = STORY[nextId]?.intro;
+            if (intro && intro.length > 0)
+                this.setScene(new ComicScene(this, nextStage, 'intro', afterIntro));
+            else
+                afterIntro();
+        };
+        this.transitionTo(() => {
+            const outro = STORY[stageId]?.outro;
+            if (outro && outro.length > 0)
+                this.setScene(new ComicScene(this, stage, 'outro', afterOutro));
+            else
+                afterOutro();
+        });
+    }
+    /** Registra a sala no jogo e mantém vivo o anúncio de novos capítulos. */
+    setOnlineSession(session) {
+        this.dropOnlineSession();
+        this.onlineSession = session;
+        this.onlineStartUnsub = session.on('start', (start) => {
+            if (!start || session.role !== 'guest')
+                return;
+            if (this.scene instanceof GameplayScene && start.stageId <= this.scene.stage.id)
+                return;
+            if (!this.onlineStory && !(this.scene instanceof GameplayScene))
+                return;
+            this.pendingOnlineStart = start;
+        });
+        this.onlinePeerUnsub = session.on('peer-left', () => {
+            if (!this.onlineStory)
+                return;
+            this.onlineStory = false;
+            this.pendingOnlineStart = null;
+            if (session.role === 'guest') {
+                this.setNotice('O HOST SAIU DA SALA', '#ff6a7a');
+                this.dropOnlineSession();
+                this.transitionTo(() => this.showMultiplayer());
+            }
+            else {
+                this.setNotice('O CONVIDADO SAIU DA SALA', '#ff6a7a');
+                this.transitionTo(() => this.showMultiplayer());
+            }
+        });
+    }
     dropOnlineSession() {
+        this.onlineStartUnsub?.();
+        this.onlineStartUnsub = null;
+        this.onlinePeerUnsub?.();
+        this.onlinePeerUnsub = null;
+        this.onlineStory = false;
+        this.pendingOnlineStart = null;
         this.onlineSession?.dispose();
         this.onlineSession = null;
     }
-    /** Chamado pela cena de combate quando o chefe cai. */
-    finishStage(stageId, charId, returnToLobby = false) {
+    /** Chamado pela cena de combate solo quando o chefe cai. */
+    finishStage(stageId, charId) {
         if (this.finishing)
             return;
         this.finishing = true;
         const stage = getStage(stageId);
         const id = charId in CHARACTERS ? charId : 'ravi';
         const nextChar = this.applyStageClear(stageId, id);
-        // Co-op local: sem cutscene de transição de arco — a dupla volta ao lobby
-        // para escolher o próximo capítulo junto.
-        if (returnToLobby) {
-            const next = Math.min(MAX_STAGE, stageId + 1);
-            this.setNotice(stageId >= MAX_STAGE
-                ? 'CAMPANHA CO-OP CONCLUÍDA — O VÉU FOI ROMPIDO'
-                : `CAPÍTULO ${stageId} CONCLUÍDO — CAP. ${next} LIBERADO`, '#8df4a8');
-            this.transitionTo(() => this.showMultiplayer());
-            return;
-        }
         const outro = STORY[stageId]?.outro;
         const finish = () => {
             if (stageId >= MAX_STAGE) {

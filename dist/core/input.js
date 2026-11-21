@@ -1,5 +1,5 @@
 /** Entrada de teclado, mouse, toque e controle com noções de "pressionado neste frame". */
-import { BINDABLE_ACTIONS, defaultBindings } from './bindings.js?v=1400d032a431';
+import { BINDABLE_ACTIONS, defaultBindings } from './bindings.js?v=d7bd45e88846';
 function emptyRemoteState() {
     return { enabled: false, down: new Set(), pressed: new Set() };
 }

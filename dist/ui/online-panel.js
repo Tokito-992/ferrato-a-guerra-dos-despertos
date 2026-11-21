@@ -5,11 +5,11 @@
  * código. A cena de combate usa a mesma `OnlineSession` guardada no `Game`,
  * então o painel pode ser fechado durante o capítulo sem derrubar a conexão.
  */
-import { isCloudConfigured } from '../core/cloud-config.js?v=1400d032a431';
-import { clamp } from '../core/math.js?v=1400d032a431';
-import { OnlineSession } from '../core/online.js?v=1400d032a431';
-import { CHARACTER_ORDER, CHARACTERS } from '../data/characters.js?v=1400d032a431';
-import { getStage, MAX_STAGE } from '../data/stages.js?v=1400d032a431';
+import { isCloudConfigured } from '../core/cloud-config.js?v=d7bd45e88846';
+import { clamp } from '../core/math.js?v=d7bd45e88846';
+import { OnlineSession } from '../core/online.js?v=d7bd45e88846';
+import { CHARACTER_ORDER, CHARACTERS } from '../data/characters.js?v=d7bd45e88846';
+import { getStage, MAX_STAGE } from '../data/stages.js?v=d7bd45e88846';
 let activePanel = null;
 function escapeHtml(value) {
     return value
@@ -117,7 +117,7 @@ export function openOnlinePanel(game) {
         if (target !== session)
             return;
         hidePanel(true);
-        game.transitionTo(() => game.showOnlineGuest(start.stageId, start.p1, start.p2));
+        game.enterOnlineGuestWithStory(start);
     };
     const startHost = (target) => {
         if (target !== session)
@@ -132,7 +132,7 @@ export function openOnlinePanel(game) {
         const stage = getStage(stageId);
         session.start(stage.id, stage.character, p2);
         hidePanel(true);
-        game.transitionTo(() => game.showOnlineHost(stage.id, stage.character, p2));
+        game.enterOnlineHostWithStory({ stageId: stage.id, p1: stage.character, p2 });
     };
     const attachSession = (target) => {
         session = target;
@@ -236,7 +236,8 @@ export function openOnlinePanel(game) {
         body.innerHTML = `
       <p id="online-desc" class="account-desc">
         Convide uma pessoa para a campanha. O host simula o capítulo e envia o estado;
-        o convidado entra com o código curto. Cada jogador grava o próprio progresso neste aparelho.
+        o convidado entra com o código curto. Cada jogador grava o próprio progresso neste aparelho,
+        e a história em quadrinhos continua entre os capítulos.
       </p>
       <div class="online-entry">
         <article class="online-entry-card">
@@ -296,8 +297,8 @@ export function openOnlinePanel(game) {
         body.innerHTML = `
       <p id="online-desc" class="account-desc">
         ${host
-            ? 'Compartilhe o código. Você comanda o capítulo e o save do seu aparelho; o convidado grava o progresso dele.'
-            : 'Escolha seu Desperto e marque pronto. O host decide quando o capítulo começa.'}
+            ? 'Compartilhe o código. Você comanda o capítulo e o save do seu aparelho; o convidado grava o progresso dele. A campanha segue direto para o próximo capítulo, com a história em quadrinhos.'
+            : 'Escolha seu Desperto e marque pronto. O host decide quando o capítulo começa. A história entre os capítulos passa nos dois aparelhos.'}
       </p>
       <div class="online-code-row">
         <div>
@@ -485,7 +486,7 @@ export function openOnlinePanel(game) {
         renderEntry();
         const target = new OnlineSession('host');
         try {
-            game.onlineSession = target;
+            game.setOnlineSession(target);
             await target.connect();
             busy = false;
             mode = 'room';
@@ -508,7 +509,7 @@ export function openOnlinePanel(game) {
         renderEntry();
         const target = new OnlineSession('guest', code);
         try {
-            game.onlineSession = target;
+            game.setOnlineSession(target);
             await target.connect();
             busy = false;
             role = 'guest';

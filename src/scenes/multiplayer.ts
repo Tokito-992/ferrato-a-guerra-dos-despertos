@@ -1,10 +1,10 @@
 /**
- * Lobby de multijogador: co-op local para dois jogadores.
+ * Lobby de multijogador: co-op local e entrada da sala privada online.
  *
  * A party escolhe um capítulo liberado, o P1 assume o herói daquele capítulo e
  * o P2 escolhe entre os Despertos já desbloqueados. O segundo controle é
- * obrigatório para iniciar. A sala privada online fica sinalizada como próxima
- * etapa, sem prometer uma conexão que ainda não existe.
+ * obrigatório para iniciar o co-op local. A campanha segue direto para o
+ * próximo capítulo, com as cutscenes em quadrinhos nos dois modos.
  */
 
 import type { Game, Scene } from '../core/game.js';
@@ -197,7 +197,7 @@ export class MultiplayerScene implements Scene {
     const p1 = this.stage.character;
     const p2 = this.partnerId;
     this.game.audio.sfx('confirm');
-    this.game.transitionTo(() => this.game.showCoopGameplay(stageId, p1, p2));
+    this.game.startCoopStageWithStory(stageId, p1, p2);
   }
 
   update(dt: number): void {
